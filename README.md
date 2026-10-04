@@ -1,275 +1,294 @@
 <!-- File: README.md -->
 
-# github-project
+# lean2agda
 
-A template for creating and working on GitHub projects, especially
-(though not exclusively) useful for AI-assisted projects.
+A Lean 4 to Agda translator, and the Agda libraries it produces.
 
-One markdown file — [`docs/GITHUB_PROJECT.md`](docs/GITHUB_PROJECT.md) —
-holds your roadmap: milestones, labels, and issues, written by hand (or
-by your AI assistant) before anything exists on GitHub.  Two commands
-keep that file and GitHub in sync, in opposite directions:
+**Status**: planning, October 2026.  Nothing translates yet.  The
+roadmap, with milestones, labels, issues and dependency graphs, is
+[`docs/GITHUB_PROJECT.md`](docs/GITHUB_PROJECT.md).
 
-| Command         | Direction     | What moves                                                        |
-| --------------- | ------------- | ----------------------------------------------------------------- |
-| `make populate` | file → GitHub | creates labels, milestones, issues; writes issue numbers back into the file |
-| `make update`   | GitHub → file | rewrites the *generated regions* with live issue state; hand-written prose is never touched |
+## Why
 
-("Update" names the user's intent — bring `docs/GITHUB_PROJECT.md` up
-to date — not a push to GitHub.  The push direction is `populate`.)
+Lean's Mathlib holds roughly 138,000 definitions and 290,000 theorems
+and grows daily; no Agda library is within an order of magnitude of
+that.  The project's aim is to let Agda users consume Lean developments
+as Agda libraries, and to learn something about both systems on the
+way.  Three goals, in priority order:
 
-## The contract
++  **Libraries**.  Translate Lean libraries, Mathlib first, into Agda
+   libraries with readable statements and machine-checked proofs.  The
+   output is split into a *constructive* layer, which never mentions a
+   classical axiom and checks under `--safe --cubical-compatible`, and
+   a *classical* layer that takes the classical principles as module
+   parameters, so that the whole library stays `--safe` and each user
+   decides what to assume.
++  **Foundations**.  Lean is an impredicative, proof-irrelevant
+   Calculus of Inductive Constructions with primitive quotients and
+   three axioms; Agda is predicative Martin-Löf type theory, with or
+   without the K rule, optionally cubical.  The differences are known
+   in principle and unmeasured in practice.  Every translation that
+   fails or needs repair is a data point about which features of Lean's
+   theory its libraries use essentially; the project publishes the
+   measurements.
++  **Confirmation**.  A proof that Agda accepts after translation has
+   been checked by a second kernel implementing a different theory.  A
+   proof that cannot be translated is a translator limitation, a
+   genuine foundational gap, or a problem in the Lean development, and
+   the pipeline tells those outcomes apart.  Independent re-checking of
+   Lean's kernel is already done well by other checkers (see the Lean
+   Kernel Arena below); what a translation into Agda adds is a check
+   against a *different theory*, and a library at the end of it.
 
-One source of truth per concern:
+## What the translation has to bridge
 
-| Concern                                                                  | Source of truth          | Who edits it              |
-| ------------------------------------------------------------------------ | ------------------------ | ------------------------- |
-| **Structure**: milestones, labels, issue definitions, prose, dependency graphs | `docs/GITHUB_PROJECT.md` | humans (and Claude)       |
-| **State**: issue numbers, open/closed, assignees                          | GitHub                   | GitHub UI / normal workflow |
+The two theories differ in ways that each force a design decision.
+The project keeps a catalog of these gaps (`docs/foundations/`, once
+M1 lands); the main entries are as follows.
 
-`populate` pushes structure to GitHub once, at bootstrap; it is
-idempotent, so re-running it never duplicates anything.  `update` pulls
-state back into the file for as long as the project lives, rewriting
-only the regions between `<!-- BEGIN GENERATED: ... -->` /
-`<!-- END GENERATED: ... -->` markers.  After bootstrap, issue bodies
-live on GitHub like any other issue; the generated regions mirror them.
+| Feature | Lean 4 | Agda | Consequence |
+| --- | --- | --- | --- |
+| Universe of propositions | `Prop` is impredicative: a proposition may quantify over any universe and stay in `Prop` | `Set ℓ` and `Prop ℓ` are predicative | universe-polymorphic level elaboration; essentially impredicative uses cannot be translated |
+| Proof irrelevance | definitional: any two proofs of a proposition are equal | only in the `Prop` universe (`--prop`), which cannot eliminate into `Set` except by absurd patterns | either use Agda's `Prop` plus explicit casts for the propositions Lean eliminates largely, or h-propositions in `Set` plus casts everywhere |
+| K and UIP | every type has unique identity proofs; `Eq.rec` reduces by K-like reduction | available with K (Agda's default); rejected under `--cubical-compatible` | each use of K must be justified by an `isSet` proof, or reported as K-essential |
+| Large elimination from `Prop` | `Eq`, `HEq`, `Acc`, `And`, `True`, `False` and other subsingletons eliminate into `Type` | not from `Prop` | those propositions live in `Set` on the Agda side |
+| Quotients | primitive `Quot` with a definitional computation rule and the axiom `Quot.sound` | none in plain Agda; set quotients as higher inductive types under `--cubical` | a module-parameter record with a propositional computation rule (casts inserted), or cubical set quotients |
+| Axioms | `propext`, `Quot.sound`, `Classical.choice` | none; postulates are forbidden by `--safe` | module parameters; `Classical.choice` is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged |
+| Universe levels | `max`, `imax`, and `Sort 0 = Prop` as a special case | `⊔`, `lsuc`, no `imax` | specialize each constant by which level parameters are zero |
+| Eta | definitional eta for structures and unit-like types | eta for records | structure-like inductives become records |
+| Literals | `Nat` literals with GMP-accelerated kernel arithmetic; `String` literals | builtin naturals and strings with different definitional edges | an operation table; `Nat.gcd` needs special care |
+| Trust escape hatches | `Lean.ofReduceBool` (`native_decide`), `implemented_by`, `partial`, `unsafe`, `sorryAx` | none | refused and reported |
 
-## Quickstart
+Two consequences shape the whole design.  First, Lean's theory proves
+uniqueness of identity proofs for every type, so a translation into
+`--cubical-compatible` Agda must prove, for each type on which K is
+used, that the type is an h-set; where it cannot (equalities between
+types, typically), the declaration is reported rather than translated.
+Second, Lean's `Classical.choice` chooses an element of every nonempty
+type, and a function of that type contradicts univalence even when
+restricted to h-sets (HoTT book, Lemma 3.8.5); the classical layer is
+therefore a `--cubical-compatible` library and not a `--cubical` one,
+and only weakened forms of choice can follow the constructive layer
+into cubical Agda.
 
-Requirements: Python 3.11+, GNU make, and the
-[GitHub CLI](https://cli.github.com/) authenticated with write access to
-your repository (`gh auth status`).  No third-party Python packages.
-(Alternatively, [use Nix](#the-nix-path) and skip installing any of
-that.)
+## Approach
 
-1. **Create your repository from this template** (the "Use this
-   template" button on GitHub, or):
+The translator is a Lean 4 program over the elaborated Lean environment
+(the `.olean` files Lake builds), which is how every serious
+predecessor works.  It runs in five stages, as follows:
 
-   ```sh
-   gh repo create you/your-project --template williamdemeo/github-project --private --clone
-   cd your-project
-   ```
+1. **Profile**.  For every constant, record the axioms it depends on,
+   its computability, and the kernel features its typing used.  This
+   per-declaration record is the *atlas*; the layering is computed
+   from it.
+2. **Normalize**.  Run Lean4Less (Deducteam) to replace definitional
+   proof irrelevance and K-like reduction with explicit casts, giving
+   terms typeable in the smaller theory Lean⁻; extend the mechanism to
+   the computation rule of `Quot.lift` where the target has no
+   definitional quotients.
+3. **Elaborate universes**.  Specialize each constant by which of its
+   universe parameters are `Prop`, then compute predicative,
+   universe-polymorphic level annotations by constraint solving, in the
+   style of Felicissimo and Blanqui's Predicativize.
+4. **Emit**.  One Agda module per Lean module and layer: `data` and
+   `record` types, recursors as pattern-matching definitions, theorems
+   in `opaque` blocks, axioms as module parameters, `.agda-lib` files
+   and an import graph.
+5. **Check**.  Run Agda under the profile's flags; every failure goes
+   back into the atlas with its category.
 
-2. **Detach the engine copy** (one time).  Template creation copies
-   this whole repository — including the engine, which has exactly one
-   home ([see the channels](#the-engine-getting-and-upgrading-it)
-   below).  Keeping a copy would freeze you at creation-day behavior,
-   so:
+### Target profiles
 
-   ```sh
-   make init
-   ```
+A *profile* is the set of Agda flags the output must check under, plus
+what remains a module parameter.
 
-   deletes the copied engine, installs a consumer `flake.nix` that
-   takes the engine as a pinned input, and prints the next steps
-   (`nix flake lock` to pin — or set `GHPROJECT_DIR` to an engine
-   checkout if you don't use Nix).  Every `make` target below works
-   identically before and after this step.
+| Profile | Agda flags | Parameters | Purpose |
+| --- | --- | --- | --- |
+| U | `--type-in-type`, postulates allowed | none (postulated) | scaffolding for building the mechanical parts; never a deliverable |
+| K | `--safe` (Agda's default, with K) | `propext`, quotients, `funext`, `Classical.choice` | the faithful target: every rule of Lean's theory has a counterpart |
+| CC | `--safe --cubical-compatible` | as K | the primary deliverable; K must be justified by `isSet` proofs |
+| CU | `--safe --cubical` | `Classical.choice` only, in forms consistent with univalence | quotients, `funext` and `propext` become theorems; constructive layer first |
 
-3. **Author your plan.**  Replace the worked example in
-   `docs/GITHUB_PROJECT.md` with your milestones, labels, and issues —
-   keep the structure (the example demonstrates every construct exactly
-   once).  Set the header line to your repository:
+### Layers
 
-   ```markdown
-   **Repository**:  `you/your-project`
-   ```
+Lean's `#print axioms` sorts declarations into tiers: T0 (no axioms),
+T1 (`propext` or `Quot.sound`, both validated by univalent type
+theory), T2 (`Classical.choice`), T3 (`Lean.ofReduceBool`, `sorryAx`,
+`unsafe`, `partial`).  The emitted library has a **constructive**
+layer (T0 and T1) and a **classical** layer (T2) importing it; T3 is
+refused.  Both layers are `--safe`: the classical principles are
+record-typed module parameters, as in TypeTopology, and a one-line user
+module may postulate them for anyone who prefers that.  A theorem whose
+statement is constructive but whose Mathlib proof is classical sits in
+the classical layer until a hand-written constructive proof promotes
+it.
 
-4. **Validate and preview** (lint needs no network; the dry run makes
-   read-only API calls):
+## Prior work this builds on
 
-   ```sh
-   make lint
-   make populate-dry
-   ```
++  **lyphyser/lean2agda** (2023 to 2024, Apache-2.0).  A
+   proof-of-concept Agda exporter for Lean 4, written in Lean on top of
+   lean4export.  It specializes constants by universe-level zero-ness,
+   deduplicates shared subterms, emits records and pattern-matching
+   recursors, and postulates quotients, `Acc.rec` and
+   `WellFounded.fixFEq`; its output needs `--type-in-type`, is a single
+   file, and ran Agda out of memory on anything larger than
+   `Nat.gcd_self`.  Our M2 ends roughly where it stopped.
++  **Lean4Less and lean2dk** (Deducteam; Vaishnav's 2026 thesis
+   *Translating Proofs from Lean to Dedukti*).  Lean4Less eliminates
+   definitional proof irrelevance and K-like reduction by inserting
+   casts justified by a proof-irrelevance axiom; on Lean's `Std` about
+   6 percent of constants used those rules and the output grew 15.5
+   percent, and it translated `Mathlib.Data.Real.Basic`, but it does
+   not yet scale to higher Mathlib modules.  lean2dk then exports to
+   Dedukti.  Lean4Less is the normalizer of our pipeline.
++  **rocq-lean-import** (Gaëtan Gilbert).  Imports Lean export files
+   into Rocq: `Prop` as `SProp`, duplication of constants per
+   `Prop`-instantiation pattern, algebraic universes for `imax`,
+   quotients as private inductives, and definitional UIP switched on.
+   Its experiments (full stdlib not checkable because of pathological
+   conversion problems; Lean 3 mathlib: 66,400 entries, 11,867 skipped,
+   73 minutes, 10 GB) calibrate our expectations.
++  **Predicativize** (Felicissimo and Blanqui, CSL 2023 and LMCS
+   2024).  Universe-polymorphic elaboration with level unification,
+   used to translate Matita's arithmetic library, through Dedukti, into
+   Agda that checks under `--safe` (including the first Agda proofs of
+   Fermat's little theorem and Bertrand's postulate), in about 32
+   minutes and with hand-added level constraints.  Our universe stage
+   follows its algorithm.
++  **lean4export and the Lean Kernel Arena** (Lean FRO).  The NDJSON
+   export format and a public benchmark of 25 independent checkers with
+   199 tests, including invalid exports a checker must reject.  M7
+   enters translation-plus-Agda as a checker.
++  **hol2dk** (Blanqui).  HOL Light's Multivariate library, more than
+   20,000 theorems, translated through Dedukti into Rocq in 2024 and
+   2025: the precedent that library-scale translation between proof
+   assistants is feasible.
++  **Foundations**.  Carneiro's thesis on Lean's type theory; Abel and
+   Coquand's proof that normalization fails with impredicative `Prop`
+   and proof-irrelevant propositional equality; Lean4Lean, the Lean
+   kernel in Lean, on which Lean4Less is built.
++  **Mathlib's own measurements**.  In February 2026 Mathlib reduced
+   its dependence on `Classical.choice` from 446,045 to 430,049 of
+   775,824 declarations (57.5 to 55.4 percent); an independent 2026
+   study counts 171,522 classical against 299,738 constructive among
+   471,260 declarations.  The counts differ in what they count; the
+   project's atlas states its denominator.
 
-5. **Push the structure to GitHub** (prompts before creating):
+## Where the results live
 
-   ```sh
-   make populate
-   ```
++  **This repository**: the translator (a Lean 4 package under
+   `translator/`), the hand-translated corpus that is its test oracle
+   (`corpus/`), the atlas tooling (`atlas/`, `scripts/python/`), and the
+   documentation, including the design records under `docs/adr/`.
++  **Generated libraries**: one repository per translated Lean
+   library, created when the first regenerable subtree exists (end of
+   M5), with provenance (Lean version, Mathlib revision, translator
+   version, profile), its own CI, and Mathlib's Apache-2.0 license and
+   notices.  `docs/libraries.md` will list them.
 
-   Each created issue's number is written back into the file
-   immediately, as a `(#N)` suffix on its heading — commit the result.
-   By default populate strips hard line breaks from prose before
-   pushing, so GitHub soft-wraps your issue bodies and milestone
-   descriptions (`--keep-line-breaks` preserves them verbatim; the run
-   output states which mode applied).
+Until the first generated library exists, the corpus is the only Agda
+output under version control: twelve Mathlib declarations translated by
+hand, each with the Lean statement, its exported kernel term, the
+idiomatic Agda version, and notes on what the translation needed.  The
+hand translations come first on purpose; the translator is built to
+reproduce them.
 
-   Then run a plain `make update` once and commit it as a
-   normalization: update's canonical rendering differs cosmetically
-   from authored input (it drops the `**Milestone:**` lines, reorders
-   labels to GitHub's order, and trims trailing `---` separators), so
-   the first `make update-check` on a freshly populated plan is
-   ALWAYS stale — that is normalization pending, not a bug.  After the
-   normalization commit, `update-check` is your drift gate.
+## Development setup
 
-6. **From then on**: work the issues on GitHub as usual, and run
+The toolchain is a Nix flake; one `nix develop` provides it, and
+`.#agda` and `.#lean` are the single-tool shells.
 
-   ```sh
-   make update
-   ```
-
-   whenever you want the file to reflect reality (state flips like
-   `(#7)` → `(#7, closed)`, assignees, edited bodies).  Commit the
-   result.  `make update-check` tells you whether that is needed: it
-   succeeds when the file is current and fails otherwise, with output
-   saying whether the file drifted or the check itself could not run.
-   (When an exit code must distinguish those two — as the shipped
-   freshness workflow does — call the script directly:
-   `python3 scripts/gh_project_update.py docs/GITHUB_PROJECT.md --check`
-   follows diff(1): 0 current, 1 drifted, 2 failed.  `make` collapses
-   any recipe failure to its own exit 2.)
-
-`make help` lists every target.
-
-## Command reference (short form)
-
-Full man-page-style documentation — every option, exit codes, the
-`--sync-bodies` classification rules, and how to unwrap arbitrary
-markdown files — lives in [docs/HowToRun.md](docs/HowToRun.md).
-The flags at a glance:
-
-**populate** (file → GitHub) — `--repo`, `--dry-run`,
-`--milestones-only` / `--labels-only` / `--issues-only` /
-`--sync-bodies` (mutually exclusive stages; sync pushes existing
-issues' bodies and milestone descriptions from the file, refusing on
-content divergence), `--force` (with sync: last writer wins),
-`--skip-labels`, `--keep-line-breaks` (default strips hard line breaks
-from prose so GitHub soft-wraps it), `--start-from ID`,
-`--delay SECONDS`, `--yes`, `--env-prefix` / `--no-env-prefix`.
-
-**update** (GitHub → file) — `--repo`, `--check` (diff(1) exit codes:
-0 current / 1 stale / 2 failed), `--no-env-prefix`.
-
-**lint** (no network) — no options; exit 0 clean / 1 errors /
-2 unreadable.
-
-## Staying fresh automatically (opt-in)
-
-The repository ships a scheduled workflow
-(`.github/workflows/project-plan-update.yml`, Mondays + manual
-dispatch) that by default only **reports** drift in the run's step
-summary — it never commits.  To let it act, set the repository variable
-`PROJECT_PLAN_AUTO_UPDATE` (Settings → Secrets and variables → Actions
-→ Variables) to:
-
-- `pr` — run `make update` and open (or refresh) a pull request.  Also
-  enable "Allow GitHub Actions to create and approve pull requests" in
-  Settings → Actions.
-- `commit` — run `make update` and push directly to the branch.
-
-Delete the workflow file if you want no scheduled runs at all.
-
-## The engine: getting and upgrading it
-
-Your project owns its **data** — `docs/GITHUB_PROJECT.md`, a thin
-Makefile, the workflows.  The **engine** (`gh_project_populate.py`,
-`gh_project_update.py`, `gh_project_lint.py` and their library) is
-never copied into consumer projects: it has exactly one home, this
-repository, and the Makefile finds it through whichever channel is
-available:
-
-1. **Nix flake input** (primary).  `make init` installs a `flake.nix`
-   taking this repository as an input; your `flake.lock` pins the
-   engine version.  `nix develop` puts the `gh-project-*` CLIs on PATH
-   (the Makefile finds them there), and the re-exported apps allow
-   direct runs:
-
-   ```sh
-   nix run .#update -- docs/GITHUB_PROJECT.md
-   ```
-
-   Upgrade deliberately:
-
-   ```sh
-   nix flake update github-project
-   ```
-
-   (If your project already has a flake, merge the input and outputs
-   from `templates/consumer/flake.nix` into it instead.)
-
-2. **Checkout** (no Nix).  Clone this repository anywhere and point
-   `GHPROJECT_DIR` at it — the engine is stdlib-only Python 3.11+, so a
-   plain `python3` runs it:
-
-   ```sh
-   make update GHPROJECT_DIR=~/git/github-project
-   ```
-
-   Upgrading is `git pull` in that checkout.
-
-3. **Installed CLI** (planned).  A `pyproject.toml` with console entry
-   points for `uv tool install` / pipx from a tagged release; the
-   Makefile already resolves `gh-project-*` from PATH, so this channel
-   needs no consumer-side changes when it lands.
-
-In CI, consumer projects need no engine either: the shipped workflows
-fetch an engine checkout automatically when the tree has no local copy —
-**pinned**, never floating `main`.  The pin resolves in order: the
-`github-project` revision in your `flake.lock` (so Nix consumers have
-exactly one pin to manage), the `GHPROJECT_ENGINE_REF` repository
-variable, then the default release tag baked into the workflow.
-
-The engine's own `make test` (115 offline tests) and `nix flake check`
-run in this repository — `scripts/VERSION` is the engine version your
-lock or checkout carries.
-
-## The Nix path
-
-A machine with [Nix](https://nixos.org/) (flakes enabled) needs nothing
-else installed — not even Python.  In this repository (or a template
-copy): `nix develop` provides python3, gh, and make.  In a detached
-consumer project, `nix develop` additionally carries the engine CLIs,
-pinned by your lock.
-
-The flake is the primary way the engine is *distributed*, but never a
-requirement for *using* it: the setup-python CI jobs and the checkout
-channel work without Nix.
-
-## Repository layout
-
-```
-docs/GITHUB_PROJECT.md    the roadmap (a worked example until you replace it)
-scripts/                  THE ENGINE — lives here and only here; `make init`
-                          removes it from projects created off the template
-  gh_project_populate.py    file → GitHub
-  gh_project_update.py      GitHub → file
-  gh_project_lint.py        structural validation, no network
-  _gh_project_lib.py        shared parsing, planning, gh client
-  _utils/                   functional-Python core (Result, file_ops, ...)
-  tests/                    offline test suite (recorded fake `gh`)
-  ci/                       workflow shell — survives `make init`
-  VERSION                   the engine version (also the flake package version)
-templates/consumer/       the flake.nix `make init` installs in consumers
-flake.nix                 the engine package + apps (+ dev shell)
-.claude/skills/           committed Claude Code skills for the two workflows
-.github/workflows/        CI + the opt-in freshness workflow (both self-adapt
-                          to trees with no engine copy)
+```sh
+nix develop         # Lean (from lean-toolchain), Agda 2.8.0, agda-stdlib 2.3,
+                    # cubical 0.9, Python 3, gh, make
+make doctor         # print tool versions; check that the Agda libraries resolve
+make corpus-check   # type-check every corpus entry under its declared flags
+make atlas          # axiom profile of the pinned Mathlib revision
+make lint           # structural check of docs/GITHUB_PROJECT.md
 ```
 
-## Design notes
+Mathlib's prebuilt `.olean` files come from `lake exe cache get` inside
+`translator/`; nothing in the project rebuilds Mathlib from source.
+The pins (Lean, Mathlib, Lean4Less, Agda, agda-stdlib, cubical) and the
+procedure for moving them are documented in `docs/pinning.md` once
+M1-3 lands.
 
-- **Idempotent by snapshot**: populate fetches live state once per run
-  and plans against it — rerunning after any interruption is always
-  safe, and `--dry-run` prints exactly the plan a real run executes.
-- **Crash-safe write-back**: issue numbers land in the file after each
-  creation, not at the end.
-- **Label reconciliation, not imposition**: existing labels are never
-  overwritten, and near-collisions (`era: conway` vs `era:conway`) are
-  reported instead of silently creating a parallel scheme.
-- **Staged and rate-limit-aware**: `--labels-only`, `--milestones-only`,
-  `--issues-only`, `--start-from M2-3`, `--delay`.
-- **The engine is referenced, never copied**: consumer projects hold
-  data (the plan file, a thin Makefile) and pin the engine by flake
-  lock or checkout — a copied engine decays the moment the real one
-  improves, which is the failure mode this repository exists to end.
-- Provenance: this template distills the gh-project tooling that grew up
-  in [agda-algebras](https://github.com/ualib/agda-algebras),
-  [williamdemeo.github.io](https://github.com/williamdemeo/williamdemeo.github.io),
-  and agda-native-air, and is now its single home — fixes land here and
-  reach consumers through their engine pin.
+## Roadmap
+
+Seven milestones; the full plan with issues and dependency graphs is
+[`docs/GITHUB_PROJECT.md`](docs/GITHUB_PROJECT.md).
+
+1. **Foundations, corpus, and gap catalog**: repository setup, Nix,
+   pins, related-work survey, the gap catalog, twelve hand
+   translations, the axiom atlas over Mathlib, ADR 0001.
+2. **Translator core on the scaffolding profile**: names, expressions,
+   inductive types, recursors, definitions, quotients, multi-module
+   emission, on profile U, proven on the corpus and `Init` fragments.
+3. **Faithful translation**: Lean4Less, the `Prop` encoding decision,
+   universe-level elaboration, quotients, literals, subsingleton
+   elimination; profile K on `Init` and `Std`, and a first measurement
+   of profile CC.
+4. **Constructive and classical layering**: the atlas as the shape of
+   the output, axioms as module parameters, classical `Decidable`
+   instances, the promotion overlay, a first layered Mathlib fragment.
+5. **Scaling and the first generated library**: Agda performance, term
+   size control, incremental regeneration, readable statements, the
+   library repository template, a Mathlib upgrade rehearsal, bridges to
+   agda-stdlib and agda-algebras.
+6. **Cubical-compatible and cubical targets**: profile CC on the
+   generated library, profile CU with cubical quotients, choice under
+   univalence, interop with agda/cubical and agda-unimath.
+7. **Verification and the foundational study**: a Lean Kernel Arena
+   entry, trust analysis, a soundness-bug suite, the report on the
+   practical distance between the two foundations, outreach.
+
+## Conventions
+
+Python follows the functional house style: total functions, `Result`
+values instead of exceptions, frozen dataclasses, a `File:` header in
+every file, a test for every pure function.  Lean code keeps a pure
+translation core with IO at the edges.  Agda output targets Agda 2.8.0
+with agda-stdlib 2.3 and the cubical library 0.9.  Design decisions are
+recorded as ADRs under `docs/adr/`, each with a companion note beside
+the component it describes.  Repository Markdown wraps at about 80
+columns; GitHub issue and PR bodies do not wrap.
 
 ## License
 
-[MIT](LICENSE).
+Apache License, Version 2.0 (`LICENSE`, `NOTICE`), matching Lean,
+Mathlib, lean4export and the predecessors whose code might be reused.
+Every generated library is a derived work of Mathlib and carries
+Apache-2.0 with Mathlib's notices and its own provenance record; the
+rules are in [`docs/licensing.md`](docs/licensing.md).
+
+## References
+
++  lyphyser/lean2agda: <https://github.com/lyphyser/lean2agda>
++  Lean4Less: <https://github.com/Deducteam/Lean4Less>; paper:
+   <https://inria.hal.science/hal-05310102>
++  lean2dk: <https://github.com/Deducteam/lean2dk>
++  R. Vaishnav, *Translating Proofs from Lean to Dedukti*, PhD thesis,
+   Université Paris-Saclay, 2026: <https://rish987.github.io/files/thesis.pdf>
++  rocq-lean-import: <https://github.com/rocq-community/rocq-lean-import>
++  Predicativize: <https://github.com/Deducteam/predicativize>;
+   T. Felicissimo and F. Blanqui, *Sharing proofs with predicative
+   theories through universe-polymorphic elaboration*, LMCS 20(3),
+   2024: <https://arxiv.org/abs/2308.15465>
++  lean4export: <https://github.com/leanprover/lean4export>; Lean
+   Kernel Arena: <https://arena.lean-lang.org/>
++  hol2dk: <https://github.com/Deducteam/hol2dk>
++  M. Carneiro, *The Type Theory of Lean*, MSc thesis, 2019; M. Carneiro,
+   *Lean4Lean: Verifying a Typechecker for Lean, in Lean*, TYPES 2025:
+   <https://arxiv.org/abs/2403.14064>
++  A. Abel and T. Coquand, *Failure of Normalization in Impredicative
+   Type Theory with Proof-Irrelevant Propositional Equality*, LMCS 16(2),
+   2020: <https://arxiv.org/abs/1911.08174>
++  Mathlib PR 35685, *reduce the use of Classical.choice*:
+   <https://github.com/leanprover-community/mathlib4/pull/35685>
++  R. Mendoza-Smith, *Geometric Measurements of the Axiom of Choice in
+   Neural Proof Embeddings*, 2026: <https://arxiv.org/abs/2606.28572>
++  Mathlib statistics: <https://leanprover-community.github.io/mathlib_stats.html>
++  Agda documentation: `Prop`
+  (<https://agda.readthedocs.io/en/latest/language/prop.html>) and
+  command-line options
+  (<https://agda.readthedocs.io/en/latest/tools/command-line-options.html>)

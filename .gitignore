@@ -1,3 +1,10 @@
+# Agda: interfaces and the project-local AGDA_DIR the Nix shellHook writes
+*.agdai
+.agda/
+
+# Lean / Lake build outputs and Mathlib's downloaded cache
+.lake/
+
 # Python
 __pycache__/
 *.pyc
@@ -5,6 +12,7 @@ __pycache__/
 
 # Nix
 result
+result-*
 .direnv/
 
 # Editors
