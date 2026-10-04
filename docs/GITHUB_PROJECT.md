@@ -546,7 +546,7 @@ Every tool the project needs must come from one `nix develop`, as in agda-native
 
 ## Acceptance criteria
 
-- [x] On a machine with only Nix, `nix develop --command make doctor` succeeds and prints Agda 2.8.0 and the Lean version named in `lean-toolchain`.
+- [ ] On a machine with only Nix, `nix develop --command make doctor` succeeds and prints Agda 2.8.0 and the Lean version named in `lean-toolchain`.  (Verified 2026-10-04 on a development machine with every tool resolved from the Nix store; the CI job below proves it on a clean runner.)
 - [x] The shell's `agda` resolves both libraries for a file outside any `.agda-lib` project (the two probes `make doctor` runs).
 - [ ] CI enters the same shell (the Cachix cache keeps the job under fifteen minutes).
 
