@@ -1,16 +1,22 @@
 name: ci
 
-# CI for both lives of this tree.  In the engine repository (and in
-# template copies that have not yet run `make init`) the local engine
-# is present: its test suite runs and the plan is linted with it.  In a
-# detached consumer project the engine steps skip themselves (hashFiles
-# on an absent file is empty), an engine checkout is fetched, and the
-# plan lint still runs — so consumers keep a structural gate on
-# docs/GITHUB_PROJECT.md with no engine files in their tree.
+# Two kinds of job.  The `checks` and `static` jobs come from the
+# github-project template and need no Nix (setup-python is enough):
+# `checks` is the structural gate on docs/GITHUB_PROJECT.md, and
+# `static` lints the scripts under scripts/ (shellcheck, and ruff once
+# there is Python).  In the engine repository (and in template copies
+# that have not yet run `make init`) the local engine is present:
+# `checks` runs its test suite and lints the plan with it.  In a
+# detached consumer project such as this one the engine steps skip
+# themselves (hashFiles on an absent file is empty), a pinned engine
+# checkout is fetched, and the plan lint still runs, so the gate needs
+# no engine files in the tree.
 #
-# Deliberately not Nix-based: the flake is the primary *distribution*
-# channel, but CI here must not force Nix on consumers (setup-python is
-# enough).  Engine-repo flake checks run in the separate nix job below.
+# The `nix` job is the project's own lane: it enters the flake's default
+# dev shell, the one `nix develop` gives a developer, and runs the
+# project's make targets there, so CI checks with exactly the toolchain
+# flake.lock pins.  Its comment below says what it runs and how it uses
+# the Cachix cache.
 
 on:
   pull_request:
@@ -81,45 +87,58 @@ jobs:
           pip install ruff
           ruff check --select E9,F scripts/
 
-  # Engine-repo only: build the package and run the suite in the Nix
-  # sandbox.  Skipped automatically in detached consumers (no local
-  # engine → nothing to build here; their flake pins the engine input).
+  # The Nix lane: the flake's default dev shell on a fresh runner, which
+  # is issue #2's acceptance test ("on a machine with only Nix").  The
+  # runner image has its own python3, gh, jq, git and make, and a plain
+  # `nix develop` appends the caller's PATH after the shell's, so a tool
+  # the shell lost would still resolve.  --ignore-environment drops the
+  # runner's environment, PATH included, so every tool the job runs must
+  # come from the shell; HOME is kept, as any real machine sets it.  A
+  # later target that reads another variable passes it with --keep NAME.
+  #
+  # It runs `make doctor`, whose two Agda probes are the project's first
+  # Agda check.  Later checks (`make check`, `make test`, `make
+  # corpus-check`) join the same `nix develop --command` rather than a
+  # second job, so each run evaluates the flake once.  `make doctor`
+  # runs the engine's lint CLI with --help, which reads no token, so
+  # NO_ENV_PREFIX is not set.
+  #
+  # Cachix.  Pulling from the public `formalverification` cache needs no
+  # token.  The write-capable CACHIX_AUTH_TOKEN reaches cachix-action
+  # only when the checked-out ref is `main` (the trust boundary
+  # agda-native-air adopted in its issue 187): a token the action
+  # installs is readable by every later step, and a pull request's run
+  # executes make targets the pull request controls.  Every other run
+  # pulls with skipPush set and pushes nothing.  The secret goes only
+  # through the action's authToken input, never through an `env:` block,
+  # which would hand it to every step of every run.  What a `main` run
+  # pushes (the Lean toolchain, the Agda environment, the engine, the
+  # shell's environment) becomes publicly downloadable; none of it is
+  # secret.
+  #
+  # Expect `warning: ignoring untrusted flake configuration setting
+  # 'extra-substituters'`: a non-interactive `nix develop` declines the
+  # flake's nixConfig, but cachix-action has already run `cachix use`, so
+  # the cache is wired anyway.  Judge the cache by the log's
+  # "copying path ... from 'https://formalverification.cachix.org'" lines.
   nix:
+    name: Nix lane (default dev shell)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Detect a local engine flake
-        id: engine
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: formalverification
+          authToken: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN || '' }}
+          skipPush: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: make doctor in the default dev shell
         run: |
-          if [ -f scripts/VERSION ] && [ -f flake.nix ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: cachix/install-nix-action@v27
-        if: steps.engine.outputs.present == 'true'
-
-      - name: nix flake check (builds the engine, runs the suite sandboxed)
-        if: steps.engine.outputs.present == 'true'
-        run: nix flake check
-
-      # The primary acceptance path end to end: assemble a detached
-      # consumer (make init), point its flake input at the engine under
-      # test, and run the engine through the consumer's own dev shell
-      # and re-exported apps — so breakage in templates/consumer/ or in
-      # the detach lifecycle fails CI, not the first real consumer.
-      - name: Consumer smoke test (detach, then run via the consumer flake)
-        if: steps.engine.outputs.present == 'true'
-        run: |
-          consumer=$(mktemp -d)/project
-          cp -r . "$consumer"
-          cd "$consumer"
-          rm -rf .git result
-          make init INIT_YES=1
-          git init -q && git add -A
-          nix flake lock --override-input github-project "path:$GITHUB_WORKSPACE"
-          test "$(nix develop --command make --no-print-directory engine-mode | tail -1)" = path
-          nix develop --command make lint
-          nix run .#lint -- docs/GITHUB_PROJECT.md
+          set -euxo pipefail
+          nix develop --ignore-environment --keep HOME --command make doctor
