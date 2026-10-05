@@ -128,6 +128,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # The default shell's inputs come to about 8.3 GiB in the store
+      # (Lean 2.9 GiB; GHC, which the Agda wrapper carries, 2.6 GiB; LLVM
+      # and clang 1.4 GiB), and a cold run builds lean4-nix's toolchain
+      # derivation, which holds the unpacked release twice while it moves
+      # it into the store.  The lane's first run filled the runner's disk
+      # doing that.  None of the runner image's largest preinstalled
+      # toolchains is used here, so they go before Nix does anything.
+      - name: Free disk space for the Nix store
+        run: |
+          set -euxo pipefail
+          df -h / /mnt || true
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet \
+            /usr/local/.ghcup /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift
+          df -h / /mnt || true
+
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
@@ -142,3 +158,7 @@ jobs:
         run: |
           set -euxo pipefail
           nix develop --ignore-environment --keep HOME --command make doctor
+
+      - name: Disk usage after entering the shell
+        if: always()
+        run: df -h / /mnt || true
