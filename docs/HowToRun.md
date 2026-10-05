@@ -4,18 +4,18 @@
 
 Man-page-style reference for the three tools that operate on
 `docs/GITHUB_PROJECT.md`.  The quickstart lives in the
-[README](../README.md); this page is the complete option-by-option
-account.
+[engine's README](https://github.com/williamdemeo/github-project#quickstart);
+this page is the complete option-by-option account.
 
 Every tool can be invoked through any engine
-[channel](../README.md#the-engine-getting-and-upgrading-it); the forms
+[channel](https://github.com/williamdemeo/github-project#the-engine-getting-and-upgrading-it); the forms
 are interchangeable:
 
 ```sh
 make populate                                   # Makefile target (primary UX)
 gh-project-populate docs/GITHUB_PROJECT.md      # installed CLI (Nix dev shell)
 nix run .#populate -- docs/GITHUB_PROJECT.md    # flake app
-python3 scripts/gh_project_populate.py docs/GITHUB_PROJECT.md   # plain python
+python3 "$GHPROJECT_DIR"/scripts/gh_project_populate.py docs/GITHUB_PROJECT.md   # engine checkout
 ```
 
 The Makefile targets pass `PLAN` (default `docs/GITHUB_PROJECT.md`),

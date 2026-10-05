@@ -1,109 +1,192 @@
 # File: flake.nix
 #
-# The engine's single home (issue #2).  Outputs:
+# lean2agda development environment.  One `nix develop` provides everything
+# the project needs; nothing is taken from the host system.
 #
-#   packages.default        the engine: gh-project-{populate,update,lint}
-#                           CLIs wrapping the stdlib-only scripts, with
-#                           python3 and gh on their runtime PATH
-#   apps.{populate,update,update-check,lint}
-#                           `nix run .#update -- docs/GITHUB_PROJECT.md`
-#   checks.engine-tests     the offline unit/integration suite
-#   devShells.default       hacking on this repository
+#   Lean      the toolchain named in ./lean-toolchain, fetched as the official
+#             prebuilt release by lean4-nix (readToolchainFile; no source
+#             build).  lean4-nix carries one manifest per stable Lean release
+#             and lags Lean by about one release, so the pin here is the newest
+#             version it knows; docs/pinning.md (issue M1-3) aligns it with
+#             the pinned Mathlib revision.
+#   Agda      Agda with agda-stdlib and the cubical library from nixpkgs
+#             (2.8.0, 2.3 and 0.9 at the time of writing), registered
+#             project-locally in $ROOT/.agda (gitignored) by the shellHook,
+#             which points AGDA_DIR there, so the user's ~/.config/agda cannot
+#             contribute, and installs an `agda` wrapper that passes the
+#             project's --library-file to the shell's own Agda.  Optional
+#             external libraries are registered when AGDA_UNIMATH_ROOT,
+#             AGDA_TYPETOPOLOGY_ROOT or AGDA_ALGEBRAS_ROOT points at a checkout
+#             containing an .agda-lib file.
+#   Python    python3 from nixpkgs, standard library only (house style).
+#   Engine    the github-project roadmap engine (gh-project-populate, -update,
+#             -lint) as a pinned flake input; the Makefile finds it on PATH.
 #
-# Consumers add this repository as a flake input, put the package in
-# their dev shell (or re-export the apps), and pin it in their
-# flake.lock — upgrades happen deliberately via `nix flake update
-# github-project`.  Nothing here is required to USE the engine: it is
-# stdlib-only Python, so a plain checkout plus python3 works too (see
-# the README's consumption channels).
+# Shells:  nix develop            everything (default)
+#          nix develop .#agda     Agda and its libraries, without Lean
+#          nix develop .#lean     the Lean toolchain, without Agda
+#
+# Every shell carries make, git and Python: the Agda shellHook finds $ROOT
+# with git, the planned corpus and output checkers (M1-6, M2-8) are Python
+# scripts run through make, and Lake fetches its dependencies with git.
+# Only the default shell carries the roadmap tools (gh, jq, the engine), so
+# a broken or missing engine package cannot break the Agda and Lean shells.
+#
+# Pinning: flake.lock pins nixpkgs (Agda, Python, tools), lean4-nix (the Lean
+# fetcher) and github-project (the engine).  Upgrade one input deliberately:
+#   nix flake update nixpkgs        (or lean4-nix, or github-project)
 {
-  description = "github-project engine: populate, update, and lint a GitHub roadmap from one plan file";
+  description = "lean2agda: a Lean 4 to Agda translator and the libraries it produces";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  # The organization's binary cache (shared with agda-native-air): prebuilt
+  # Agda toolchains and library interfaces, so a fresh machine pulls instead
+  # of building.  Nix asks once whether to trust the substituter.
+  nixConfig = {
+    extra-substituters = [ "https://formalverification.cachix.org" ];
+    extra-trusted-public-keys = [ "formalverification.cachix.org-1:KG/AJuuli2F4/bA56rUYC9V8ZE/Zw6iZjxJEf40cQOo=" ];
+  };
 
-  outputs = { self, nixpkgs }:
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    lean4-nix.url = "github:lenianiva/lean4-nix";
+    github-project.url = "github:williamdemeo/github-project";
+  };
+
+  outputs = { self, nixpkgs, lean4-nix, github-project }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems
-        (system: f system nixpkgs.legacyPackages.${system});
-      version = nixpkgs.lib.trim (builtins.readFile ./scripts/VERSION);
-    in
-    {
-      packages = forAllSystems (system: pkgs: rec {
-        default = gh-project-engine;
-        gh-project-engine = pkgs.stdenv.mkDerivation {
-          pname = "gh-project-engine";
-          inherit version;
-          src = ./scripts;
-          # python3 must be on the check-phase PATH: the recorded fake
-          # `gh` the integration tests exec is itself a python3 script.
-          nativeBuildInputs = [ pkgs.makeWrapper pkgs.python3 ];
-          dontBuild = true;
+      # x86_64-darwin is absent on purpose: the pinned nixpkgs refuses to
+      # evaluate for it ("Nixpkgs 26.11 has dropped support for
+      # x86_64-darwin").
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
 
-          # The suite is offline by design (recorded fake `gh`), so it
-          # can run inside the sandbox; `nix flake check` gets teeth.
-          # patchShebangs first: the fake gh's `#!/usr/bin/env python3`
-          # has no /usr/bin/env in the sandbox, and the resulting ENOENT
-          # masquerades as "gh: No such file or directory".
-          doCheck = true;
-          checkPhase = ''
-            patchShebangs tests/fake_gh
-            ${pkgs.python3.interpreter} -m unittest discover -s tests
-          '';
-
-          installPhase = ''
-            lib=$out/lib/gh-project-engine
-            mkdir -p $lib $out/bin
-            cp gh_project_populate.py gh_project_update.py \
-               gh_project_lint.py _gh_project_lib.py VERSION $lib/
-            cp -r _utils $lib/_utils
-            for tool in populate update lint; do
-              makeWrapper ${pkgs.python3.interpreter} $out/bin/gh-project-$tool \
-                --add-flags "$lib/gh_project_$tool.py" \
-                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.gh ]}
-            done
-          '';
-
-          meta = {
-            description = "Populate, update, and lint a GitHub roadmap from one plan file";
-            homepage = "https://github.com/williamdemeo/github-project";
-            license = pkgs.lib.licenses.mit;
-            mainProgram = "gh-project-update";
+      # One package set per system, with the Lean overlay applied: after it,
+      # pkgs.lean is the toolchain named in ./lean-toolchain.
+      forAllSystems = f: nixpkgs.lib.genAttrs systems (system:
+        f {
+          inherit system;
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ (lean4-nix.readToolchainFile ./lean-toolchain) ];
           };
-        };
-      });
-
-      apps = forAllSystems (system: pkgs:
-        let
-          engine = self.packages.${system}.gh-project-engine;
-          app = exe: {
-            type = "app";
-            program = "${engine}/bin/${exe}";
-          };
-          updateCheckBin = pkgs.writeShellApplication {
-            name = "gh-project-update-check";
-            text = ''exec ${engine}/bin/gh-project-update --check "$@"'';
-          };
-        in
-        rec {
-          populate = app "gh-project-populate";
-          update = app "gh-project-update";
-          lint = app "gh-project-lint";
-          update-check = {
-            type = "app";
-            program = "${updateCheckBin}/bin/gh-project-update-check";
-          };
-          default = update;
         });
 
-      checks = forAllSystems (system: pkgs: {
-        engine-tests = self.packages.${system}.gh-project-engine;
+      # Agda and its libraries must come from the same package set:
+      # agdaPackages.* are built against pkgs.agda.
+      agdaLibs = p: [ p.standard-library p.cubical ];
+      mkAgdaEnv = pkgs: pkgs.agda.withPackages agdaLibs;
+
+      # Project-local AGDA_DIR plus an `agda` wrapper.  AGDA_DIR is Agda's
+      # configuration directory, so pointing it into the repository is what
+      # keeps the user's ~/.config/agda out of the picture: both the
+      # `libraries` file (every registered .agda-lib) and the `defaults` file
+      # (the library names a file outside any .agda-lib project sees) are
+      # written there on every shell entry.  The wrapper only passes
+      # --library-file again on the command line (Agda's last flag wins) to
+      # bypass the Nix wrapper's baked-in file, so that libraries registered
+      # through the *_ROOT variables resolve too.  It deliberately does not
+      # pass --library flags: those drop the current directory from the
+      # include path, and a scratch file's module name then matches nothing.
+      # The wrapper execs the shell's own Agda by its store path; it never
+      # asks `command -v agda`.  That lookup names the wrapper itself when
+      # the hook runs again in an entered shell (eval "$shellHook"), and
+      # only the bare word `agda` when an agda function is defined (an
+      # interactive `nix develop` sources ~/.bashrc before the hook).
+      # Either way the wrapper would exec itself, and since every shell of
+      # the checkout shares the file, `agda` would hang in all of them.
+      # The heredoc lines sit at column 0 on purpose: Nix strips the common
+      # indentation of this string, and the terminator must reach the shell
+      # at column 0.
+      mkAgdaShellSetup = pkgs: agdaEnv: ''
+        ROOT="$PWD"
+        if command -v git >/dev/null 2>&1 && git rev-parse --show-toplevel >/dev/null 2>&1; then
+          ROOT="$(git rev-parse --show-toplevel)"
+        fi
+        export AGDA_DIR="$ROOT/.agda"
+        mkdir -p "$AGDA_DIR/bin"
+        {
+          for f in ${pkgs.agdaPackages.standard-library}/*.agda-lib ${pkgs.agdaPackages.cubical}/*.agda-lib; do
+            echo "$f"
+          done
+          for var in AGDA_UNIMATH_ROOT AGDA_TYPETOPOLOGY_ROOT AGDA_ALGEBRAS_ROOT; do
+            root="''${!var:-}"
+            if [ -n "$root" ]; then
+              lib="$(ls "$root"/*.agda-lib 2>/dev/null | head -n 1)"
+              if [ -n "$lib" ]; then
+                echo "$lib"
+              else
+                echo "warning: $var=$root has no .agda-lib file; not registered" >&2
+              fi
+            fi
+          done
+        } > "$AGDA_DIR/libraries"
+        : > "$AGDA_DIR/defaults"
+        while IFS= read -r libfile; do
+          name="$(sed -n 's/^name:[[:space:]]*//p' "$libfile" | head -n 1)"
+          if [ -n "$name" ]; then
+            echo "$name" >> "$AGDA_DIR/defaults"
+          fi
+        done < "$AGDA_DIR/libraries"
+        cat > "$AGDA_DIR/bin/agda" <<EOF
+#!/usr/bin/env bash
+exec "${agdaEnv}/bin/agda" --library-file "$AGDA_DIR/libraries" "\$@"
+EOF
+        chmod +x "$AGDA_DIR/bin/agda"
+        export PATH="$AGDA_DIR/bin:$PATH"
+      '';
+
+      banner = pkgs: withLean: withAgda: withRoadmap: ''
+        echo ""
+        echo "lean2agda dev shell"
+        ${if withLean then ''echo "  Lean     : $(lean --version 2>/dev/null || echo unavailable)"'' else ""}
+        ${if withAgda then ''echo "  Agda     : ${pkgs.agda.version}  (standard-library ${pkgs.agdaPackages.standard-library.version}, cubical ${pkgs.agdaPackages.cubical.version})"'' else ""}
+        ${if withAgda then ''echo "  AGDA_DIR : $AGDA_DIR"'' else ""}
+        echo "  Python   : ${pkgs.python3.version}"
+        ${if withRoadmap then ''echo "  engine   : $(command -v gh-project-lint >/dev/null 2>&1 && echo on PATH || echo missing)"'' else ""}
+        echo ""
+      '';
+    in
+    {
+      devShells = forAllSystems ({ pkgs, system }:
+        let
+          agdaEnv = mkAgdaEnv pkgs;
+          engine = github-project.packages.${system}.gh-project-engine;
+          build = [ pkgs.gnumake pkgs.git pkgs.python3 ];
+          roadmap = [ pkgs.gh pkgs.jq engine ];
+        in
+        {
+          default = pkgs.mkShell {
+            name = "lean2agda-dev";
+            packages = build ++ roadmap ++ [ agdaEnv pkgs.lean.lean-all ];
+            LANG = "C.UTF-8";
+            LC_ALL = "C.UTF-8";
+            shellHook = mkAgdaShellSetup pkgs agdaEnv + banner pkgs true true true;
+          };
+
+          agda = pkgs.mkShell {
+            name = "lean2agda-agda";
+            packages = build ++ [ agdaEnv ];
+            LANG = "C.UTF-8";
+            LC_ALL = "C.UTF-8";
+            shellHook = mkAgdaShellSetup pkgs agdaEnv + banner pkgs false true false;
+          };
+
+          lean = pkgs.mkShell {
+            name = "lean2agda-lean";
+            packages = build ++ [ pkgs.lean.lean-all ];
+            shellHook = banner pkgs true false false;
+          };
+        });
+
+      # `nix run .#update -- docs/GITHUB_PROJECT.md` and friends, pinned by
+      # this project's own flake.lock.
+      apps = forAllSystems ({ system, ... }: github-project.apps.${system});
+
+      # Handy for editors started outside the shell and for CI.
+      packages = forAllSystems ({ pkgs, ... }: {
+        agda = mkAgdaEnv pkgs;
+        lean = pkgs.lean.lean-all;
       });
 
-      devShells = forAllSystems (system: pkgs: {
-        default = pkgs.mkShell {
-          packages = [ pkgs.python3 pkgs.gh pkgs.gnumake ];
-        };
-      });
+      formatter = forAllSystems ({ pkgs, ... }: pkgs.nixpkgs-fmt);
     };
 }
