@@ -16,10 +16,14 @@ section before changing anything structural.
 +  Enter the toolchain with `nix develop`; `flake.lock` pins Agda 2.8.0
    with agda-stdlib 2.3 and cubical 0.9, the Lean toolchain named in
    `lean-toolchain`, Python 3, `gh`, and the github-project engine.
-   Never assume a system Agda or Lean.  `nix develop .#agda` and
-   `nix develop .#lean` are the single-tool shells.
-+  `make doctor` prints the tool versions and fails if Agda cannot
-   resolve the standard library and the cubical library.
+   Never assume a system Agda or Lean.  `nix develop .#agda` leaves out
+   Lean and `nix develop .#lean` leaves out Agda; both keep make, git and
+   Python, but only the default shell carries `gh`, jq and the engine, so
+   run the roadmap targets (`make lint`, `make update`) there.
++  `make doctor`, run in the default shell, prints the tool versions and
+   fails, naming what is missing, unless `lean`, `lake`, `agda`,
+   `python3`, `gh`, `jq`, the github-project engine, the standard
+   library, and the cubical library all resolve.
 +  Type-check one Agda file inside the shell with `agda path/File.agda`;
    the shell's `agda` is a wrapper that passes the project-local
    `--library-file`, so a bare system `agda` would see no libraries.

@@ -89,23 +89,39 @@ lint: guard-engine ## Validate $(PLAN)'s structure (no network)
 
 # ---- project -------------------------------------------------------------
 
-doctor: ## Print tool versions; fail unless Lean, Agda, Python and both Agda libraries resolve
-	@echo "lean    : $$($(LEAN) --version 2>/dev/null || echo MISSING)"
-	@echo "lake    : $$($(LAKE) --version 2>/dev/null || echo MISSING)"
-	@echo "agda    : $$($(AGDA) --version 2>/dev/null || echo MISSING)"
-	@echo "python  : $$($(PYTHON) --version 2>/dev/null || echo MISSING)"
-	@echo "gh      : $$(gh --version 2>/dev/null | head -n 1 || echo MISSING)"
-	@echo "engine  : $(ENGINE_MODE)"
-	@command -v $(LEAN) >/dev/null 2>&1 && command -v $(AGDA) >/dev/null 2>&1 \
-	  && command -v $(PYTHON) >/dev/null 2>&1 \
-	  || { echo "error: a required tool is missing; enter the shell with: nix develop"; exit 1; }
-	@tmp=$$(mktemp -d) \
-	  && printf '{-# OPTIONS --safe --cubical-compatible #-}\nmodule Doctor where\nopen import Data.Nat using (ℕ)\n' > $$tmp/Doctor.agda \
-	  && printf '{-# OPTIONS --safe --cubical --guardedness #-}\nmodule DoctorCubical where\nopen import Cubical.Foundations.Prelude using (Type)\n' > $$tmp/DoctorCubical.agda \
-	  && (cd $$tmp && $(AGDA) Doctor.agda && $(AGDA) DoctorCubical.agda) \
-	  && rm -rf $$tmp \
-	  && echo "agda libraries: standard-library and cubical resolve" \
-	  || { echo "error: Agda could not resolve the standard library or the cubical library (see above)"; exit 1; }
+# $(call probe,NAME,COMMAND) is a shell fragment for doctor's first recipe
+# line.  It prints NAME and the first line COMMAND writes, or MISSING when
+# COMMAND fails or writes nothing; in that case it also appends NAME to
+# $$missing.  The status tested is COMMAND's own: in a pipeline such as
+# `gh --version | head -n 1 || echo MISSING` it is head's, so MISSING could
+# never appear.  The engine has no --version, so doctor runs its lint CLI's
+# --help instead: an engine that is found but cannot start fails as well.
+probe = v=$$($(2) 2>/dev/null) && [ -n "$$v" ] \
+  || { v=MISSING; missing="$$missing $(1)"; }; \
+  printf '%-8s: %s\n' '$(1)' "$$(printf '%s\n' "$$v" | head -n 1)";
+
+doctor: ## Print tool versions; fail, naming each missing tool or Agda library
+	@missing=; \
+	  $(call probe,lean,$(LEAN) --version) \
+	  $(call probe,lake,$(LAKE) --version) \
+	  $(call probe,agda,$(AGDA) --version) \
+	  $(call probe,python,$(PYTHON) --version) \
+	  $(call probe,gh,gh --version) \
+	  $(call probe,jq,jq --version) \
+	  if [ '$(ENGINE_MODE)' != missing ] && $(LINT) --help >/dev/null 2>&1; \
+	  then e='$(ENGINE_MODE)'; else e=MISSING; missing="$$missing engine"; fi; \
+	  printf '%-8s: %s\n' engine "$$e"; \
+	  [ -z "$$missing" ] \
+	  || { echo "error: missing:$$missing; enter the shell with: nix develop"; exit 1; }
+	@tmp=$$(mktemp -d) || exit 1; bad=; \
+	  printf '{-# OPTIONS --safe --cubical-compatible #-}\nmodule Doctor where\nopen import Data.Nat using (ℕ)\n' > "$$tmp/Doctor.agda"; \
+	  printf '{-# OPTIONS --safe --cubical --guardedness #-}\nmodule DoctorCubical where\nopen import Cubical.Foundations.Prelude using (Type)\n' > "$$tmp/DoctorCubical.agda"; \
+	  (cd "$$tmp" && $(AGDA) Doctor.agda) || bad="$$bad standard-library"; \
+	  (cd "$$tmp" && $(AGDA) DoctorCubical.agda) || bad="$$bad cubical"; \
+	  rm -rf "$$tmp"; \
+	  [ -z "$$bad" ] \
+	  || { echo "error: Agda could not resolve:$$bad (see above)"; exit 1; }; \
+	  echo "agda libraries: standard-library and cubical resolve"
 
 check: ## Type-check the corpus and the emitted Agda (placeholder: lands with M1-6 and M2-8)
 	@echo "check: nothing to check yet.  The corpus checker lands with issue M1-6"

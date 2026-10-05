@@ -140,8 +140,8 @@ library gets its own repository (one per source library) with
 provenance (Lean version, Mathlib revision, translator version,
 profile), its own CI, and Mathlib's Apache-2.0 license.  The first such
 repository is created at the end of M5, not before; until then the
-corpus in this repository is the only Agda output under version
-control.
+corpus in this repository is the main Agda output under version
+control, beside the translator's golden tests (M2-1, M2-9).
 
 ### Working agreements
 
@@ -537,7 +537,7 @@ Every tool the project needs must come from one `nix develop`, as in agda-native
 
 ## Tasks
 
-- [x] Write `flake.nix` with inputs `nixpkgs`, `lean4-nix`, and `github-project`; shells `default` (everything), `agda` (Agda and libraries only), `lean` (Lean toolchain only).
+- [x] Write `flake.nix` with inputs `nixpkgs`, `lean4-nix`, and `github-project`; shells `default` (everything), `agda` (Agda and its libraries, without Lean), `lean` (the Lean toolchain, without Agda); all three carry make, git and Python, and only `default` carries the roadmap tools (gh, jq, the engine).
 - [x] Register agda-stdlib and cubical in a project-local `AGDA_DIR` with a generated `libraries` file and an `agda` wrapper function, following the agda-algebras flake; allow optional external libraries (agda-unimath, TypeTopology) through `*_ROOT` environment variables as agda-native-air does.
 - [x] Reuse the `formalverification` Cachix cache for the Agda toolchain and prebuilt library interfaces (declared in `nixConfig`; pushing to the cache from CI is part of the CI task below).
 - [x] Add `make doctor`: prints the versions of `lean`, `lake`, `agda`, `python3`, confirms the libraries resolve, and fails if any is missing.

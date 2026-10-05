@@ -172,7 +172,7 @@ it.
    775,824 declarations (57.5 to 55.4 percent); an independent 2026
    study counts 171,522 classical against 299,738 constructive among
    471,260 declarations.  The counts differ in what they count; the
-   project's atlas states its denominator.
+   project's atlas will state its denominator.
 
 ## Where the results live
 
@@ -186,32 +186,35 @@ it.
    version, profile), its own CI, and Mathlib's Apache-2.0 license and
    notices.  `docs/libraries.md` will list them.
 
-Until the first generated library exists, the corpus is the only Agda
-output under version control: twelve Mathlib declarations translated by
-hand, each with the Lean statement, its exported kernel term, the
+Until the first generated library exists, the corpus will be the main
+Agda output under version control: twelve Mathlib declarations,
+selected in issue M1-6 and translated by hand in issues M1-7 through
+M1-9, each with the Lean statement, its exported kernel term, the
 idiomatic Agda version, and notes on what the translation needed.  The
 hand translations come first on purpose; the translator is built to
 reproduce them.
 
 ## Development setup
 
-The toolchain is a Nix flake; one `nix develop` provides it, and
-`.#agda` and `.#lean` are the single-tool shells.
+The toolchain is a Nix flake; one `nix develop` provides it.  The
+`.#agda` shell leaves out Lean and the `.#lean` shell leaves out Agda;
+both keep make, git and Python 3, and only the default shell carries
+the roadmap tools (gh, jq, and the github-project engine).
 
 ```sh
 nix develop         # Lean (from lean-toolchain), Agda 2.8.0, agda-stdlib 2.3,
                     # cubical 0.9, Python 3, gh, make
-make doctor         # print tool versions; check that the Agda libraries resolve
-make corpus-check   # type-check every corpus entry under its declared flags
-make atlas          # axiom profile of the pinned Mathlib revision
+make doctor         # print versions; fail, naming any missing tool or library
+make corpus-check   # placeholder until M1-6: type-check every corpus entry
+make atlas          # placeholder until M1-11: axiom profile of pinned Mathlib
 make lint           # structural check of docs/GITHUB_PROJECT.md
 ```
 
-Mathlib's prebuilt `.olean` files come from `lake exe cache get` inside
-`translator/`; nothing in the project rebuilds Mathlib from source.
-The pins (Lean, Mathlib, Lean4Less, Agda, agda-stdlib, cubical) and the
-procedure for moving them are documented in `docs/pinning.md` once
-M1-3 lands.
+Once issue M1-3 creates the Lake package, Mathlib's prebuilt `.olean`
+files will come from `lake exe cache get` inside `translator/`; nothing
+in the project rebuilds Mathlib from source.  The same issue documents
+the pins (Lean, Mathlib, Lean4Less, Agda, agda-stdlib, cubical) and the
+procedure for moving them in `docs/pinning.md`.
 
 ## Roadmap
 

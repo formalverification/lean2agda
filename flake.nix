@@ -12,10 +12,10 @@
 #   Agda      Agda with agda-stdlib and the cubical library from nixpkgs
 #             (2.8.0, 2.3 and 0.9 at the time of writing), registered
 #             project-locally in $ROOT/.agda (gitignored) by the shellHook,
-#             which also installs an `agda` wrapper passing
-#             --no-default-libraries and the project's --library-file, so the
-#             user's ~/.config/agda cannot contribute.  Optional external
-#             libraries are registered when AGDA_UNIMATH_ROOT,
+#             which points AGDA_DIR there, so the user's ~/.config/agda cannot
+#             contribute, and installs an `agda` wrapper that passes the
+#             project's --library-file to the shell's own Agda.  Optional
+#             external libraries are registered when AGDA_UNIMATH_ROOT,
 #             AGDA_TYPETOPOLOGY_ROOT or AGDA_ALGEBRAS_ROOT points at a checkout
 #             containing an .agda-lib file.
 #   Python    python3 from nixpkgs, standard library only (house style).
@@ -23,8 +23,14 @@
 #             -lint) as a pinned flake input; the Makefile finds it on PATH.
 #
 # Shells:  nix develop            everything (default)
-#          nix develop .#agda     Agda and its libraries only
-#          nix develop .#lean     the Lean toolchain only
+#          nix develop .#agda     Agda and its libraries, without Lean
+#          nix develop .#lean     the Lean toolchain, without Agda
+#
+# Every shell carries make, git and Python: the Agda shellHook finds $ROOT
+# with git, the planned corpus and output checkers (M1-6, M2-8) are Python
+# scripts run through make, and Lake fetches its dependencies with git.
+# Only the default shell carries the roadmap tools (gh, jq, the engine), so
+# a broken or missing engine package cannot break the Agda and Lean shells.
 #
 # Pinning: flake.lock pins nixpkgs (Agda, Python, tools), lean4-nix (the Lean
 # fetcher) and github-project (the engine).  Upgrade one input deliberately:
@@ -48,7 +54,10 @@
 
   outputs = { self, nixpkgs, lean4-nix, github-project }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      # x86_64-darwin is absent on purpose: the pinned nixpkgs refuses to
+      # evaluate for it ("Nixpkgs 26.11 has dropped support for
+      # x86_64-darwin").
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
 
       # One package set per system, with the Lean overlay applied: after it,
       # pkgs.lean is the toolchain named in ./lean-toolchain.
@@ -77,10 +86,17 @@
       # through the *_ROOT variables resolve too.  It deliberately does not
       # pass --library flags: those drop the current directory from the
       # include path, and a scratch file's module name then matches nothing.
+      # The wrapper execs the shell's own Agda by its store path; it never
+      # asks `command -v agda`.  That lookup names the wrapper itself when
+      # the hook runs again in an entered shell (eval "$shellHook"), and
+      # only the bare word `agda` when an agda function is defined (an
+      # interactive `nix develop` sources ~/.bashrc before the hook).
+      # Either way the wrapper would exec itself, and since every shell of
+      # the checkout shares the file, `agda` would hang in all of them.
       # The heredoc lines sit at column 0 on purpose: Nix strips the common
       # indentation of this string, and the terminator must reach the shell
       # at column 0.
-      mkAgdaShellSetup = pkgs: ''
+      mkAgdaShellSetup = pkgs: agdaEnv: ''
         ROOT="$PWD"
         if command -v git >/dev/null 2>&1 && git rev-parse --show-toplevel >/dev/null 2>&1; then
           ROOT="$(git rev-parse --show-toplevel)"
@@ -110,23 +126,22 @@
             echo "$name" >> "$AGDA_DIR/defaults"
           fi
         done < "$AGDA_DIR/libraries"
-        NIX_AGDA="$(command -v agda)"
         cat > "$AGDA_DIR/bin/agda" <<EOF
 #!/usr/bin/env bash
-exec "$NIX_AGDA" --library-file "$AGDA_DIR/libraries" "\$@"
+exec "${agdaEnv}/bin/agda" --library-file "$AGDA_DIR/libraries" "\$@"
 EOF
         chmod +x "$AGDA_DIR/bin/agda"
         export PATH="$AGDA_DIR/bin:$PATH"
       '';
 
-      banner = pkgs: withLean: withAgda: ''
+      banner = pkgs: withLean: withAgda: withRoadmap: ''
         echo ""
         echo "lean2agda dev shell"
         ${if withLean then ''echo "  Lean     : $(lean --version 2>/dev/null || echo unavailable)"'' else ""}
         ${if withAgda then ''echo "  Agda     : ${pkgs.agda.version}  (standard-library ${pkgs.agdaPackages.standard-library.version}, cubical ${pkgs.agdaPackages.cubical.version})"'' else ""}
         ${if withAgda then ''echo "  AGDA_DIR : $AGDA_DIR"'' else ""}
         echo "  Python   : ${pkgs.python3.version}"
-        echo "  engine   : $(command -v gh-project-lint >/dev/null 2>&1 && echo on PATH || echo missing)"
+        ${if withRoadmap then ''echo "  engine   : $(command -v gh-project-lint >/dev/null 2>&1 && echo on PATH || echo missing)"'' else ""}
         echo ""
       '';
     in
@@ -135,29 +150,30 @@ EOF
         let
           agdaEnv = mkAgdaEnv pkgs;
           engine = github-project.packages.${system}.gh-project-engine;
-          common = [ pkgs.gnumake pkgs.git pkgs.gh pkgs.jq pkgs.python3 engine ];
+          build = [ pkgs.gnumake pkgs.git pkgs.python3 ];
+          roadmap = [ pkgs.gh pkgs.jq engine ];
         in
         {
           default = pkgs.mkShell {
             name = "lean2agda-dev";
-            packages = common ++ [ agdaEnv pkgs.lean.lean-all ];
+            packages = build ++ roadmap ++ [ agdaEnv pkgs.lean.lean-all ];
             LANG = "C.UTF-8";
             LC_ALL = "C.UTF-8";
-            shellHook = mkAgdaShellSetup pkgs + banner pkgs true true;
+            shellHook = mkAgdaShellSetup pkgs agdaEnv + banner pkgs true true true;
           };
 
           agda = pkgs.mkShell {
             name = "lean2agda-agda";
-            packages = common ++ [ agdaEnv ];
+            packages = build ++ [ agdaEnv ];
             LANG = "C.UTF-8";
             LC_ALL = "C.UTF-8";
-            shellHook = mkAgdaShellSetup pkgs + banner pkgs false true;
+            shellHook = mkAgdaShellSetup pkgs agdaEnv + banner pkgs false true false;
           };
 
           lean = pkgs.mkShell {
             name = "lean2agda-lean";
-            packages = common ++ [ pkgs.lean.lean-all ];
-            shellHook = banner pkgs true false;
+            packages = build ++ [ pkgs.lean.lean-all ];
+            shellHook = banner pkgs true false false;
           };
         });
 

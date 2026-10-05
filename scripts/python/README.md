@@ -2,10 +2,10 @@
 
 # scripts/python
 
-Stdlib-only Python for the project's plumbing: checking the corpus
-(`corpus_check.py`, issue M1-6), reporting on the atlas
-(`atlas_report.py`, issue M1-11), and driving Agda over emitted modules
-(`agda_check.py`, issue M2-8).
+Stdlib-only Python for the project's plumbing, none of it written yet.
+The planned scripts check the corpus (`corpus_check.py`, issue M1-6),
+report on the atlas (`atlas_report.py`, issue M1-11), and drive Agda
+over emitted modules (`agda_check.py`, issue M2-8).
 
 House style, which applies to every file here, is as follows:
 
