@@ -23,7 +23,11 @@ section before changing anything structural.
 +  `make doctor`, run in the default shell, prints the tool versions and
    fails, naming what is missing, unless `lean`, `lake`, `agda`,
    `python3`, `gh`, `jq`, the github-project engine, the standard
-   library, and the cubical library all resolve.
+   library, and the cubical library all resolve.  CI runs it on every
+   pull request, in the `nix` job of `.github/workflows/ci.yml`, with
+   `nix develop --ignore-environment --keep HOME` so that the runner's
+   own python3, gh, jq and git cannot stand in for the shell's; later
+   checks join that same command rather than a second job.
 +  Type-check one Agda file inside the shell with `agda path/File.agda`;
    the shell's `agda` is a wrapper that passes the project-local
    `--library-file`, so a bare system `agda` would see no libraries.
@@ -115,3 +119,9 @@ before any pull request.  The committed skills `project-setup` and
 +  In GitHub Actions, set `NO_ENV_PREFIX=1` on engine invocations: the
    engine strips `GH_TOKEN` by default, which is how Actions
    authenticates.
++  The GitHub runner starts with about 14 GB of free disk, and the
+   default shell needs about 11 GB in the store plus, on a cold run, a
+   second copy of the unpacked Lean release while lean4-nix builds it.
+   The `nix` job therefore deletes the runner image's largest
+   preinstalled toolchains first, which leaves about 39 GB; keep
+   Mathlib's cache and other large downloads out of that job.
