@@ -13,6 +13,8 @@
 #   project   doctor / check / test / corpus-check / atlas are the project's
 #             own targets; the ones not yet implemented say which roadmap
 #             issue implements them.
+#   lean      lean-cache / lean-build / lean-smoke run Lake in translator/,
+#             the Lake package that carries Mathlib (docs/pinning.md).
 #
 # Variables:
 #   PLAN           plan file            (default: docs/GITHUB_PROJECT.md)
@@ -54,6 +56,7 @@ endif
 
 .PHONY: help populate-dry populate update update-check lint \
         doctor check test corpus-check atlas \
+        lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
 .DEFAULT_GOAL := help
 
@@ -140,6 +143,27 @@ corpus-check: ## Type-check every corpus entry under its declared flags (placeho
 
 atlas: ## Compute the axiom profile of the pinned Mathlib revision (placeholder: lands with M1-11)
 	@echo "atlas: the atlas producer lands with issue M1-11; see atlas/README.md."
+
+# ---- lean ----------------------------------------------------------------
+
+# Lake runs in translator/, the package that requires Mathlib; its first
+# `lake update --keep-toolchain` creates .lake/packages/ (docs/pinning.md).
+# No CI job runs these targets: the cache is several gigabytes.
+
+lean-cache: ## Fetch Mathlib's prebuilt .olean files into translator/.lake (lake exe cache get)
+	cd translator && $(LAKE) exe cache get
+
+lean-build: ## Build the translator's Lake package (lake build in translator/)
+	cd translator && $(LAKE) build
+
+# lean-smoke checks the cache two ways.  `lake build --no-build Mathlib`
+# compiles nothing: it exits with status 3 if any of Mathlib's modules, or
+# of its dependencies', is out of date, which is how a missing file or a
+# cache built by another Lean would show; a plain `lake build` would start
+# compiling Mathlib instead.  Smoke.lean then loads the files.
+lean-smoke: ## Check that Mathlib's cache is complete and loads (lake build --no-build, #print axioms)
+	cd translator && $(LAKE) build --no-build Mathlib
+	cd translator && $(LAKE) env $(LEAN) scripts/Smoke.lean
 
 # ---- plumbing ------------------------------------------------------------
 
