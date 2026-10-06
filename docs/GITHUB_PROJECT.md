@@ -503,7 +503,7 @@ body by ID.
 
 <!-- BEGIN GENERATED: milestone-1 -->
 
-### Issue M1-1: Detach the template and lay out the repository skeleton (#1)
+### Issue M1-1: Detach the template and lay out the repository skeleton (#1, closed)
 
 **Labels:** `milestone-1-foundations`, `infrastructure`
 
@@ -542,13 +542,13 @@ Every tool the project needs must come from one `nix develop`, as in agda-native
 - [x] Reuse the `formalverification` Cachix cache for the Agda toolchain and prebuilt library interfaces (declared in `nixConfig`; pushing to the cache from CI is part of the CI task below).
 - [x] Add `make doctor`: prints the versions of `lean`, `lake`, `agda`, `python3`, confirms the libraries resolve, and fails if any is missing.
 - [x] Document the setup in the README's development section.
-- [ ] Make CI enter the same shell for the Agda and Lean lanes (the shipped workflow lints the plan with setup-python and needs no Nix; add a Nix job when the first Agda or Lean check exists).
+- [x] Make CI enter the same shell for the Agda and Lean lanes (the shipped workflow lints the plan with setup-python and needs no Nix; the Nix job runs `make doctor`, whose two Agda probes are the first Agda check, and later Agda and Lean checks join that job).
 
 ## Acceptance criteria
 
-- [ ] On a machine with only Nix, `nix develop --command make doctor` succeeds and prints Agda 2.8.0 and the Lean version named in `lean-toolchain`.  (Verified 2026-10-04 on a development machine with every tool resolved from the Nix store; the CI job below proves it on a clean runner.)
+- [x] On a machine with only Nix, `nix develop --command make doctor` succeeds and prints Agda 2.8.0 and the Lean version named in `lean-toolchain`.  (Verified 2026-10-04 on a development machine with every tool resolved from the Nix store, and 2026-10-05 by the CI job below on a fresh runner, with `--ignore-environment` hiding the runner's own tools.)
 - [x] The shell's `agda` resolves both libraries for a file outside any `.agda-lib` project (the two probes `make doctor` runs).
-- [ ] CI enters the same shell (the Cachix cache keeps the job under fifteen minutes).
+- [x] CI enters the same shell (the Cachix cache keeps the job under fifteen minutes).  (Cold, with nothing of the lane in Cachix, the job took 8 min 43 s and 3 min 26 s in two attempts of run 37303222343; the cache only shortens warm runs.)
 
 ---
 
