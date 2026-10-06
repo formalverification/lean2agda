@@ -100,7 +100,7 @@ probe = v=$$($(2) 2>/dev/null) && [ -n "$$v" ] \
   || { v=MISSING; missing="$$missing $(1)"; }; \
   printf '%-8s: %s\n' '$(1)' "$$(printf '%s\n' "$$v" | head -n 1)";
 
-doctor: ## Print tool versions; fail, naming each missing tool or Agda library
+doctor: ## Print tool versions; fail, naming each missing tool or Agda library or a split Lean pin
 	@missing=; \
 	  $(call probe,lean,$(LEAN) --version) \
 	  $(call probe,lake,$(LAKE) --version) \
@@ -113,6 +113,10 @@ doctor: ## Print tool versions; fail, naming each missing tool or Agda library
 	  printf '%-8s: %s\n' engine "$$e"; \
 	  [ -z "$$missing" ] \
 	  || { echo "error: missing:$$missing; enter the shell with: nix develop"; exit 1; }
+	@cmp -s lean-toolchain translator/lean-toolchain \
+	  || { echo "error: translator/lean-toolchain differs from lean-toolchain;"; \
+	       echo "       it should be a symlink to it (docs/pinning.md)"; exit 1; }; \
+	  echo "lean-toolchain: $$(cat lean-toolchain), also read by translator/"
 	@tmp=$$(mktemp -d) || exit 1; bad=; \
 	  printf '{-# OPTIONS --safe --cubical-compatible #-}\nmodule Doctor where\nopen import Data.Nat using (ℕ)\n' > "$$tmp/Doctor.agda"; \
 	  printf '{-# OPTIONS --safe --cubical --guardedness #-}\nmodule DoctorCubical where\nopen import Cubical.Foundations.Prelude using (Type)\n' > "$$tmp/DoctorCubical.agda"; \
