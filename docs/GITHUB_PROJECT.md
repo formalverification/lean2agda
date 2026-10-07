@@ -527,7 +527,7 @@ The repository was created from the github-project template and still carries th
 
 ---
 
-### Issue M1-2: Nix development environment with Lean, Agda, and Python (#2)
+### Issue M1-2: Nix development environment with Lean, Agda, and Python (#2, closed)
 
 **Labels:** `milestone-1-foundations`, `infrastructure`
 
@@ -562,15 +562,16 @@ Mathlib's toolchain moves monthly, and the tools we depend on (Lean4Less, lean2d
 
 ## Tasks
 
-- [ ] Create `translator/` as a Lake package whose `lakefile` requires Mathlib at a pinned revision; write `lean-toolchain` to match Mathlib's.  lean4-nix carries one manifest per stable Lean release and lags Lean by about one release, so the Mathlib revision to pin is the Mathlib tag matching the newest Lean that lean4-nix knows (the repository's `lean-toolchain` already names it), not master.
-- [ ] Document `lake exe cache get` as the way to obtain Mathlib's `.olean` files, and where they live (`.lake/`, gitignored).
-- [ ] Write `docs/pinning.md`: what is pinned (Lean, Mathlib, Lean4Less fork, Agda, agda-stdlib, cubical), where each pin lives, and the upgrade procedure (rehearsed in M5-7).
-- [ ] Record the Lean4Less toolchain requirement next to Mathlib's so the skew between them is visible.
+- [x] Create `translator/` as a Lake package whose `lakefile` requires Mathlib at a pinned revision; write `lean-toolchain` to match Mathlib's.  lean4-nix carries one manifest per stable Lean release and lags Lean by about one release, so the Mathlib revision to pin is the Mathlib tag matching the newest Lean that lean4-nix knows (the repository's `lean-toolchain` already names it), not master.
+- [x] Document `lake exe cache get` as the way to obtain Mathlib's `.olean` files, and where they live (`.lake/`, gitignored).
+- [x] Write `docs/pinning.md`: what is pinned (Lean, Mathlib, Lean4Less fork, Agda, agda-stdlib, cubical), where each pin lives, and the upgrade procedure (rehearsed in M5-7).
+- [x] Record the Lean4Less toolchain requirement next to Mathlib's so the skew between them is visible.
+- [x] Require lean4export in the same package at its release tag nearest the pinned Lean (v4.33.0; it has no v4.33.1 tag), since the corpus entries record each declaration's exported kernel term; it runs as `lake exe lean4export`.
 
 ## Acceptance criteria
 
-- [ ] `lake build` in `translator/` succeeds inside `nix develop` with Mathlib's cache and no source rebuild of Mathlib.
-- [ ] `docs/pinning.md` names every pin and the command that changes it.
+- [x] `lake build` in `translator/` succeeds inside `nix develop` with Mathlib's cache and no source rebuild of Mathlib.  (Verified 2026-10-05.  `lake build` compiles the one module of `Lean2Agda`, which imports nothing, so `make lean-smoke` adds the check that matters: `lake build --no-build Mathlib` reports all 8705 jobs of Mathlib and its dependencies up to date, compiling nothing, and exits with status 3 once a Mathlib source file changes.)
+- [x] `docs/pinning.md` names every pin and the command that changes it.
 
 ---
 

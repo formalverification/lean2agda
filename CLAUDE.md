@@ -23,7 +23,8 @@ section before changing anything structural.
 +  `make doctor`, run in the default shell, prints the tool versions and
    fails, naming what is missing, unless `lean`, `lake`, `agda`,
    `python3`, `gh`, `jq`, the github-project engine, the standard
-   library, and the cubical library all resolve.  CI runs it on every
+   library, and the cubical library all resolve, and unless
+   `translator/lean-toolchain` agrees with `lean-toolchain`.  CI runs it on every
    pull request, in the `nix` job of `.github/workflows/ci.yml`, with
    `nix develop --ignore-environment --keep HOME` so that the runner's
    own python3, gh, jq and git cannot stand in for the shell's; later
@@ -34,9 +35,16 @@ section before changing anything structural.
 +  `make help` lists every target.  `make check`, `make test`,
    `make corpus-check` and `make atlas` are placeholders until the issues
    that implement them land (M1-6, M1-11, M2-1, M2-8); each says so.
-+  Mathlib's prebuilt `.olean` files come from `lake exe cache get`
-   inside `translator/` once the Lake package exists (M1-3); never
-   rebuild Mathlib from source.
++  `translator/` is a Lake package requiring Mathlib and lean4export at
+   pinned tags (`docs/pinning.md`).  Mathlib's prebuilt `.olean` files
+   come from `lake exe cache get` there (`make lean-cache`); never
+   rebuild Mathlib from source, and if the cache lacks files for the
+   pinned tag, stop and say so.  Run every `lake update` as
+   `lake update --keep-toolchain`: without the flag Lake may rewrite
+   `lean-toolchain` through the `translator/lean-toolchain` symlink,
+   and a Lean that lean4-nix lacks breaks every shell.  `make lean-build`
+   and `make lean-smoke` build the package and check that Mathlib loads;
+   no CI job runs them, since the cache is several gigabytes.
 +  Do not commit generated artifacts: `*.agdai`, `.agda/`, `.lake/`,
    `result`, and anything the translator emits.  Generated libraries
    live in their own repositories (see the roadmap's Description).

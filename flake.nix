@@ -7,8 +7,11 @@
 #             prebuilt release by lean4-nix (readToolchainFile; no source
 #             build).  lean4-nix carries one manifest per stable Lean release
 #             and lags Lean by about one release, so the pin here is the newest
-#             version it knows; docs/pinning.md (issue M1-3) aligns it with
-#             the pinned Mathlib revision.
+#             version it knows; docs/pinning.md says how it moves with the
+#             pinned Mathlib revision.  The Lean shells also carry curl,
+#             which Mathlib's cache tool (`lake exe cache get`) runs to
+#             download; without it the tool fails even when nothing is
+#             missing.
 #   Agda      Agda with agda-stdlib and the cubical library from nixpkgs
 #             (2.8.0, 2.3 and 0.9 at the time of writing), registered
 #             project-locally in $ROOT/.agda (gitignored) by the shellHook,
@@ -152,11 +155,15 @@ EOF
           engine = github-project.packages.${system}.gh-project-engine;
           build = [ pkgs.gnumake pkgs.git pkgs.python3 ];
           roadmap = [ pkgs.gh pkgs.jq engine ];
+          # Lean and the curl that Mathlib's cache tool runs.  Only curl's
+          # bin output: the default output would also put the headers of
+          # curl and its libraries into the shell's environment.
+          leanTools = [ pkgs.lean.lean-all pkgs.curl.bin ];
         in
         {
           default = pkgs.mkShell {
             name = "lean2agda-dev";
-            packages = build ++ roadmap ++ [ agdaEnv pkgs.lean.lean-all ];
+            packages = build ++ roadmap ++ [ agdaEnv ] ++ leanTools;
             LANG = "C.UTF-8";
             LC_ALL = "C.UTF-8";
             shellHook = mkAgdaShellSetup pkgs agdaEnv + banner pkgs true true true;
@@ -172,7 +179,7 @@ EOF
 
           lean = pkgs.mkShell {
             name = "lean2agda-lean";
-            packages = build ++ [ pkgs.lean.lean-all ];
+            packages = build ++ leanTools;
             shellHook = banner pkgs true false false;
           };
         });

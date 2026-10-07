@@ -1,0 +1,45 @@
+# File: translator/lakefile.toml
+#
+# The lean2agda Lake package.  TOML rather than lakefile.lean: the package
+# needs no custom targets or scripts, so a declarative file suffices, Lake
+# reads it without elaborating Lean code, and it is the form `lake new`
+# writes and lean4export uses.  `lake translate-config lean` converts it if
+# a later issue needs code in the configuration.
+#
+# Every pin here is explained, with the command that moves it, in
+# docs/pinning.md.  In short: Mathlib is pinned to the release tag that
+# matches ./lean-toolchain (a symlink to the repository's lean-toolchain,
+# so the flake, elan and Mathlib's cache tool read one file), and
+# lake-manifest.json records the commit each tag resolved to.  Run every
+# `lake update` with --keep-toolchain so that Lake never rewrites the
+# toolchain through the symlink.
+
+name = "lean2agda"
+defaultTargets = ["Lean2Agda"]
+
+[leanOptions]
+autoImplicit = false
+
+# The kernel-term exporter (NDJSON), which records the exported term of
+# each corpus entry.  Its nearest release tag is one patch release behind
+# the pinned Lean; there is no v4.33.1 tag.  Run it with
+# `lake exe lean4export`.
+[[require]]
+name = "lean4export"
+git = "https://github.com/leanprover/lean4export"
+rev = "v4.33.0"
+
+# Mathlib at the tag of the pinned Lean release.  Mathlib's prebuilt .olean
+# files come from `lake exe cache get`; never build Mathlib from source.
+# Mathlib's requirement comes last, as its cache tool advises: should a
+# later requirement share a dependency with Mathlib, Mathlib's revision
+# then wins, and the cache tool refuses to run on any other.
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.33.1"
+
+# The translator's library.  Issue M2-1 adds the pure core under
+# Lean2Agda/Core/ and the command line in Lean2Agda/Main.lean.
+[[lean_lib]]
+name = "Lean2Agda"

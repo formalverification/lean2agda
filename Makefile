@@ -13,6 +13,8 @@
 #   project   doctor / check / test / corpus-check / atlas are the project's
 #             own targets; the ones not yet implemented say which roadmap
 #             issue implements them.
+#   lean      lean-cache / lean-build / lean-smoke run Lake in translator/,
+#             the Lake package that carries Mathlib (docs/pinning.md).
 #
 # Variables:
 #   PLAN           plan file            (default: docs/GITHUB_PROJECT.md)
@@ -54,6 +56,7 @@ endif
 
 .PHONY: help populate-dry populate update update-check lint \
         doctor check test corpus-check atlas \
+        lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
 .DEFAULT_GOAL := help
 
@@ -100,7 +103,7 @@ probe = v=$$($(2) 2>/dev/null) && [ -n "$$v" ] \
   || { v=MISSING; missing="$$missing $(1)"; }; \
   printf '%-8s: %s\n' '$(1)' "$$(printf '%s\n' "$$v" | head -n 1)";
 
-doctor: ## Print tool versions; fail, naming each missing tool or Agda library
+doctor: ## Print tool versions; fail, naming each missing tool or Agda library or a split Lean pin
 	@missing=; \
 	  $(call probe,lean,$(LEAN) --version) \
 	  $(call probe,lake,$(LAKE) --version) \
@@ -113,6 +116,10 @@ doctor: ## Print tool versions; fail, naming each missing tool or Agda library
 	  printf '%-8s: %s\n' engine "$$e"; \
 	  [ -z "$$missing" ] \
 	  || { echo "error: missing:$$missing; enter the shell with: nix develop"; exit 1; }
+	@cmp -s lean-toolchain translator/lean-toolchain \
+	  || { echo "error: translator/lean-toolchain differs from lean-toolchain;"; \
+	       echo "       it should be a symlink to it (docs/pinning.md)"; exit 1; }; \
+	  echo "lean-toolchain: $$(cat lean-toolchain), also read by translator/"
 	@tmp=$$(mktemp -d) || exit 1; bad=; \
 	  printf '{-# OPTIONS --safe --cubical-compatible #-}\nmodule Doctor where\nopen import Data.Nat using (ℕ)\n' > "$$tmp/Doctor.agda"; \
 	  printf '{-# OPTIONS --safe --cubical --guardedness #-}\nmodule DoctorCubical where\nopen import Cubical.Foundations.Prelude using (Type)\n' > "$$tmp/DoctorCubical.agda"; \
@@ -136,6 +143,27 @@ corpus-check: ## Type-check every corpus entry under its declared flags (placeho
 
 atlas: ## Compute the axiom profile of the pinned Mathlib revision (placeholder: lands with M1-11)
 	@echo "atlas: the atlas producer lands with issue M1-11; see atlas/README.md."
+
+# ---- lean ----------------------------------------------------------------
+
+# Lake runs in translator/, the package that requires Mathlib; its first
+# `lake update --keep-toolchain` creates .lake/packages/ (docs/pinning.md).
+# No CI job runs these targets: the cache is several gigabytes.
+
+lean-cache: ## Fetch Mathlib's prebuilt .olean files into translator/.lake (lake exe cache get)
+	cd translator && $(LAKE) exe cache get
+
+lean-build: ## Build the translator's Lake package (lake build in translator/)
+	cd translator && $(LAKE) build
+
+# lean-smoke checks the cache two ways.  `lake build --no-build Mathlib`
+# compiles nothing: it exits with status 3 if any of Mathlib's modules, or
+# of its dependencies', is out of date, which is how a missing file or a
+# cache built by another Lean would show; a plain `lake build` would start
+# compiling Mathlib instead.  Smoke.lean then loads the files.
+lean-smoke: ## Check that Mathlib's cache is complete and loads (lake build --no-build, #print axioms)
+	cd translator && $(LAKE) build --no-build Mathlib
+	cd translator && $(LAKE) env $(LEAN) scripts/Smoke.lean
 
 # ---- plumbing ------------------------------------------------------------
 

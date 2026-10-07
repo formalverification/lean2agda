@@ -210,11 +210,24 @@ make atlas          # placeholder until M1-11: axiom profile of pinned Mathlib
 make lint           # structural check of docs/GITHUB_PROJECT.md
 ```
 
-Once issue M1-3 creates the Lake package, Mathlib's prebuilt `.olean`
-files will come from `lake exe cache get` inside `translator/`; nothing
-in the project rebuilds Mathlib from source.  The same issue documents
-the pins (Lean, Mathlib, Lean4Less, Agda, agda-stdlib, cubical) and the
-procedure for moving them in `docs/pinning.md`.
+The translator is a Lake package in `translator/` that requires Mathlib
+at the release tag matching `lean-toolchain`.  Mathlib's prebuilt
+`.olean` files come from `lake exe cache get` inside `translator/`;
+nothing in the project rebuilds Mathlib from source.  A fresh checkout
+fetches them once, as follows (several gigabytes, under
+`translator/.lake/`, which is gitignored):
+
+```sh
+cd translator && lake update --keep-toolchain && cd ..   # clone Mathlib; its hook fetches the cache
+make lean-cache     # lake exe cache get: fetch whatever is still missing
+make lean-build     # lake build in translator/
+make lean-smoke     # check that no Mathlib module is stale, then load Mathlib
+```
+
+`docs/pinning.md` names every pin (Lean, Mathlib, lean4export,
+Lean4Less, Agda, agda-stdlib, cubical, and the flake's inputs), where
+each lives, the command that changes it, and the procedure for moving
+them.
 
 ## Roadmap
 
