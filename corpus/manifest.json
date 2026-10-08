@@ -34,11 +34,11 @@
     "lean_module": "Init.Data.Nat.Gcd",
     "axioms": ["Quot.sound"],
     "tier": "T1",
-    "features": ["large-elimination", "k-and-uip", "literals", "decidable-and-noncomputable", "axioms"],
+    "features": ["large-elimination", "k-and-uip", "literals", "decidable-and-noncomputable", "axioms", "projections-and-let", "universe-levels"],
     "agda_files": [
       {"path": "NatGcdSucc.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 7
   },
   {
