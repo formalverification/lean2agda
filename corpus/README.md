@@ -24,7 +24,7 @@ defines each field and the rules the checker enforces.
 
 | Id | Lean declaration | Module | Theme | Tier | Issue | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| `list-reverse-reverse` | `List.reverse_reverse` | `Init.Data.List.Lemmas` | constructive arithmetic and lists | T1 | [#7] | planned |
+| `list-reverse-reverse` | `List.reverse_reverse` | `Init.Data.List.Lemmas` | constructive arithmetic and lists | T1 | [#7] | translated |
 | `nat-gcd-self` | `Nat.gcd_self` | `Init.Data.Nat.Gcd` | constructive arithmetic and lists | T1 | [#7] | planned |
 | `nat-gcd-succ` | `Nat.gcd_succ` | `Init.Data.Nat.Gcd` | well-founded recursion | T1 | [#7] | planned |
 | `lists-subset-refl` | `Lists'.Subset.refl` | `Mathlib.SetTheory.Lists` | mutual inductive types | T1 | [#7] | planned |
@@ -113,8 +113,34 @@ under the flags the file declares and no others, with a per-file
 timeout (`CORPUS_TIMEOUT`, 300 seconds by default), and prints one row
 per entry and a summary.  It exits with status 1 if a checked entry
 fails or an entry is malformed; `planned` entries are listed, not
-failed.  `--json` prints the same report as JSON, with a row for every
-file.
+failed.  `--json` prints the same report as JSON, with a record for
+every file.  On 2026-10-07, with only the seed entry translated, it
+printed the following (Agda 2.8.0, with no `.agdai` interface files
+left from an earlier run):
+
+```text
+$ make corpus-check
+| id                      | status     | result  | seconds |
+| ----------------------- | ---------- | ------- | ------- |
+| list-reverse-reverse    | translated | pass    | 4.8     |
+| nat-gcd-self            | planned    | skipped | -       |
+| nat-gcd-succ            | planned    | skipped | -       |
+| lists-subset-refl       | planned    | skipped | -       |
+| multiset-map-map        | planned    | skipped | -       |
+| set-ext                 | planned    | skipped | -       |
+| finset-card-image       | planned    | skipped | -       |
+| real-sqrt-nonneg        | planned    | skipped | -       |
+| subgroup-card-dvd       | planned    | skipped | -       |
+| order-hom-map-lfp       | planned    | skipped | -       |
+| subtype-coe-eta         | planned    | skipped | -       |
+| substructure-closure-le | planned    | skipped | -       |
+
+12 entries: 1 checked (1 passed, 0 failed), 11 planned, 0 malformed.
+```
+
+When a file fails, the row names its first error, and Agda's whole
+output for the file follows the table; a malformed entry's row names
+its first problem, and every problem is listed below the table.
 
 ## Translating an entry
 

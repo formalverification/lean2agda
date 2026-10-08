@@ -10,7 +10,7 @@
     "agda_files": [
       {"path": "ListReverseReverse.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 7
   },
   {
