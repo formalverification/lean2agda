@@ -22,20 +22,26 @@ defines each field and the rules the checker enforces.
 
 ## The entries
 
-| Id | Lean declaration | Module | Theme | Tier | Issue | Status |
-| --- | --- | --- | --- | --- | --- | --- |
-| `list-reverse-reverse` | `List.reverse_reverse` | `Init.Data.List.Lemmas` | constructive arithmetic and lists | T1 | [#7] | translated |
-| `nat-gcd-self` | `Nat.gcd_self` | `Init.Data.Nat.Gcd` | constructive arithmetic and lists | T1 | [#7] | planned |
-| `nat-gcd-succ` | `Nat.gcd_succ` | `Init.Data.Nat.Gcd` | well-founded recursion | T1 | [#7] | planned |
-| `lists-subset-refl` | `Lists'.Subset.refl` | `Mathlib.SetTheory.Lists` | mutual inductive types | T1 | [#7] | planned |
-| `multiset-map-map` | `Multiset.map_map` | `Mathlib.Data.Multiset.MapFold` | a quotient (`Quot`) | T1 | [#8] | planned |
-| `set-ext` | `Set.ext` | `Mathlib.Data.Set.Defs` | set extensionality | T1 | [#8] | planned |
-| `finset-card-image` | `Finset.card_image_of_injective` | `Mathlib.Data.Finset.Card` | a `Decidable` instance in a `Finset` statement | T2 | [#9] | planned |
-| `real-sqrt-nonneg` | `Real.sqrt_nonneg` | `Mathlib.Analysis.Real.Sqrt` | real numbers | T2 | [#9] | planned |
-| `subgroup-card-dvd` | `Subgroup.card_subgroup_dvd_card` | `Mathlib.GroupTheory.Coset.Card` | Lagrange's theorem | T2 | [#9] | planned |
-| `order-hom-map-lfp` | `OrderHom.map_lfp` | `Mathlib.Order.FixedPoints` | lattices (Knaster and Tarski) | T1 | [#9] | planned |
-| `subtype-coe-eta` | `Subtype.coe_eta` | `Mathlib.Data.Subtype` | structure eta | T0 | [#9] | planned |
-| `substructure-closure-le` | `FirstOrder.Language.Substructure.closure_le` | `Mathlib.ModelTheory.Substructures` | model theory (agda-algebras) | T2 | [#9] | planned |
+| Id | Lean declaration | Module | Theme | Tier | Issue |
+| --- | --- | --- | --- | --- | --- |
+| `list-reverse-reverse` | `List.reverse_reverse` | `Init.Data.List.Lemmas` | constructive arithmetic and lists | T1 | [#7] |
+| `nat-gcd-self` | `Nat.gcd_self` | `Init.Data.Nat.Gcd` | constructive arithmetic and lists | T1 | [#7] |
+| `nat-gcd-succ` | `Nat.gcd_succ` | `Init.Data.Nat.Gcd` | well-founded recursion | T1 | [#7] |
+| `lists-subset-refl` | `Lists'.Subset.refl` | `Mathlib.SetTheory.Lists` | mutual inductive types | T1 | [#7] |
+| `multiset-map-map` | `Multiset.map_map` | `Mathlib.Data.Multiset.MapFold` | a quotient (`Quot`) | T1 | [#8] |
+| `set-ext` | `Set.ext` | `Mathlib.Data.Set.Defs` | set extensionality | T1 | [#8] |
+| `finset-card-image` | `Finset.card_image_of_injective` | `Mathlib.Data.Finset.Card` | a `Decidable` instance in a `Finset` statement | T2 | [#9] |
+| `real-sqrt-nonneg` | `Real.sqrt_nonneg` | `Mathlib.Analysis.Real.Sqrt` | real numbers | T2 | [#9] |
+| `subgroup-card-dvd` | `Subgroup.card_subgroup_dvd_card` | `Mathlib.GroupTheory.Coset.Card` | Lagrange's theorem | T2 | [#9] |
+| `order-hom-map-lfp` | `OrderHom.map_lfp` | `Mathlib.Order.FixedPoints` | lattices (Knaster and Tarski) | T1 | [#9] |
+| `subtype-coe-eta` | `Subtype.coe_eta` | `Mathlib.Data.Subtype` | structure eta | T0 | [#9] |
+| `substructure-closure-le` | `FirstOrder.Language.Substructure.closure_le` | `Mathlib.ModelTheory.Substructures` | model theory (agda-algebras) | T2 | [#9] |
+
+The table records the selection.  The current state of each entry,
+its status included, is `manifest.json`, and `make corpus-check` prints
+it; a session that translates an entry updates the manifest, not this
+table or the coverage table below, which issue M1-10 refreshes from the
+manifest when the twelve are done.
 
 Every name, module and axiom set was checked on 2026-10-07 against
 Lean v4.33.1 and Mathlib v4.33.1, the pins of
