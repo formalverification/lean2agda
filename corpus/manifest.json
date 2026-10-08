@@ -48,11 +48,11 @@
     "lean_module": "Mathlib.SetTheory.Lists",
     "axioms": ["propext", "Quot.sound"],
     "tier": "T1",
-    "features": ["nested-and-mutual-inductives", "large-elimination", "projections-and-let", "axioms"],
+    "features": ["nested-and-mutual-inductives", "large-elimination", "projections-and-let", "axioms", "k-and-uip", "universe-levels", "literals", "decidable-and-noncomputable", "structure-eta"],
     "agda_files": [
       {"path": "ListsSubsetRefl.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 7
   },
   {
