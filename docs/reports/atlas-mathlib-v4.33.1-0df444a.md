@@ -290,6 +290,11 @@ depend on each (the axiom itself among them), are as follows:
 | `lcVoid` | 1 |
 | `sorryAx` | 1 |
 
+Of the 255, 249 are `unsafe`; the other 6 are `Lean.ofReduceBool`,
+`Lean.ofReduceNat`, `Lean.reduceBool`, `Lean.reduceNat`,
+`Lean.trustCompiler` and `sorryAx`.  No theorem is T3.
+(`docs/lean-findings.md`, LF-2, has what this rules out.)
+
 Mathlib's 41 T3 constants are as follows:
 
 | constant | module | kind | other axioms |
@@ -343,13 +348,14 @@ a constant it reaches while one of that constant's own dependencies is
 still being visited, counting that dependency as having none.  The
 cycles where this happens are an inductive type and its constructors (a
 constructor's type mentions its type, and the type depends on its
-constructors) and mutually recursive `unsafe` definitions.  Each
-`.olean` stores a table of the axioms of its exported declarations
-computed this way, and an importing module trusts it (Lean issue
-[15226]; pull request [15385], open, would fix it for inductive types
-only).  The atlas computes reachability over the same edges instead, and
-records in `lean_omits` what Lean leaves out.  Lean never reports an
-axiom the atlas does not; the program checks that for every constant.
+constructors) and mutually recursive definitions such as the
+`_unsafe_rec` companions of mutual `partial def`s.  Each `.olean` stores
+a table of the axioms of its exported declarations computed this way,
+and an importing module trusts it (Lean issue [15226]; pull request
+[15385], open, would fix it for inductive types only).  The atlas
+computes reachability over the same edges instead, and records in
+`lean_omits` what Lean leaves out.  Lean never reports an axiom the
+atlas does not; the program checks that for every constant.
 
 +  1,837 constants of the environment, 550 of them in Mathlib, get an
    incomplete axiom set from Lean.  The axiom left out is `Quot.sound`
@@ -357,6 +363,9 @@ axiom the atlas does not; the program checks that for every constant.
    them.
 +  Mathlib's 550 are 203 definitions, 194 theorems, 78 constructors, 65
    inductive types, 9 recursors and 1 opaque constant.
++  Every axiom Lean leaves out here is one of the standard three, though
+   the same mechanism can hide `sorryAx` (`docs/lean-findings.md`, LF-1,
+   has a two-file reproduction).
 +  With Lean's axiom sets, Mathlib's tiers would be T0 84,133, T1
    120,221, T2 364,794 and T3 41.  The Mathlib constants whose tier
    changes are as follows:

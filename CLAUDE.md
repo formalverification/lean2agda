@@ -95,8 +95,10 @@ before any pull request.  The committed skills `project-setup` and
    copy fixed the upstream trap in which `unwrap` treated
    `Result.ok(None)` as an error; the other copies still have it.
 +  `docs/`: the roadmap, the design records under `docs/adr/`, the
-   foundational notes under `docs/foundations/`, and the engine's
-   command reference `docs/HowToRun.md`.
+   foundational notes under `docs/foundations/`, the register of
+   findings about Lean's internals `docs/lean-findings.md`, the reports
+   under `docs/reports/`, and the engine's command reference
+   `docs/HowToRun.md`.
 
 ## Conventions
 
@@ -122,6 +124,12 @@ before any pull request.  The committed skills `project-setup` and
    grammar, not prose).  American spelling.  Never bold punctuation.
 +  Git identity is the human author's; provenance of AI-assisted
    changes goes in a line of the commit body, never in a trailer.
++  Anything questionable a session finds about Lean's kernel,
+   elaborator or tooling (a possible inconsistency, a trusted tool that
+   answers wrongly, an assumption a proof can make unseen), and any such
+   question checked and found sound, gets an entry in
+   `docs/lean-findings.md` with its evidence, and the session's final
+   message says so.
 
 ## Environment gotchas
 

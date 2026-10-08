@@ -26,8 +26,8 @@ def moduleOf (env : Environment) (n : Name) : Name :=
 
 /-- Whether `n` is a `partial def`.  Lean compiles one to an `opaque`
 constant that depends on no axiom and carries no `implemented_by`
-attribute, beside an `unsafe` companion `n._unsafe_rec`; the companion is
-the reliable sign. -/
+attribute, beside a companion `n._unsafe_rec` whose safety is `partial`
+(not `unsafe`); the companion is the reliable sign. -/
 def isPartialDef (env : Environment) (n : Name) : ConstantInfo → Bool
   | .opaqueInfo _ => env.contains (n ++ `_unsafe_rec)
   | _             => false

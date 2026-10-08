@@ -19,7 +19,8 @@ result of a constant reached while one of its own dependencies is still
 being visited, with that dependency counted as having no axioms.  The
 cycles where that happens are an inductive type and its constructors
 (each constructor's type mentions the type, and the type depends on its
-constructors) and mutually recursive `unsafe` definitions; the per-module
+constructors) and mutually recursive definitions such as the
+`_unsafe_rec` companions of mutual `partial def`s; the per-module
 table each `.olean` carries keeps the incomplete answer (Lean issue
 15226).  Reachability over the same edges has no such order dependence:
 a constant depends on an axiom exactly when the axiom is reachable from

@@ -79,9 +79,10 @@ they are written, are as follows:
    marked `noncomputable` and of one the compiler could not compile,
    which a `noncomputable section` allows without an error;
 +  `unsafe`: the constant is `unsafe`;
-+  `partial`: it is a `partial def`, an `opaque` constant with an
-   `unsafe` companion `<name>._unsafe_rec` (`partial` leaves no other
-   trace; `#print axioms` shows nothing);
++  `partial`: it is a `partial def`, an `opaque` constant with a
+   companion definition `<name>._unsafe_rec`, whose safety is `partial`
+   rather than `unsafe` (`partial` leaves no other trace; `#print axioms`
+   shows nothing);
 +  `private`: Lean's `isPrivateName`, a name beginning
    `_private.<module>.0.`;
 +  `internal`: Lean's `Name.isInternal`, some component of the name
@@ -109,7 +110,8 @@ still being visited, counting that dependency as having no axioms, and
 each `.olean` stores the results for its declarations in a table that
 importing modules trust (Lean issue [15226]).  The cycles where this
 bites are an inductive type and its constructors, and mutually
-recursive `unsafe` definitions.  The program still calls
+recursive definitions such as the `_unsafe_rec` companions of mutual
+`partial def`s.  The program still calls
 `Lean.collectAxioms` on every constant, records what it leaves out in
 `lean_omits`, and stops with an error if it ever names an axiom the
 graph does not reach.  At v4.33.1 it under-reports 1,837 constants of
@@ -136,5 +138,10 @@ constants the imports declare, never its own.
    `9f0aee2` (Lean v4.29.0-rc8, from elan) and at the pin, it gave the
    rows the report quotes; at the pin it takes about six minutes and
    7.6 GiB.
++  `Safety.lean`: whether every safe constant uses only safe ones and
+   every `partial` one no `unsafe` one, as the kernel requires, with the
+   safety of the `_unsafe_rec` companions; about 95 seconds and 7.4 GiB at
+   the pin, where it found no violation (`../docs/lean-findings.md`,
+   LF-3).
 
 [15226]: https://github.com/leanprover/lean4/issues/15226

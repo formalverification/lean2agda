@@ -27,6 +27,7 @@ from atlas_report import (
     grouped, is_mathlib, largest, lean_axioms, main, modules_tsv, name_components,
     namespace_of, num, para, parse_atlas, parse_end, parse_header, parse_object,
     parse_record, parse_run, pct, pinned_stem, render_report, rest, root_of, series, stem_of,
+    t3_safety,
     table, tier_cells, tier_counts, tier_table, user_name, without_auto, wrap,
 )
 from corpus_manifest import AgdaFile, Entry
@@ -208,6 +209,15 @@ class TestFormatting(unittest.TestCase):
         self.assertTrue(lines[0].startswith("+  ") and all(l.startswith("   ") for l in lines[1:]))
         self.assertEqual(para("one.  Two."), "one.  Two.")
 
+    def test_t3_safety(self) -> None:
+        recs = [rec("sorryAx", "Init.Prelude", ["sorryAx"], kind="axiom"),
+                rec("Part.unwrap", "Mathlib.Data.Part", ["lcProof"], kind="definition", unsafe=True),
+                rec("lcProof", "Init.Prelude", ["lcProof"], kind="axiom", unsafe=True),
+                rec("Foo", "M", [])]
+        self.assertEqual(t3_safety(recs), "Of the 3, 2 are `unsafe`; the other is `sorryAx`.  "
+                         "No theorem is T3.  (`docs/lean-findings.md`, LF-2, has what this rules out.)")
+        self.assertIn("1 theorem is T3.", t3_safety([rec("t", "M", ["sorryAx"])]))
+
     def test_words(self) -> None:
         self.assertEqual((counted(1, "theorem"), counted(1, "opaque"), counted(3, "inductive")),
                          ("1 theorem", "1 opaque constant", "3 inductive types"))
@@ -251,6 +261,8 @@ class TestFormatting(unittest.TestCase):
         self.assertTrue(report.startswith("<!-- File: docs/reports/x.md -->\n\n# Axiom atlas of Mathlib v4.33.1\n"))
         self.assertIn("the 2 constants declared in Mathlib's own 2 modules", report.replace("\n   ", " "))
         self.assertIn("1 constants of the environment, 1 of them in Mathlib", report.replace("\n   ", " "))
+        self.assertIn("is one of the standard three, though the same mechanism can hide `sorryAx`",
+                      report.replace("\n   ", " "))
         self.assertIn("| T0 | T1 | 1 |", report)
         self.assertIn("[15226]: https://github.com/leanprover/lean4/issues/15226", report)
         self.assertNotIn("—", report)

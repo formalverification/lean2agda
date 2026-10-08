@@ -727,6 +727,19 @@ def section_namespaces(mathlib: Sequence[Record]) -> str:
     )
 
 
+def t3_safety(recs: Sequence[Record]) -> str:
+    """Which T3 constants are not `unsafe`, and whether any theorem is T3."""
+    t3 = [r for r in recs if r.tier == "T3"]
+    safe = [code(r.name) for r in t3 if not r.unsafe]
+    theorems = sum(r.kind == "theorem" for r in t3)
+    rest_ = ("" if not safe else f"; the other is {safe[0]}" if len(safe) == 1
+             else f"; the other {num(len(safe))} are {series(safe)}")
+    thm = ("No theorem is T3." if not theorems
+           else f"{counted(theorems, 'theorem')} {'is' if theorems == 1 else 'are'} T3.")
+    return (f"Of the {num(len(t3))}, {num(len(t3) - len(safe))} are `unsafe`{rest_}.  {thm}  "
+            "(`docs/lean-findings.md`, LF-2, has what this rules out.)")
+
+
 def section_t3(recs: Sequence[Record], mathlib: Sequence[Record]) -> str:
     standard = {"propext", "Quot.sound", "Classical.choice"}
     t3 = [r for r in mathlib if r.tier == "T3"]
@@ -740,6 +753,7 @@ def section_t3(recs: Sequence[Record], mathlib: Sequence[Record]) -> str:
         table(["axiom", "constants"],
               [[code(a), num(n)] for a, n in sorted(causes.items(), key=lambda kv: (-kv[1], kv[0]))],
               [False, True]),
+        para(t3_safety(recs)),
         para(f"Mathlib's {num(len(t3))} T3 constants are as follows:"),
         table(["constant", "module", "kind", "other axioms"],
               [[code(r.name), code(r.module), r.kind,
@@ -757,6 +771,13 @@ def section_print_axioms(recs: Sequence[Record], mathlib: Sequence[Record]) -> s
     kinds = Counter(r.kind for r in ml_short)
     by_axiom = [f"`{a}` for {num(n)}" for a, n in sorted(missing.items(), key=lambda kv: (-kv[1], kv[0]))]
     by_kind = [counted(n, k) for k, n in sorted(kinds.items(), key=lambda kv: (-kv[1], kv[0]))]
+    standard = {"propext", "Quot.sound", "Classical.choice"}
+    hidden = sum(any(a not in standard for a in r.lean_omits) for r in short)
+    hatch = ("Every axiom Lean leaves out here is one of the standard three, though the "
+             "same mechanism can hide `sorryAx` (`docs/lean-findings.md`, LF-1, has a "
+             "two-file reproduction)." if not hidden else
+             f"For {num(hidden)} of them Lean leaves out an axiom other than the standard "
+             "three, a trust escape hatch (`docs/lean-findings.md`, LF-1).")
     return blocks(
         "## Where `#print axioms` falls short",
         para("`Lean.collectAxioms`, which `#print axioms` calls, caches the axioms of a "
@@ -764,7 +785,8 @@ def section_print_axioms(recs: Sequence[Record], mathlib: Sequence[Record]) -> s
              "being visited, counting that dependency as having none.  The cycles where "
              "this happens are an inductive type and its constructors (a constructor's type "
              "mentions its type, and the type depends on its constructors) and mutually "
-             "recursive `unsafe` definitions.  Each `.olean` stores a table of the axioms of "
+             "recursive definitions such as the `_unsafe_rec` companions of mutual `partial "
+             "def`s.  Each `.olean` stores a table of the axioms of "
              "its exported declarations computed this way, and an importing module trusts "
              "it (Lean issue [15226]; pull request [15385], open, would fix it for "
              "inductive types only).  The atlas computes reachability over the same edges "
@@ -776,6 +798,7 @@ def section_print_axioms(recs: Sequence[Record], mathlib: Sequence[Record]) -> s
                    "them in Mathlib, get an incomplete axiom set from Lean.  The axiom left "
                    f"out is {series(by_axiom)} of them."),
             bullet(f"Mathlib's {num(len(ml_short))} are {series(by_kind)}."),
+            bullet(hatch),
             bullet(f"With Lean's axiom sets, Mathlib's tiers would be T0 {num(lean_ml.t0)}, "
                    f"T1 {num(lean_ml.t1)}, T2 {num(lean_ml.t2)} and T3 {num(lean_ml.t3)}.  "
                    "The Mathlib constants whose tier changes are as follows:"),
