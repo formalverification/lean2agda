@@ -27,8 +27,9 @@ section before changing anything structural.
    `translator/lean-toolchain` agrees with `lean-toolchain`.  CI runs it on every
    pull request, in the `nix` job of `.github/workflows/ci.yml`, with
    `nix develop --ignore-environment --keep HOME` so that the runner's
-   own python3, gh, jq and git cannot stand in for the shell's; later
-   checks join that same command rather than a second job.
+   own python3, gh, jq and git cannot stand in for the shell's.  The same
+   command runs `make corpus-check` and `make test`; later checks join
+   it rather than a second job.
 +  Type-check one Agda file inside the shell with `agda path/File.agda`;
    the shell's `agda` is a wrapper that passes the project-local
    `--library-file`, so a bare system `agda` would see no libraries.
