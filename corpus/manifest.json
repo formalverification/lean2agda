@@ -62,12 +62,12 @@
     "lean_module": "Mathlib.Data.Multiset.MapFold",
     "axioms": ["propext", "Quot.sound"],
     "tier": "T1",
-    "features": ["quotients", "axioms", "universe-levels"],
+    "features": ["impredicative-prop", "k-and-uip", "large-elimination", "quotients", "axioms", "universe-levels", "projections-and-let"],
     "agda_files": [
       {"path": "MultisetMapMap.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
       {"path": "MultisetMapMapCubical.agda", "flags": ["--safe", "--cubical", "--guardedness"], "profile": "CU"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 8
   },
   {
