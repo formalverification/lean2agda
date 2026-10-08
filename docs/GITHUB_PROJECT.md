@@ -671,19 +671,19 @@ Write `docs/foundations/gap-catalog.md`: one entry per feature of Lean's kernel 
 
 ## Tasks
 
-- [ ] Entries for: impredicative `Prop` (and `imax`); definitional proof irrelevance; K-like reduction and UIP; large elimination from `Prop` for subsingletons (`Eq`, `HEq`, `Acc`, `And`, `True`, `False`); structure eta and unit eta; primitive quotients and their computation rule; `Nat` literals with GMP-accelerated kernel operations and `String` literals; universe polymorphism and level arithmetic; the axioms `propext`, `Quot.sound`, `Classical.choice`; `Decidable` and `noncomputable`; the trust escape hatches (`Lean.ofReduceBool`, `implemented_by`, `partial`, `unsafe`, `sorryAx`); nested and mutual inductives; projections and `let`.
-- [ ] For each: Agda's rule or absence, with the documentation link (`--prop` restricts elimination from `Prop` to absurd patterns; `--safe` disables postulates; `--cubical-compatible` implies `--without-K`).
-- [ ] State the two facts that shape the profiles: Lean's theory proves UIP for every type, so a translation to `--cubical-compatible` Agda must justify each use of K by an `isSet` proof; and global choice of Lean's `Classical.choice` form is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged.
-- [ ] Cite Carneiro's thesis on Lean's type theory, Abel and Coquand on the failure of normalization, Vaishnav's thesis, and the HoTT book for the choice argument.
+- [x] Entries for: impredicative `Prop` (and `imax`); definitional proof irrelevance; K-like reduction and UIP; large elimination from `Prop` for subsingletons (`Eq`, `HEq`, `Acc`, `And`, `True`, `False`); structure eta and unit eta; primitive quotients and their computation rule; `Nat` literals with GMP-accelerated kernel operations and `String` literals; universe polymorphism and level arithmetic; the axioms `propext`, `Quot.sound`, `Classical.choice`; `Decidable` and `noncomputable`; the trust escape hatches (`Lean.ofReduceBool`, `implemented_by`, `partial`, `unsafe`, `sorryAx`); nested and mutual inductives; projections and `let`.
+- [x] For each: Agda's rule or absence, with the documentation link (`--prop` restricts elimination from `Prop` to absurd patterns; `--safe` disables postulates; `--cubical-compatible` implies `--without-K`).
+- [x] State the two facts that shape the profiles: Lean's theory proves UIP for every type, so a translation to `--cubical-compatible` Agda must justify each use of K by an `isSet` proof; and global choice of Lean's `Classical.choice` form is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged.
+- [x] Cite Carneiro's thesis on Lean's type theory, Abel and Coquand on the failure of normalization, Vaishnav's thesis, and the HoTT book for the choice argument.
 
 ## Acceptance criteria
 
-- [ ] Every entry has all five fields filled in.
+- [x] Every entry has all five fields filled in.
 - [ ] The catalog is linked from the README and from ADR 0001.
 
 ---
 
-### Issue M1-6: Corpus layout, selection, and checker (#6)
+### Issue M1-6: Corpus layout, selection, and checker (#6, closed)
 
 **Labels:** `milestone-1-foundations`, `infrastructure`, `hand-translation`
 
@@ -715,15 +715,15 @@ Translate by hand the constructive entries of the corpus: a `Nat` lemma (`Nat.gc
 
 ## Tasks
 
-- [ ] Export each declaration's kernel term with lean4export and record its size (nodes, bytes) in `notes.md`.
-- [ ] Write the idiomatic Agda versions; note where agda-stdlib already has the result and whether the statements match up to notation.
-- [ ] For `Nat.gcd`: document that Lean's kernel needs K-like reduction for its defining equation to hold definitionally (the reason Lean4Less aborts on large `Nat.gcd` computations) and how the Agda version avoids the issue.
-- [ ] Record uses of proof irrelevance, K, literals, and `WellFounded` in the kernel terms.
+- [x] Export each declaration's kernel term with lean4export and record its size (nodes, bytes) in `notes.md`.
+- [x] Write the idiomatic Agda versions; note where agda-stdlib already has the result and whether the statements match up to notation.
+- [x] For `Nat.gcd`: document that Lean's kernel needs K-like reduction for its defining equation to hold definitionally (the reason Lean4Less aborts on large `Nat.gcd` computations) and how the Agda version avoids the issue.
+- [x] Record uses of proof irrelevance, K, literals, and `WellFounded` in the kernel terms.
 
 ## Acceptance criteria
 
-- [ ] All entries of this theme check under `--safe --cubical-compatible` via `make corpus-check`.
-- [ ] Each `notes.md` cross-references the gap catalog entries it exercised.
+- [x] All entries of this theme check under `--safe --cubical-compatible` via `make corpus-check`.
+- [x] Each `notes.md` cross-references the gap catalog entries it exercised.
 
 ---
 
@@ -737,14 +737,14 @@ Translate by hand a `Multiset` lemma (Lean's `Quot` over list permutation) and a
 
 ## Tasks
 
-- [ ] Parameterized versions: a record of quotient primitives (`Quot`, `mk`, `lift`, `ind`, `sound`, and the propositional computation rule) and records for `propext` and `funext`, as module parameters.
-- [ ] Cubical versions using `SetQuotient` (`rec` computes on points, `eq/` for `sound`, `elimProp` for `ind`), `funExt`, and propositional extensionality for h-propositions.
-- [ ] Record where the Lean kernel term uses the definitional computation of `Quot.lift` and what the parameterized version has to do instead (an explicit rewrite by the propositional rule).
+- [x] Parameterized versions: a record of quotient primitives (`Quot`, `mk`, `lift`, `ind`, `sound`, and the propositional computation rule) and records for `propext` and `funext`, as module parameters.
+- [x] Cubical versions using `SetQuotient` (`rec` computes on points, `eq/` for `sound`, `elimProp` for `ind`), `funExt`, and propositional extensionality for h-propositions.
+- [x] Record where the Lean kernel term uses the definitional computation of `Quot.lift` and what the parameterized version has to do instead (an explicit rewrite by the propositional rule).
 
 ## Acceptance criteria
 
-- [ ] Both versions of both entries check (`--safe --cubical-compatible` and `--safe --cubical` respectively).
-- [ ] `notes.md` lists the definitional quotient computations the parameterized version had to make explicit.
+- [x] Both versions of both entries check (`--safe --cubical-compatible` and `--safe --cubical` respectively).
+- [x] `notes.md` lists the definitional quotient computations the parameterized version had to make explicit.
 
 ---
 
