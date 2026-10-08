@@ -671,14 +671,14 @@ Write `docs/foundations/gap-catalog.md`: one entry per feature of Lean's kernel 
 
 ## Tasks
 
-- [ ] Entries for: impredicative `Prop` (and `imax`); definitional proof irrelevance; K-like reduction and UIP; large elimination from `Prop` for subsingletons (`Eq`, `HEq`, `Acc`, `And`, `True`, `False`); structure eta and unit eta; primitive quotients and their computation rule; `Nat` literals with GMP-accelerated kernel operations and `String` literals; universe polymorphism and level arithmetic; the axioms `propext`, `Quot.sound`, `Classical.choice`; `Decidable` and `noncomputable`; the trust escape hatches (`Lean.ofReduceBool`, `implemented_by`, `partial`, `unsafe`, `sorryAx`); nested and mutual inductives; projections and `let`.
-- [ ] For each: Agda's rule or absence, with the documentation link (`--prop` restricts elimination from `Prop` to absurd patterns; `--safe` disables postulates; `--cubical-compatible` implies `--without-K`).
-- [ ] State the two facts that shape the profiles: Lean's theory proves UIP for every type, so a translation to `--cubical-compatible` Agda must justify each use of K by an `isSet` proof; and global choice of Lean's `Classical.choice` form is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged.
-- [ ] Cite Carneiro's thesis on Lean's type theory, Abel and Coquand on the failure of normalization, Vaishnav's thesis, and the HoTT book for the choice argument.
+- [x] Entries for: impredicative `Prop` (and `imax`); definitional proof irrelevance; K-like reduction and UIP; large elimination from `Prop` for subsingletons (`Eq`, `HEq`, `Acc`, `And`, `True`, `False`); structure eta and unit eta; primitive quotients and their computation rule; `Nat` literals with GMP-accelerated kernel operations and `String` literals; universe polymorphism and level arithmetic; the axioms `propext`, `Quot.sound`, `Classical.choice`; `Decidable` and `noncomputable`; the trust escape hatches (`Lean.ofReduceBool`, `implemented_by`, `partial`, `unsafe`, `sorryAx`); nested and mutual inductives; projections and `let`.
+- [x] For each: Agda's rule or absence, with the documentation link (`--prop` restricts elimination from `Prop` to absurd patterns; `--safe` disables postulates; `--cubical-compatible` implies `--without-K`).
+- [x] State the two facts that shape the profiles: Lean's theory proves UIP for every type, so a translation to `--cubical-compatible` Agda must justify each use of K by an `isSet` proof; and global choice of Lean's `Classical.choice` form is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged.
+- [x] Cite Carneiro's thesis on Lean's type theory, Abel and Coquand on the failure of normalization, Vaishnav's thesis, and the HoTT book for the choice argument.
 
 ## Acceptance criteria
 
-- [ ] Every entry has all five fields filled in.
+- [x] Every entry has all five fields filled in.
 - [ ] The catalog is linked from the README and from ADR 0001.
 
 ---
