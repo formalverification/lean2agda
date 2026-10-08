@@ -43,24 +43,35 @@ way.  Three goals, in priority order:
 ## What the translation has to bridge
 
 The two theories differ in ways that each force a design decision.
-The project keeps a catalog of these gaps (`docs/foundations/`, once
-M1 lands); the main entries are as follows.
+The project's catalog of these gaps,
+[`docs/foundations/gap-catalog.md`](docs/foundations/gap-catalog.md),
+has one entry per feature of Lean's kernel theory, with the Lean rule,
+Agda's status under each target profile, the translation strategy,
+the predecessors' treatment and the references, every Agda claim
+settled by a probe file and every Lean claim checked at the pinned
+versions on 2026-10-07.  The table below summarizes its thirteen
+entries, in the catalog's order and under its slugs, which the corpus
+manifest uses as its feature vocabulary.
 
-| Feature | Lean 4 | Agda | Consequence |
+| Entry | Lean 4 | Agda | Consequence |
 | --- | --- | --- | --- |
-| Universe of propositions | `Prop` is impredicative: a proposition may quantify over any universe and stay in `Prop` | `Set ℓ` and `Prop ℓ` are predicative | universe-polymorphic level elaboration; essentially impredicative uses cannot be translated |
-| Proof irrelevance | definitional: any two proofs of a proposition are equal | only in the `Prop` universe (`--prop`), which cannot eliminate into `Set` except by absurd patterns | either use Agda's `Prop` plus explicit casts for the propositions Lean eliminates largely, or h-propositions in `Set` plus casts everywhere |
-| K and UIP | every type has unique identity proofs; `Eq.rec` reduces by K-like reduction | available with K (Agda's default); rejected under `--cubical-compatible` | each use of K must be justified by an `isSet` proof, or reported as K-essential |
-| Large elimination from `Prop` | `Eq`, `HEq`, `Acc`, `And`, `True`, `False` and other subsingletons eliminate into `Type` | not from `Prop` | those propositions live in `Set` on the Agda side |
-| Quotients | primitive `Quot` with a definitional computation rule and the axiom `Quot.sound` | none in plain Agda; set quotients as higher inductive types under `--cubical` | a module-parameter record with a propositional computation rule (casts inserted), or cubical set quotients |
-| Axioms | `propext`, `Quot.sound`, `Classical.choice` | none; postulates are forbidden by `--safe` | module parameters; `Classical.choice` is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged |
-| Universe levels | `max`, `imax`, and `Sort 0 = Prop` as a special case | `⊔`, `lsuc`, no `imax` | specialize each constant by which level parameters are zero |
-| Eta | definitional eta for structures and unit-like types | eta for records | structure-like inductives become records |
-| Literals | `Nat` literals with GMP-accelerated kernel arithmetic; `String` literals | builtin naturals and strings with different definitional edges | an operation table; `Nat.gcd` needs special care |
-| Trust escape hatches | `Lean.ofReduceBool` (`native_decide`), `implemented_by`, `partial`, `unsafe`, `sorryAx` | none | refused and reported |
+| `impredicative-prop` | `Prop` is impredicative: a proposition may quantify over any universe and stay in `Prop`, through `imax` | `Set ℓ` and `Prop ℓ` are predicative | universe-polymorphic level elaboration; essentially impredicative uses cannot be translated |
+| `proof-irrelevance` | definitional: any two proofs of a proposition are equal | only in the `Prop` universe (`--prop`), which cannot eliminate into `Set` except by absurd patterns, and in irrelevant arguments | either use Agda's `Prop` plus explicit casts for the propositions Lean eliminates largely, or h-propositions in `Set` plus casts everywhere |
+| `k-and-uip` | every type has unique identity proofs; `Eq.rec` reduces by K-like reduction on any proof | K by pattern matching under Agda's default; rejected under `--cubical-compatible`; no K-like reduction under any flag | each use of K must be justified by an `isSet` proof, or reported as K-essential |
+| `large-elimination` | `Eq`, `HEq`, `Acc`, `And`, `True`, `False` and every syntactic subsingleton eliminate into `Sort u` | not from `Prop`, under any flag | those propositions live in `Set` on the Agda side |
+| `quotients` | primitive `Quot` with a definitional computation rule and the axiom `Quot.sound` | none in plain Agda; set quotients as higher inductive types under `--cubical` | a module-parameter record with a propositional computation rule (casts inserted), or cubical set quotients |
+| `axioms` | `propext`, `Quot.sound`, `Classical.choice` | none; postulates are forbidden by `--safe` | module parameters; `Classical.choice` is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged |
+| `universe-levels` | `max`, `imax`, and `Sort 0 = Prop` as a special case | `⊔`, `lsuc`, no `imax`; level-polymorphic types live in `Setω` | specialize each constant by which level parameters are zero, then solve level constraints |
+| `structure-eta` | definitional eta for non-recursive structures and unit-like types | eta for records, recursive ones included | structure-like inductives become records |
+| `literals` | `Nat` literals with GMP-accelerated kernel arithmetic (fourteen operations, `gcd` among them); `String` literals over UTF-8 byte arrays | builtin naturals and strings with different definitional edges | an operation table; `Nat.gcd` needs special care |
+| `trust-escape-hatches` | `sorryAx`, the `native_decide` axioms, `Lean.ofReduceBool`, the compiler's `lcProof` family, `implemented_by`, `partial`, `unsafe` | none under `--safe` | refused and reported |
+| `decidable-and-noncomputable` | `Decidable` instances from `Classical.choice`, marked `noncomputable` for the compiler | `Dec` on a module parameter is stuck; no modifier exists or is needed | abstract classical instances into hypotheses where the statement allows it |
+| `nested-and-mutual-inductives` | both, handled inside the kernel; almost absent from Mathlib's mathematics | both, plus induction-recursion | emitted directly; the recursors' several motives fold into pattern matching |
+| `projections-and-let` | `Expr.proj` and `let` are kernel terms; `.olean` terms are pointer-shared | record projections are functions; `let` is sugar without sharing | a sharing pass introduces constants for repeated closed subterms |
 
-Two consequences shape the whole design.  First, Lean's theory proves
-uniqueness of identity proofs for every type, so a translation into
+Two consequences shape the whole design (the catalog's first section).
+First, Lean's theory proves uniqueness of identity proofs for every
+type, so a translation into
 `--cubical-compatible` Agda must prove, for each type on which K is
 used, that the type is an h-set; where it cannot (equalities between
 types, typically), the declaration is reported rather than translated.
