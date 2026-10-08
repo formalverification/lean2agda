@@ -63,9 +63,11 @@ the selection are not obvious from the names:
    `Lean.Syntax`, nested.  The corpus therefore takes the one mutual
    block Mathlib's mathematics has.
 +  **Tiers lower and higher than they look**.  `List.reverse_reverse`
-   and `Nat.gcd_self` are T1, not T0: `simp` closes goals with
-   `eq_self`, which is proved from `propext` (the seed entry's notes
-   trace it).  `OrderHom.map_lfp`, Knaster and Tarski, is T1;
+   is T1, not T0, only because `simp` closes a goal with `eq_self`,
+   which is proved from `propext` (the seed entry's notes trace it).
+   `Nat.gcd_self` is T1 through `eq_self` too, and through the lemmas
+   its proof cites: `Nat.mod_self` (`propext`) and `Nat.gcd_succ`
+   (`Quot.sound`).  `OrderHom.map_lfp`, Knaster and Tarski, is T1;
    `Subtype.coe_eta` is T0.
 +  **The gcd equation**.  `Nat.gcd` is defined by well-founded
    recursion (`termination_by`, compiled through `WellFounded.fix`) and
