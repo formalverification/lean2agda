@@ -22,7 +22,11 @@ Provenance:
   Copied into lean2agda from ualib/agda-algebras, scripts/python/_utils/,
   at commit ee830be, with three unused imports removed and one f-string
   without placeholders made a plain string.  lean2agda added
-  ErrorType.TIMEOUT, for command_runner's timeout.  See NOTICE.
+  ErrorType.TIMEOUT, for command_runner's timeout, and fixed two defects
+  of the copy: unwrap and unwrap_or treated a successful Result holding
+  None as an error (unwrap raised "Called unwrap() on error result:
+  None"), so they now follow is_ok alone; and is_agda_file compared
+  Path.suffix with '.lagda.md', which no suffix equals.  See NOTICE.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
     TypeVar, Generic, Optional, Dict, List, Tuple,
-    Callable, Any, Protocol, runtime_checkable
+    Callable, Any, Protocol, cast, runtime_checkable
 )
 from enum import Enum, auto
 
@@ -88,14 +92,15 @@ class Result(Generic[T, E]):
         return not self._is_ok
 
     def unwrap(self) -> T:
-        """Extract the success value (throws if error)."""
-        if self._is_ok and self._value is not None:
-            return self._value
+        """Extract the success value (throws if error).  A success value
+        may be None, as for a write that returns nothing."""
+        if self._is_ok:
+            return cast(T, self._value)
         raise ValueError(f"Called unwrap() on error result: {self._error}")
 
     def unwrap_or(self, default: T) -> T:
         """Extract the success value or return default."""
-        return self._value if self._is_ok and self._value is not None else default
+        return cast(T, self._value) if self._is_ok else default
 
     def unwrap_err(self) -> E:
         """Extract the error value (throws if success)."""
@@ -253,8 +258,9 @@ class ProcessedFile:
 
     @property
     def is_agda_file(self) -> bool:
-        """True if this is an Agda source file."""
-        return self.source_path.suffix in {'.agda', '.lagda', '.lagda.md'}
+        """True if this is an Agda source file.  Matched on the name,
+        since Path.suffix of 'M.lagda.md' is '.md'."""
+        return self.source_path.name.endswith(('.agda', '.lagda', '.lagda.md'))
 
     @property
     def module_name(self) -> str:

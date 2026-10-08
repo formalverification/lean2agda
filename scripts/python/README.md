@@ -17,10 +17,11 @@ file's header says from where and what changed): `Result` and
 `PipelineError` in `pipeline_types.py`, filesystem wrappers in
 `file_ops.py`, and `run_command` in `command_runner.py`.  Use it rather
 than calling `open`, `shutil` or `subprocess` directly, and put a new
-general helper there.  Two of its behaviors surprise: `is_ok` and
-`is_err` are properties, not methods, and `unwrap` treats
-`Result.ok(None)` as an error, so a function whose `Result` may be
-unwrapped returns a value, never `None`.
+general helper there.  One of its behaviors surprises: `is_ok` and
+`is_err` are properties, not methods.  The copies in agda-algebras and
+agda-native-air also have `unwrap` treat `Result.ok(None)` as an error;
+this copy fixed that, with the other defects its files' headers name,
+so a `Result` may hold `None` here.
 
 House style, which applies to every file here, is as follows:
 

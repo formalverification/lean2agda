@@ -89,8 +89,9 @@ before any pull request.  The committed skills `project-setup` and
    reporting on the atlas and driving Agda; every pure function has a
    test, under `scripts/python/tests/`.  Use the `_utils` package
    (copied from agda-algebras) rather than reimplementing it: its
-   `Result` has `is_ok` and `is_err` as properties, and `unwrap` treats
-   `Result.ok(None)` as an error, so never put `None` in a `Result`.
+   `Result` has `is_ok` and `is_err` as properties, not methods.  This
+   copy fixed the upstream trap in which `unwrap` treated
+   `Result.ok(None)` as an error; the other copies still have it.
 +  `docs/`: the roadmap, the design records under `docs/adr/`, the
    foundational notes under `docs/foundations/`, and the engine's
    command reference `docs/HowToRun.md`.

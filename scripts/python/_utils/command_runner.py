@@ -13,13 +13,18 @@ Provenance:
   Copied into lean2agda from ualib/agda-algebras, scripts/python/_utils/,
   at commit ee830be.  lean2agda added the timeout parameter, and keeps
   the captured standard output in the error of a failed command (Agda
-  prints its errors there, not on standard error).  See NOTICE.
+  prints its errors there, not on standard error).  It also fixed two
+  defects of the copy: streaming read standard output to its end before
+  standard error, which deadlocks once the command fills the standard
+  error pipe, and left both pipes open; and capture_output=False still
+  captured standard output.  See NOTICE.
 """
 from __future__ import annotations
 import subprocess
 import logging
+import threading
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import IO, Callable, List, Optional, Union
 
 from .pipeline_types import Result, PipelineError, ErrorType
 
@@ -36,6 +41,10 @@ def run_command(
     Runs a shell command and returns a Result object.
     Can either capture output or stream it live to the logger.
 
+    Standard output is captured when capture_output is set, written to
+    stdout_file when one is given, and otherwise inherited from this
+    process; standard error is always captured.
+
     With a timeout (seconds; capturing mode only), a command still
     running when it expires is killed and the result is an error of type
     ErrorType.TIMEOUT, never an exception.
@@ -46,26 +55,31 @@ def run_command(
     try:
         # --- NEW: Logic to handle live streaming output ---
         if stream_output:
-            # Use Popen for live output streaming
-            process = subprocess.Popen(
+            # Use Popen for live output streaming; as a context manager it
+            # closes both pipes and waits for the command on the way out.
+            with subprocess.Popen(
                 [str(arg) for arg in command],
                 cwd=cwd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 encoding='utf-8'
-            )
+            ) as process:
+                # Log stdout and stderr line by line, draining standard error
+                # on a thread while this one reads standard output.  Reading
+                # one stream to its end before the other deadlocks as soon as
+                # the command fills the other's pipe (64 KiB on Linux): the
+                # command blocks writing it, and this process blocks waiting
+                # for the first stream to close.
+                drain = threading.Thread(
+                    target=_log_lines, args=(process.stderr, logging.warning, "  ! "), daemon=True
+                )
+                drain.start()
+                _log_lines(process.stdout, logging.info, "  > ")
 
-            # Log stdout and stderr line-by-line
-            if process.stdout:
-                for line in iter(process.stdout.readline, ''):
-                    logging.info(f"  > {line.strip()}")
-            if process.stderr:
-                 for line in iter(process.stderr.readline, ''):
-                    logging.warning(f"  ! {line.strip()}")
-
-            # Wait for the process to complete and get the return code
-            process.wait()
+                # Wait for the process to complete and get the return code
+                process.wait()
+                drain.join()
             if process.returncode != 0:
                  return Result.err(PipelineError(
                     error_type=ErrorType.COMMAND_FAILED,
@@ -79,7 +93,7 @@ def run_command(
 
         # --- Original logic for capturing output ---
         else:
-            stdout_target = subprocess.PIPE if capture_output or not stdout_file else None
+            stdout_target = subprocess.PIPE if capture_output else None
             if stdout_file:
                 stdout_file.parent.mkdir(parents=True, exist_ok=True)
                 stdout_target = open(stdout_file, "w", encoding="utf-8")
@@ -145,3 +159,11 @@ def _as_text(output: Optional[Union[str, bytes]]) -> str:
     if isinstance(output, bytes):
         return output.decode("utf-8", errors="replace")
     return output
+
+
+def _log_lines(stream: Optional[IO[str]], log: Callable[[str], None], prefix: str) -> None:
+    """Log each line of a text stream until it closes."""
+    if stream is None:
+        return
+    for line in iter(stream.readline, ''):
+        log(f"{prefix}{line.strip()}")
