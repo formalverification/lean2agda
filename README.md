@@ -236,7 +236,8 @@ the roadmap tools (gh, jq, and the github-project engine).
 nix develop         # Lean (from lean-toolchain), Agda 2.8.0, agda-stdlib 2.3,
                     # cubical 0.9, Python 3, gh, make
 make doctor         # print versions; fail, naming any missing tool or library
-make corpus-check   # placeholder until M1-6: type-check every corpus entry
+make corpus-check   # type-check every translated corpus entry (corpus/README.md)
+make test           # the Python tests (scripts/python/tests/)
 make atlas          # placeholder until M1-11: axiom profile of pinned Mathlib
 make lint           # structural check of docs/GITHUB_PROJECT.md
 ```

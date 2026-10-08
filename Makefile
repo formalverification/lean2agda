@@ -11,8 +11,8 @@
 #             (A `local` mode exists for template copies that have not run
 #             `make init`; this project has.)
 #   project   doctor / check / test / corpus-check / atlas are the project's
-#             own targets; the ones not yet implemented say which roadmap
-#             issue implements them.
+#             own targets; atlas, not yet implemented, says which roadmap
+#             issue implements it.
 #   lean      lean-cache / lean-build / lean-smoke run Lake in translator/,
 #             the Lake package that carries Mathlib (docs/pinning.md).
 #
@@ -21,6 +21,7 @@
 #   REPO           owner/name override  (default: the plan file's
 #                                        **Repository**: header)
 #   PYTHON         interpreter          (default: python3)
+#   CORPUS_TIMEOUT seconds corpus-check allows each Agda file (default: 300)
 #   GHPROJECT_DIR  engine checkout path (checkout channel only)
 #   NO_ENV_PREFIX  set (to anything) wherever gh authenticates *through*
 #                  GH_TOKEN/GITHUB_TOKEN; GitHub Actions included.
@@ -32,6 +33,7 @@ GHPROJECT_DIR ?=
 AGDA   ?= agda
 LEAN   ?= lean
 LAKE   ?= lake
+CORPUS_TIMEOUT ?= 300
 
 FLAGS := $(if $(REPO),--repo $(REPO)) $(if $(NO_ENV_PREFIX),--no-env-prefix)
 
@@ -130,16 +132,21 @@ doctor: ## Print tool versions; fail, naming each missing tool or Agda library o
 	  || { echo "error: Agda could not resolve:$$bad (see above)"; exit 1; }; \
 	  echo "agda libraries: standard-library and cubical resolve"
 
-check: ## Type-check the corpus and the emitted Agda (placeholder: lands with M1-6 and M2-8)
-	@echo "check: nothing to check yet.  The corpus checker lands with issue M1-6"
-	@echo "       and the emitted-Agda checker with issue M2-8 (docs/GITHUB_PROJECT.md)."
+# check grows with the project: the emitted-Agda checker of issue M2-8
+# joins corpus-check here.
+check: corpus-check ## Type-check the corpus (corpus-check); the emitted Agda joins with M2-8
 
-test: ## Run the translator and Python test suites (placeholder: lands with M2-1)
-	@echo "test: no test suites yet.  The translator's golden tests land with issue M2-1"
-	@echo "      and the Python tests with the first script under scripts/python/."
+# Python-only until issue M2-1 adds the translator's golden tests.  The
+# suite runs no Agda (the Agda call is injected), so it needs no shell
+# beyond Python 3, but CI runs it in the default shell with the rest.
+test: ## Run the Python test suite (Python-only until M2-1 adds the golden tests)
+	$(PYTHON) -m unittest discover -s scripts/python/tests -t scripts/python
 
-corpus-check: ## Type-check every corpus entry under its declared flags (placeholder: lands with M1-6)
-	@echo "corpus-check: the corpus checker lands with issue M1-6; see corpus/README.md."
+# Run inside the Nix shell: the checker runs `agda` from each translated
+# entry's agda/ directory with no flags of its own, so each file checks
+# under its OPTIONS pragma against the libraries the shell registers.
+corpus-check: ## Type-check every translated corpus entry under the flags its files declare
+	$(PYTHON) scripts/python/corpus_check.py --agda $(AGDA) --timeout $(CORPUS_TIMEOUT)
 
 atlas: ## Compute the axiom profile of the pinned Mathlib revision (placeholder: lands with M1-11)
 	@echo "atlas: the atlas producer lands with issue M1-11; see atlas/README.md."

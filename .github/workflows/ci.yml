@@ -96,12 +96,14 @@ jobs:
   # come from the shell; HOME is kept, as any real machine sets it.  A
   # later target that reads another variable passes it with --keep NAME.
   #
-  # It runs `make doctor`, whose two Agda probes are the project's first
-  # Agda check.  Later checks (`make check`, `make test`, `make
-  # corpus-check`) join the same `nix develop --command` rather than a
-  # second job, so each run evaluates the flake once.  `make doctor`
-  # runs the engine's lint CLI with --help, which reads no token, so
-  # NO_ENV_PREFIX is not set.
+  # It runs `make doctor`, whose two Agda probes check that the shell's
+  # agda resolves both libraries; `make corpus-check`, which type-checks
+  # every translated corpus entry under the flags its files declare; and
+  # `make test`, the Python suite.  Make stops at the first target that
+  # fails.  Later checks join the same `nix develop --command` rather
+  # than a second job, so each run evaluates the flake once.  `make
+  # doctor` runs the engine's lint CLI with --help, which reads no
+  # token, so NO_ENV_PREFIX is not set.
   #
   # Cachix.  Pulling from the public `formalverification` cache needs no
   # token.  The write-capable CACHIX_AUTH_TOKEN reaches cachix-action
@@ -154,10 +156,11 @@ jobs:
           authToken: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN || '' }}
           skipPush: ${{ github.ref != 'refs/heads/main' }}
 
-      - name: make doctor in the default dev shell
+      - name: make doctor, corpus-check and test in the default dev shell
         run: |
           set -euxo pipefail
-          nix develop --ignore-environment --keep HOME --command make doctor
+          nix develop --ignore-environment --keep HOME \
+            --command make doctor corpus-check test
 
       - name: Disk usage after entering the shell
         if: always()

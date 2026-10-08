@@ -575,7 +575,7 @@ Mathlib's toolchain moves monthly, and the tools we depend on (Lean4Less, lean2d
 
 ---
 
-### Issue M1-4: Related-work survey (#4)
+### Issue M1-4: Related-work survey (#4, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `research`, `upstream`
 
@@ -629,15 +629,15 @@ The corpus is the set of Lean declarations we translate by hand first and that t
 
 ## Tasks
 
-- [ ] Layout `corpus/<id>/`: `lean/` (the Lean statement and its elaborated term, exported with lean4export), `agda/` (the hand-written idiomatic Agda, with its `OPTIONS` pragma), and `notes.md` (what the translation needed, by gap-catalog entry).
-- [ ] Manifest `corpus/manifest.json`: id, Lean name, Mathlib module, axiom tier, features exercised, Agda profile the hand version checks under, status.
-- [ ] Select the entries across these themes: constructive arithmetic and lists; well-founded recursion (`Nat.gcd`); a `Quot`-based lemma (`Multiset`); set extensionality (`propext`, `funext`); a `Finset` lemma whose statement carries a classical `Decidable` instance; a `Real` lemma; Lagrange's theorem; a lattice lemma (Knaster and Tarski); a structure-eta reliance (`Subtype`); and a `Mathlib.ModelTheory` lemma that touches agda-algebras's domain.
-- [ ] `scripts/python/corpus_check.py` (functional house style) runs `agda` on each entry under its declared flags and prints a table; wire `make corpus-check`.
+- [x] Layout `corpus/<id>/`: `lean/` (the Lean statement and its elaborated term, exported with lean4export), `agda/` (the hand-written idiomatic Agda, with its `OPTIONS` pragma), and `notes.md` (what the translation needed, by gap-catalog entry).
+- [x] Manifest `corpus/manifest.json`: id, Lean name, Mathlib module, axiom tier, features exercised, Agda profile the hand version checks under, status.
+- [x] Select the entries across these themes: constructive arithmetic and lists; well-founded recursion (`Nat.gcd`); a `Quot`-based lemma (`Multiset`); set extensionality (`propext`, `funext`); a `Finset` lemma whose statement carries a classical `Decidable` instance; a `Real` lemma; Lagrange's theorem; a lattice lemma (Knaster and Tarski); a structure-eta reliance (`Subtype`); and a `Mathlib.ModelTheory` lemma that touches agda-algebras's domain.
+- [x] `scripts/python/corpus_check.py` (functional house style) runs `agda` on each entry under its declared flags and prints a table; wire `make corpus-check`.
 
 ## Acceptance criteria
 
-- [ ] The manifest lists twelve entries with their themes and features.
-- [ ] `make corpus-check` runs and reports per-entry status, in CI too.
+- [x] The manifest lists twelve entries with their themes and features.
+- [x] `make corpus-check` runs and reports per-entry status, in CI too.
 
 ---
 
