@@ -17,6 +17,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import replace
+from unittest import mock
 from pathlib import Path
 from typing import Any
 
@@ -90,7 +91,12 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(parse_object('{"a": 1}').unwrap(), {"a": 1})
         self.assertTrue(parse_object("[1]").is_err)
         self.assertTrue(parse_object("{").is_err)
-        self.assertIn("nested too deeply", parse_object("[" * 100_000).unwrap_err())
+        # Whether this much nesting overflows the parser's stack depends on
+        # the machine's stack size (it did here, not on the CI runner), so
+        # only an error is required; the overflow branch is driven below.
+        self.assertTrue(parse_object("[" * 100_000).is_err)
+        with mock.patch("atlas_report.json.loads", side_effect=RecursionError):
+            self.assertEqual(parse_object("[]").unwrap_err(), "not JSON (nested too deeply to parse)")
 
     def test_decode_atlas(self) -> None:
         self.assertEqual(decode_atlas("«x»\n".encode("utf-8")).unwrap(), "«x»\n")
