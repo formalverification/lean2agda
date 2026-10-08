@@ -29,8 +29,7 @@ Your lean2agda from September 2024 is the closest thing to it that
 exists, and I have read it carefully.  The pass structure (deduplication
 of closed subterms, binder fixing, level clauses, records for structure-
 like inductives, recursors by pattern matching) is the right shape, and
-our first milestone ends roughly where your tool stops: one Agda file
-under `--type-in-type`, checked on `Nat.gcd_self`.  Our survey of prior
+our M2 ends roughly where your tool stops: one Agda file under `--prop --type-in-type`, checked on `Nat.gcd_self`
 work (`docs/related-work.md` in the repository) has a section on your
 tool, and every idea we take from it is credited there and in the design
 notes.  We have not copied any code; if a later side-by-side comparison
@@ -49,8 +48,8 @@ level-clause idea, to contributing.  The project is public and the
 roadmap is in the repository; there is no obligation either way, and a
 "no" is a perfectly good answer.
 
-Thank you for having built it and for putting it under a license that
-lets others build on it.
+Thank you for having built it and for making it available under the Apache-2.0
+license.
 
 Best regards,
 
