@@ -9,8 +9,10 @@ follows:
    type-checks every translated corpus entry; run by `make corpus-check`.
    `corpus_manifest.py` holds the manifest's rules and `agda_run.py` the
    call to Agda, which issue M2-8's `agda_check.py` is to reuse.
-+  `atlas_report.py` (issue M1-11) and `agda_check.py` (issue M2-8) are
-   planned.
++  `atlas_report.py` (issue M1-11): reads the records `lake exe atlas`
+   writes and writes the atlas's report under `docs/reports/`, checking
+   them against `corpus/manifest.json`; run by `make atlas`.
++  `agda_check.py` (issue M2-8) is planned.
 
 `_utils/` is the utilities package, copied from agda-algebras (each
 file's header says from where and what changed): `Result` and

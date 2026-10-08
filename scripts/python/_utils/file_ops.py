@@ -12,7 +12,7 @@ Provenance:
   Adapted from formalverification/agda-native-air/ at SHA 664b919.
   Copied into lean2agda from ualib/agda-algebras, scripts/python/_utils/,
   at commit ee830be, with the missing import of ProcessingStage
-  added.  lean2agda added file_size.  See NOTICE.
+  added.  lean2agda added file_size and read_bytes.  See NOTICE.
 """
 from __future__ import annotations
 import json
@@ -149,6 +149,15 @@ def file_size(path: Path) -> Result[int, PipelineError]:
         return Result.err(PipelineError(ErrorType.FILE_NOT_FOUND, f"File not found: {path}"))
     except Exception as e:
         return Result.err(PipelineError(ErrorType.COMMAND_FAILED, f"Failed to read the size of: {path}", cause=e))
+
+def read_bytes(path: Path) -> Result[bytes, PipelineError]:
+    """Reads a file's bytes, unchanged, returning a Result."""
+    try:
+        return Result.ok(path.read_bytes())
+    except FileNotFoundError:
+        return Result.err(PipelineError(ErrorType.FILE_NOT_FOUND, f"File not found: {path}"))
+    except Exception as e:
+        return Result.err(PipelineError(ErrorType.COMMAND_FAILED, f"Failed to read file: {path}", cause=e))
 
 def write_text(path: Path, content: str) -> Result[None, PipelineError]:
     """Writes text to a file, returning a Result."""
