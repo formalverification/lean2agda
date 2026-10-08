@@ -683,7 +683,7 @@ Write `docs/foundations/gap-catalog.md`: one entry per feature of Lean's kernel 
 
 ---
 
-### Issue M1-6: Corpus layout, selection, and checker (#6)
+### Issue M1-6: Corpus layout, selection, and checker (#6, closed)
 
 **Labels:** `milestone-1-foundations`, `infrastructure`, `hand-translation`
 
@@ -737,14 +737,14 @@ Translate by hand a `Multiset` lemma (Lean's `Quot` over list permutation) and a
 
 ## Tasks
 
-- [ ] Parameterized versions: a record of quotient primitives (`Quot`, `mk`, `lift`, `ind`, `sound`, and the propositional computation rule) and records for `propext` and `funext`, as module parameters.
-- [ ] Cubical versions using `SetQuotient` (`rec` computes on points, `eq/` for `sound`, `elimProp` for `ind`), `funExt`, and propositional extensionality for h-propositions.
-- [ ] Record where the Lean kernel term uses the definitional computation of `Quot.lift` and what the parameterized version has to do instead (an explicit rewrite by the propositional rule).
+- [x] Parameterized versions: a record of quotient primitives (`Quot`, `mk`, `lift`, `ind`, `sound`, and the propositional computation rule) and records for `propext` and `funext`, as module parameters.
+- [x] Cubical versions using `SetQuotient` (`rec` computes on points, `eq/` for `sound`, `elimProp` for `ind`), `funExt`, and propositional extensionality for h-propositions.
+- [x] Record where the Lean kernel term uses the definitional computation of `Quot.lift` and what the parameterized version has to do instead (an explicit rewrite by the propositional rule).
 
 ## Acceptance criteria
 
-- [ ] Both versions of both entries check (`--safe --cubical-compatible` and `--safe --cubical` respectively).
-- [ ] `notes.md` lists the definitional quotient computations the parameterized version had to make explicit.
+- [x] Both versions of both entries check (`--safe --cubical-compatible` and `--safe --cubical` respectively).
+- [x] `notes.md` lists the definitional quotient computations the parameterized version had to make explicit.
 
 ---
 
