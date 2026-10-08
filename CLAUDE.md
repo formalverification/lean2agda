@@ -32,9 +32,12 @@ section before changing anything structural.
 +  Type-check one Agda file inside the shell with `agda path/File.agda`;
    the shell's `agda` is a wrapper that passes the project-local
    `--library-file`, so a bare system `agda` would see no libraries.
-+  `make help` lists every target.  `make check`, `make test`,
-   `make corpus-check` and `make atlas` are placeholders until the issues
-   that implement them land (M1-6, M1-11, M2-1, M2-8); each says so.
++  `make help` lists every target.  `make corpus-check` type-checks every
+   translated corpus entry under the flags its files declare
+   (`corpus/README.md`); `make check` runs it, and the emitted-Agda check
+   joins with M2-8.  `make test` runs the Python suite under
+   `scripts/python/tests/`, Python-only until M2-1 adds the golden tests.
+   `make atlas` is a placeholder until M1-11, and says so.
 +  `translator/` is a Lake package requiring Mathlib and lean4export at
    pinned tags (`docs/pinning.md`).  Mathlib's prebuilt `.olean` files
    come from `lake exe cache get` there (`make lean-cache`); never
@@ -76,12 +79,17 @@ before any pull request.  The committed skills `project-setup` and
    the edges.
 +  `corpus/`: Mathlib declarations translated by hand, one directory per
    entry with the Lean statement and exported term, the idiomatic Agda,
-   and notes; the translator's test oracle.
+   and notes; the translator's test oracle.  `corpus/SCHEMA.md` defines
+   an entry and `corpus/manifest.json`, and `corpus/README.md` says how
+   to translate one.
 +  `atlas/`: per-declaration records of axioms, computability and kernel
    features, as NDJSON, with their schema.
 +  `scripts/python/`: stdlib-only Python for checking the corpus,
    reporting on the atlas and driving Agda; every pure function has a
-   test.
+   test, under `scripts/python/tests/`.  Use the `_utils` package
+   (copied from agda-algebras) rather than reimplementing it: its
+   `Result` has `is_ok` and `is_err` as properties, and `unwrap` treats
+   `Result.ok(None)` as an error, so never put `None` in a `Result`.
 +  `docs/`: the roadmap, the design records under `docs/adr/`, the
    foundational notes under `docs/foundations/`, and the engine's
    command reference `docs/HowToRun.md`.

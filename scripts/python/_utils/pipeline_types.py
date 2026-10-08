@@ -21,7 +21,8 @@ Provenance:
   Adapted from formalverification/agda-native-air/ at SHA 664b919.
   Copied into lean2agda from ualib/agda-algebras, scripts/python/_utils/,
   at commit ee830be, with three unused imports removed and one f-string
-  without placeholders made a plain string.  See NOTICE.
+  without placeholders made a plain string.  lean2agda added
+  ErrorType.TIMEOUT, for command_runner's timeout.  See NOTICE.
 """
 
 from __future__ import annotations
@@ -152,6 +153,7 @@ class ErrorType(Enum):
     PANDOC_ERROR = auto()
     BIBTEX_ERROR = auto()
     VALIDATION_ERROR = auto()
+    TIMEOUT = auto()
 
 
 @dataclass(frozen=True)

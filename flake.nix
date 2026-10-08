@@ -30,8 +30,8 @@
 #          nix develop .#lean     the Lean toolchain, without Agda
 #
 # Every shell carries make, git and Python: the Agda shellHook finds $ROOT
-# with git, the planned corpus and output checkers (M1-6, M2-8) are Python
-# scripts run through make, and Lake fetches its dependencies with git.
+# with git, the corpus checker and the planned output checker (M2-8) are
+# Python scripts run through make, and Lake fetches its dependencies with git.
 # Only the default shell carries the roadmap tools (gh, jq, the engine), so
 # a broken or missing engine package cannot break the Agda and Lean shells.
 #

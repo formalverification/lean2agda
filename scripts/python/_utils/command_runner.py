@@ -11,13 +11,15 @@ Provenance:
 
   Adapted from formalverification/agda-native-air/ at SHA 664b919.
   Copied into lean2agda from ualib/agda-algebras, scripts/python/_utils/,
-  at commit ee830be, unchanged.  See NOTICE.
+  at commit ee830be.  lean2agda added the timeout parameter, and keeps
+  the captured standard output in the error of a failed command (Agda
+  prints its errors there, not on standard error).  See NOTICE.
 """
 from __future__ import annotations
 import subprocess
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from .pipeline_types import Result, PipelineError, ErrorType
 
@@ -27,11 +29,16 @@ def run_command(
     capture_output: bool = False,
     text: bool = False,
     stdout_file: Optional[Path] = None,
-    stream_output: bool = False  # --- NEW: Parameter to enable live streaming
+    stream_output: bool = False,  # --- NEW: Parameter to enable live streaming
+    timeout: Optional[float] = None,
 ) -> Result[subprocess.CompletedProcess, PipelineError]:
     """
     Runs a shell command and returns a Result object.
     Can either capture output or stream it live to the logger.
+
+    With a timeout (seconds; capturing mode only), a command still
+    running when it expires is killed and the result is an error of type
+    ErrorType.TIMEOUT, never an exception.
     """
     command_str = ' '.join(map(str, command))
     logging.debug(f"Running: {command_str}")
@@ -80,7 +87,8 @@ def run_command(
             process = subprocess.run(
                 [str(arg) for arg in command],
                 cwd=cwd, stdout=stdout_target, stderr=subprocess.PIPE,
-                text=text, check=False, encoding='utf-8' if text else None
+                text=text, check=False, encoding='utf-8' if text else None,
+                timeout=timeout
             )
 
             if process.stderr:
@@ -93,11 +101,24 @@ def run_command(
                         "command": command_str,
                         "return_code": process.returncode,
                         "stderr": process.stderr.strip() if process.stderr else "N/A",
+                        "stdout": _as_text(process.stdout),
                         "cwd": str(cwd) if cwd else "N/A"
                     }
                 ))
             return Result.ok(process)
 
+    except subprocess.TimeoutExpired as e:
+        return Result.err(PipelineError(
+            error_type=ErrorType.TIMEOUT,
+            message=f"Command timed out after {timeout:g} seconds",
+            context={
+                "command": command_str,
+                "timeout": timeout,
+                "stdout": _as_text(e.stdout),
+                "cwd": str(cwd) if cwd else "N/A"
+            },
+            cause=e
+        ))
     except FileNotFoundError as e:
         return Result.err(PipelineError(
             error_type=ErrorType.COMMAND_FAILED,
@@ -114,3 +135,13 @@ def run_command(
         if not stream_output and stdout_file and 'stdout_target' in locals() and stdout_target:
             if not isinstance(stdout_target, int): # Not a PIPE
                  stdout_target.close()
+
+
+def _as_text(output: Optional[Union[str, bytes]]) -> str:
+    """Captured output as text: TimeoutExpired carries bytes even when
+    the command ran in text mode, and an uncaptured stream is None."""
+    if output is None:
+        return ""
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return output

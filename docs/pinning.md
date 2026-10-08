@@ -108,8 +108,9 @@ candidate; see its section below for what that means for M3-1.
    would then be wrong.
 +  **Moves with it**.  Lean, lean4export, and everything computed from
    Mathlib: the atlas (M1-11, [#11]), the exported terms of the corpus
-   entries, the translator's golden tests, and the provenance record of
-   any generated library.
+   entries and the axioms and tiers `corpus/manifest.json` records for
+   every entry, the translator's golden tests, and the provenance record
+   of any generated library.
 
 Mathlib's prebuilt `.olean` files come from `lake exe cache get` (or
 `make lean-cache`); nothing in the project builds Mathlib from source.
@@ -183,8 +184,8 @@ carry it.
    together; Python 3 (3.14.7) comes from the same input.
 +  **Change**.  `nix flake update nixpkgs`.
 +  **Verify**.  `nix develop --command make doctor` prints the new Agda
-   version, and its two probes check that both libraries resolve; once
-   M1-6 lands, `make corpus-check` re-checks every corpus entry.
+   version, and its two probes check that both libraries resolve;
+   `make corpus-check` re-checks every translated corpus entry.
 +  **Moves with it**.  The version numbers written in the README,
    `CLAUDE.md`, `flake.nix`'s header comment and the roadmap's Working
    agreements, and the `OPTIONS` pragmas of the corpus if a flag changes
