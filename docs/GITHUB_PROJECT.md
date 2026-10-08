@@ -488,6 +488,70 @@ graph TD
   M7_4 --> M7_5 --> M7_6
 ```
 
+### What is left of M1, and in what order
+
+Hand-authored on 2026-10-07, when M1-1 to M1-4 were closed and M1-6 was
+in review as pull request 66; update never touches it.  Each open issue
+names the kickoff prompt that starts its session
+(`~/claude-kickoff-prompts/kickoff-N-lean2agda-*.md`, whose sources are
+in the claude-tooling repository).  An edge `A --> B` means B waits for
+A, and an edge to or from a column stands for every issue in it; a
+dotted edge means B can start without A and adopts its result when it
+lands.  The sessions in one column can run in parallel, as follows:
+
++  **Now**: M1-5, the gap catalog (kickoff 97), and M1-11, the axiom
+   atlas (kickoff 98).  M1-14 with the last task of M1-13 (kickoff 99)
+   starts by asking William whether to contact the predecessors' authors
+   while the repository is private.
++  **Once pull request 66 merges**, or stacked on it: M1-7 (kickoff 100),
+   M1-8 (kickoff 101), and M1-9 in two parts (kickoffs 102 and 103), four
+   sessions at once.  Each edits only its own entries of
+   `corpus/manifest.json`; their notes use the catalog's provisional
+   slugs until M1-5 lands.
++  **Once M1-5 and the four translation sessions are done**: M1-10, the
+   gap report (kickoff 104).
++  **Once M1-10 and M1-11 are done**: M1-12, ADR 0001 (kickoff 105), the
+   end of the milestone's critical path.
+
+```mermaid
+graph LR
+  classDef done fill:#d8f0dc,stroke:#2e7d32,color:#1b3d1f
+  classDef review fill:#fff1c2,stroke:#a07800,color:#4a3800
+  classDef ready fill:#dbe8ff,stroke:#2457b3,color:#0d2a5c
+  classDef waiting fill:#eeeeee,stroke:#777777,color:#333333
+  subgraph C0["Done or in review"]
+    M1_3["M1-3 Lean, Mathlib, Lake"]:::done
+    M1_4["M1-4 Related-work survey"]:::done
+    M1_6["M1-6 Corpus and checker<br/>in review, PR 66"]:::review
+  end
+  subgraph C1["Now"]
+    M1_14["M1-14 and M1-13 Outreach<br/>kickoff 99<br/>William decides first"]:::ready
+    M1_5["M1-5 Gap catalog<br/>kickoff 97"]:::ready
+    M1_11["M1-11 Axiom atlas<br/>kickoff 98"]:::ready
+  end
+  subgraph C2["After PR 66"]
+    M1_7["M1-7 Arithmetic, recursion<br/>kickoff 100"]:::waiting
+    M1_8["M1-8 Quotients, extensionality<br/>kickoff 101"]:::waiting
+    M1_9a["M1-9 part 1: eta, lattices, Finset<br/>kickoff 102"]:::waiting
+    M1_9b["M1-9 part 2: reals, Lagrange, model theory<br/>kickoff 103"]:::waiting
+  end
+  subgraph C3["Then"]
+    M1_10["M1-10 Gap report<br/>kickoff 104"]:::waiting
+  end
+  subgraph C4["Last"]
+    M1_12["M1-12 ADR 0001<br/>kickoff 105"]:::waiting
+  end
+  M1_4 --> M1_14
+  M1_4 --> M1_5
+  M1_3 --> M1_11
+  M1_6 --> C2
+  M1_5 -.-> C2
+  M1_5 --> M1_10
+  C2 --> M1_10
+  M1_10 --> M1_12
+  M1_11 --> M1_12
+```
+
 ---
 
 ## Issues
