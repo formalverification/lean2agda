@@ -697,9 +697,9 @@ which are published under CC BY 4.0, over Lean4Lean, which is Apache-2.0; that
 is a rewrite of a kernel modification, and [#26] should record it as the
 fallback so that the project does not depend on an answer.
 
-The message for the project's author to send is drafted in
-`docs/outreach/lyphyser.md`; the answer, or silence after a month, is recorded
-here under [#14].
+A message to the author was drafted and is kept outside the repository, which
+is private; whether and how to send it is decided under [#14], and any answer
+is recorded here.
 
 ## References
 
