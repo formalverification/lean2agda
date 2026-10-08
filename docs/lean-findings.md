@@ -161,6 +161,47 @@ what it means for this project.  The severities are as follows:
    `partial def` gets "an `unsafe` companion".  The atlas's `partial`
    field is unaffected: it flags the `opaque` constant, by its companion.
 
+## LF-4: `proofIrrelevance := false` leaves proofs in arguments identified
+
++  **Severity**.  S2.  The elaborator is not trusted; the kernel has
+   definitional proof irrelevance as a rule of Lean's theory and is
+   unaffected.
++  **Found**.  2026-10-08, by issue [#7]'s session (pull request [#70]),
+   looking for a way to make Lean say where a proof relies on
+   definitional proof irrelevance; reproduced by issue [#11]'s session at
+   Lean v4.33.1.
++  **What**.  `Meta.Config.proofIrrelevance`, documented as "Enables proof
+   irrelevance at `isDefEq`", does not switch it off everywhere.  With it
+   `false`, `isDefEq h₁ h₂` fails for two proofs of one proposition, but
+   `isDefEq (h₁ = h₁) (h₁ = h₂)` still succeeds, since proofs in argument
+   position are compared another way.  The file that shows it, run with
+   `lake env lean` (it needs only `import Lean`), is as follows:
+
+   ```lean
+   import Lean
+   open Lean Meta
+
+   #eval show MetaM Unit from do
+     withLocalDeclD `p (mkSort Level.zero) fun p => do
+     withLocalDeclD `h1 p fun h1 => do
+     withLocalDeclD `h2 p fun h2 => do
+       let e1 ← mkEq h1 h1
+       let e2 ← mkEq h1 h2
+       for pi in [true, false] do
+         withConfig (fun c => { c with proofIrrelevance := pi }) do
+           IO.println s!"{pi}: {← isDefEq h1 h2} {← isDefEq e1 e2}"
+   ```
+
+   It printed `true: true true` and `false: false true`.
++  **What it means here**.  The elaborator cannot be made to report where
+   a proof needs definitional proof irrelevance, which Agda lacks without
+   `--prop`; the normalizer, Lean4Less, which makes those uses explicit
+   casts, is the instrument instead (the gap catalog's
+   `proof-irrelevance` entry).
++  **Upstream**.  Not reported; no Lean issue was searched for yet.
+
+[#7]: https://github.com/formalverification/lean2agda/issues/7
+[#70]: https://github.com/formalverification/lean2agda/pull/70
 [#11]: https://github.com/formalverification/lean2agda/issues/11
 [#71]: https://github.com/formalverification/lean2agda/pull/71
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
