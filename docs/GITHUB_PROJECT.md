@@ -552,7 +552,7 @@ Every tool the project needs must come from one `nix develop`, as in agda-native
 
 ---
 
-### Issue M1-3: Pin the Lean toolchain and Mathlib revision; Lake project (#3)
+### Issue M1-3: Pin the Lean toolchain and Mathlib revision; Lake project (#3, closed)
 
 **Labels:** `milestone-1-foundations`, `infrastructure`
 
@@ -585,15 +585,15 @@ The planning session found substantial prior work: lyphyser's proof-of-concept `
 
 ## Tasks
 
-- [ ] For each predecessor: what it translates, how (environment or export file, Dedukti or direct), how it handles `Prop`, universes, proof irrelevance and quotients, what scale it reached, its license and activity, and what we take from it.
-- [ ] Record the quantitative anchors with their sources: Lean4Less's cast overhead on `Std` and on `Mathlib.Algebra.Order.Field.Rat`, rocq-lean-import's stdlib and mathlib runs, Predicativize's 32-minute Matita translation, the Arena's Mathlib checking times.
+- [x] For each predecessor: what it translates, how (environment or export file, Dedukti or direct), how it handles `Prop`, universes, proof irrelevance and quotients, what scale it reached, its license and activity, and what we take from it.
+- [x] Record the quantitative anchors with their sources: Lean4Less's cast overhead on `Std` and on `Mathlib.Algebra.Order.Field.Rat`, rocq-lean-import's stdlib and mathlib runs, Predicativize's 32-minute Matita translation, the Arena's Mathlib checking times.
 - [ ] Decide and record whether to reuse code from lyphyser/lean2agda (Apache-2.0) and how to credit it; contact the author (M1-14).
-- [ ] Note the open question of the Dedukti route (Lean4Less, lean2dk, Predicativize, then Agda) as a baseline to compare against once lean2dk matures.
+- [x] Note the open question of the Dedukti route (Lean4Less, lean2dk, Predicativize, then Agda) as a baseline to compare against once lean2dk matures.
 
 ## Acceptance criteria
 
-- [ ] `docs/related-work.md` exists with one section per predecessor and a reference list with URLs.
-- [ ] The README's related-work section links to it and agrees with it.
+- [x] `docs/related-work.md` exists with one section per predecessor and a reference list with URLs.
+- [x] The README's related-work section links to it and agrees with it.
 
 ---
 

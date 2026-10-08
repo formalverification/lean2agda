@@ -125,54 +125,85 @@ it.
 
 ## Prior work this builds on
 
-+  **lyphyser/lean2agda** (2023 to 2024, Apache-2.0).  A
-   proof-of-concept Agda exporter for Lean 4, written in Lean on top of
-   lean4export.  It specializes constants by universe-level zero-ness,
-   deduplicates shared subterms, emits records and pattern-matching
-   recursors, and postulates quotients, `Acc.rec` and
-   `WellFounded.fixFEq`; its output needs `--type-in-type`, is a single
-   file, and ran Agda out of memory on anything larger than
-   `Nat.gcd_self`.  Our M2 ends roughly where it stopped.
+The survey [`docs/related-work.md`](docs/related-work.md) has a section
+on each of the following, with every figure checked against its primary
+source on 2026-10-07 and the source location footnoted; this list is
+the summary.
+
++  **lyphyser/lean2agda** (September 2024, Apache-2.0).  A
+   proof-of-concept Agda exporter for Lean 4: a fork of lean4export,
+   written in Lean over the elaborated environment, rewritten in ten
+   commits over four days.  It specializes constants by universe-level
+   zero-ness, deduplicates repeated closed subterms, fixes binder
+   implicitness, emits records and pattern-matching recursors, and
+   postulates quotients, axioms, `Acc.rec` and `WellFounded.fixFEq`;
+   its output needs `--prop --type-in-type`, is a single file, and ran
+   Agda out of memory on larger tasks.  Our M2 ends roughly where it
+   stopped; we cite its ideas and reuse no code before M2-10 (issue 24)
+   compares the two tools.
 +  **Lean4Less and lean2dk** (Deducteam; Vaishnav's 2026 thesis
    *Translating Proofs from Lean to Dedukti*).  Lean4Less eliminates
    definitional proof irrelevance and K-like reduction by inserting
-   casts justified by a proof-irrelevance axiom; on Lean's `Std` about
-   6 percent of constants used those rules and the output grew 15.5
-   percent, and it translated `Mathlib.Data.Real.Basic`, but it does
-   not yet scale to higher Mathlib modules.  lean2dk then exports to
-   Dedukti.  Lean4Less is the normalizer of our pipeline.
-+  **rocq-lean-import** (Gaëtan Gilbert).  Imports Lean export files
-   into Rocq: `Prop` as `SProp`, duplication of constants per
-   `Prop`-instantiation pattern, algebraic universes for `imax`,
-   quotients as private inductives, and definitional UIP switched on.
-   Its experiments (full stdlib not checkable because of pathological
-   conversion problems; Lean 3 mathlib: 66,400 entries, 11,867 skipped,
-   73 minutes, 10 GB) calibrate our expectations.
-+  **Predicativize** (Felicissimo and Blanqui, CSL 2023 and LMCS
-   2024).  Universe-polymorphic elaboration with level unification,
-   used to translate Matita's arithmetic library, through Dedukti, into
-   Agda that checks under `--safe` (including the first Agda proofs of
-   Fermat's little theorem and Bertrand's postulate), in about 32
-   minutes and with hand-added level constraints.  Our universe stage
-   follows its algorithm.
+   casts justified by a proof-irrelevance lemma (an axiom in the paper,
+   a theorem from `propext` in the repository since February 2026),
+   yielding terms typed in the smaller theory Lean⁻.  On Lean's `Std`
+   at v4.16.0-rc2, 6.3 percent of constants used those rules and the
+   environment grew 15.5 percent; it translated
+   `Mathlib.Data.Real.Basic` but does not yet scale to higher Mathlib
+   modules, and its `.olean` output is currently broken.  Without this
+   step a translation keeps no classical logic: Lean's proof of excluded
+   middle uses proof irrelevance, and Agda's `Prop` cannot eliminate
+   into `Set`, so the proofs Lean identifies definitionally need
+   explicit casts on the Agda side; this step is the normalizer of our
+   pipeline.  lean2dk then exports to Dedukti; its best branch checks
+   `Init.Data.Nat.Lemmas` against a patched Dedukti with a couple dozen
+   constants stubbed.  Lean4Less has no license file.
++  **rocq-lean-import** (Gaëtan Gilbert, LGPL-2.1).  Imports Lean export
+   files into Rocq: `Prop` as `SProp`, duplication of constants per
+   `Prop`-instantiation pattern, algebraic universes with surrogate
+   parameters for `imax`, quotients as private inductives, and
+   definitional UIP required.  Its Lean 3 experiments calibrate our
+   expectations: the stdlib could not be fully checked because of
+   pathological conversion problems, and the mathlib run (66,400
+   entries, 11,867 skipped, 73 minutes, 10 GB) was made with conversion
+   checking off, so it declared the terms without checking them.
++  **Predicativize** (Felicissimo and Blanqui, LMCS 2024; with Barnawal
+   at CSL 2023).
+   Universe-polymorphic elaboration with level unification, used to
+   translate Matita's arithmetic library, through Dedukti, into Agda
+   that checks under `--safe` (as far as its authors know, the first
+   Agda proofs of Fermat's little theorem and Bertrand's postulate), in
+   about 32 minutes, with hand-added level constraints and with the
+   inductive types and recursive functions rebuilt by hand.  Our
+   universe stage follows its algorithm.
 +  **lean4export and the Lean Kernel Arena** (Lean FRO).  The NDJSON
-   export format and a public benchmark of 25 independent checkers with
-   199 tests, including invalid exports a checker must reject.  M7
-   enters translation-plus-Agda as a checker.
-+  **hol2dk** (Blanqui).  HOL Light's Multivariate library, more than
-   20,000 theorems, translated through Dedukti into Rocq in 2024 and
-   2025: the precedent that library-scale translation between proof
+   export format (version 3.1.0) and a public benchmark of Lean
+   checkers, including invalid exports a checker must reject: 25
+   checkers and 223 tests in the round of 2026-10-03, in which the
+   official checker took 38 minutes of wall time on a 6.2 GB Mathlib
+   export.  The round is rebuilt on every change.  M7 enters
+   translation-plus-Agda as a checker.
++  **hol2dk** (Blanqui, CeCILL-2.1).  HOL Light's base and Multivariate
+   libraries, more than 20,000 theorems by its README (17,500 by the
+   release note), translated through Dedukti and Lambdapi into Rocq and
+   released in December 2024 and January 2025, the theorems shipped as
+   axioms with a script that regenerates and checks the proofs in about
+   a day: the precedent that library-scale translation between proof
    assistants is feasible.
 +  **Foundations**.  Carneiro's thesis on Lean's type theory; Abel and
    Coquand's proof that normalization fails with impredicative `Prop`
    and proof-irrelevant propositional equality; Lean4Lean, the Lean
-   kernel in Lean, on which Lean4Less is built.
-+  **Mathlib's own measurements**.  In February 2026 Mathlib reduced
-   its dependence on `Classical.choice` from 446,045 to 430,049 of
-   775,824 declarations (57.5 to 55.4 percent); an independent 2026
-   study counts 171,522 classical against 299,738 constructive among
-   471,260 declarations.  The counts differ in what they count; the
-   project's atlas will state its denominator.
+   kernel in Lean with a formal statement of Lean's typing rules, which
+   Lean4Less modifies; and the HoTT book's Lemma 3.8.5, the reason
+   choice cannot follow the constructive layer into cubical Agda.
++  **Mathlib measurements**.  An open Mathlib pull request (35685,
+   opened February 2026, on a custom Lean fork) counted 446,045
+   declarations depending on `Classical.choice` on master (57.5 percent
+   of the environment) against 430,049 of 775,824 on its branch (55.4
+   percent); an
+   independent 2026 study counts 171,522 classical against 299,738
+   constructive among 471,260 declarations.  The counts have different
+   denominators and dates; the project's atlas will state its own.
 
 ## Where the results live
 
@@ -280,7 +311,9 @@ rules are in [`docs/licensing.md`](docs/licensing.md).
 ## References
 
 +  lyphyser/lean2agda: <https://github.com/lyphyser/lean2agda>
-+  Lean4Less: <https://github.com/Deducteam/Lean4Less>; paper:
++  Lean4Less: <https://github.com/Deducteam/Lean4Less>; R. Vaishnav,
+   *Lean4Less: Eliminating Definitional Equalities from Lean via an
+   Extensional-to-Intensional Translation*, ICTAC 2025:
    <https://inria.hal.science/hal-05310102>
 +  lean2dk: <https://github.com/Deducteam/lean2dk>
 +  R. Vaishnav, *Translating Proofs from Lean to Dedukti*, PhD thesis,
@@ -289,16 +322,25 @@ rules are in [`docs/licensing.md`](docs/licensing.md).
 +  Predicativize: <https://github.com/Deducteam/predicativize>;
    T. Felicissimo and F. Blanqui, *Sharing proofs with predicative
    theories through universe-polymorphic elaboration*, LMCS 20(3),
-   2024: <https://arxiv.org/abs/2308.15465>
+   2024: <https://arxiv.org/abs/2308.15465>; the CSL 2023 version, with
+   A. K. Barnawal: <https://doi.org/10.4230/LIPIcs.CSL.2023.19>; the
+   translated library: <https://doi.org/10.5281/zenodo.10686897>
 +  lean4export: <https://github.com/leanprover/lean4export>; Lean
-   Kernel Arena: <https://arena.lean-lang.org/>
-+  hol2dk: <https://github.com/Deducteam/hol2dk>
-+  M. Carneiro, *The Type Theory of Lean*, MSc thesis, 2019; M. Carneiro,
-   *Lean4Lean: Verifying a Typechecker for Lean, in Lean*, TYPES 2025:
-   <https://arxiv.org/abs/2403.14064>
+   Kernel Arena: <https://arena.lean-lang.org/> and
+   <https://github.com/leanprover/lean-kernel-arena>
++  hol2dk: <https://github.com/Deducteam/hol2dk>; its Rocq library:
+   <https://github.com/Deducteam/coq-hol-light>
++  M. Carneiro, *The Type Theory of Lean*, MSc thesis, 2019:
+   <https://github.com/digama0/lean-type-theory/releases/tag/v1.0>;
+   M. Carneiro, *Lean4Lean: Verifying a Typechecker for Lean, in Lean*,
+   arXiv 2403.14064, venue unconfirmed:
+   <https://arxiv.org/abs/2403.14064>; the repository:
+   <https://github.com/digama0/lean4lean>
 +  A. Abel and T. Coquand, *Failure of Normalization in Impredicative
    Type Theory with Proof-Irrelevant Propositional Equality*, LMCS 16(2),
    2020: <https://arxiv.org/abs/1911.08174>
++  The Univalent Foundations Program, *Homotopy Type Theory*, 2013:
+   <https://hott.github.io/book/hott-online.pdf>
 +  Mathlib PR 35685, *reduce the use of Classical.choice*:
    <https://github.com/leanprover-community/mathlib4/pull/35685>
 +  R. Mendoza-Smith, *Geometric Measurements of the Axiom of Choice in
