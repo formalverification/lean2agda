@@ -1,0 +1,172 @@
+[
+  {
+    "id": "list-reverse-reverse",
+    "theme": "constructive arithmetic and lists",
+    "lean_name": "List.reverse_reverse",
+    "lean_module": "Init.Data.List.Lemmas",
+    "axioms": ["propext"],
+    "tier": "T1",
+    "features": ["axioms", "universe-levels", "projections-and-let"],
+    "agda_files": [
+      {"path": "ListReverseReverse.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 7
+  },
+  {
+    "id": "nat-gcd-self",
+    "theme": "constructive arithmetic and lists",
+    "lean_name": "Nat.gcd_self",
+    "lean_module": "Init.Data.Nat.Gcd",
+    "axioms": ["propext", "Quot.sound"],
+    "tier": "T1",
+    "features": ["axioms", "literals"],
+    "agda_files": [
+      {"path": "NatGcdSelf.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 7
+  },
+  {
+    "id": "nat-gcd-succ",
+    "theme": "well-founded recursion",
+    "lean_name": "Nat.gcd_succ",
+    "lean_module": "Init.Data.Nat.Gcd",
+    "axioms": ["Quot.sound"],
+    "tier": "T1",
+    "features": ["large-elimination", "k-and-uip", "literals", "decidable-and-noncomputable", "axioms"],
+    "agda_files": [
+      {"path": "NatGcdSucc.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 7
+  },
+  {
+    "id": "lists-subset-refl",
+    "theme": "mutual inductive types",
+    "lean_name": "Lists'.Subset.refl",
+    "lean_module": "Mathlib.SetTheory.Lists",
+    "axioms": ["propext", "Quot.sound"],
+    "tier": "T1",
+    "features": ["nested-and-mutual-inductives", "large-elimination", "projections-and-let", "axioms"],
+    "agda_files": [
+      {"path": "ListsSubsetRefl.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 7
+  },
+  {
+    "id": "multiset-map-map",
+    "theme": "a quotient (Quot)",
+    "lean_name": "Multiset.map_map",
+    "lean_module": "Mathlib.Data.Multiset.MapFold",
+    "axioms": ["propext", "Quot.sound"],
+    "tier": "T1",
+    "features": ["quotients", "axioms", "universe-levels"],
+    "agda_files": [
+      {"path": "MultisetMapMap.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
+      {"path": "MultisetMapMapCubical.agda", "flags": ["--safe", "--cubical", "--guardedness"], "profile": "CU"}
+    ],
+    "status": "planned",
+    "issue": 8
+  },
+  {
+    "id": "set-ext",
+    "theme": "set extensionality",
+    "lean_name": "Set.ext",
+    "lean_module": "Mathlib.Data.Set.Defs",
+    "axioms": ["propext", "Quot.sound"],
+    "tier": "T1",
+    "features": ["axioms", "quotients", "universe-levels"],
+    "agda_files": [
+      {"path": "SetExt.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
+      {"path": "SetExtCubical.agda", "flags": ["--safe", "--cubical", "--guardedness"], "profile": "CU"}
+    ],
+    "status": "planned",
+    "issue": 8
+  },
+  {
+    "id": "finset-card-image",
+    "theme": "a Decidable instance in a Finset statement",
+    "lean_name": "Finset.card_image_of_injective",
+    "lean_module": "Mathlib.Data.Finset.Card",
+    "axioms": ["propext", "Classical.choice", "Quot.sound"],
+    "tier": "T2",
+    "features": ["decidable-and-noncomputable", "quotients", "proof-irrelevance", "axioms"],
+    "agda_files": [
+      {"path": "FinsetCardImage.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 9
+  },
+  {
+    "id": "real-sqrt-nonneg",
+    "theme": "real numbers",
+    "lean_name": "Real.sqrt_nonneg",
+    "lean_module": "Mathlib.Analysis.Real.Sqrt",
+    "axioms": ["propext", "Classical.choice", "Quot.sound"],
+    "tier": "T2",
+    "features": ["quotients", "decidable-and-noncomputable", "axioms"],
+    "agda_files": [
+      {"path": "RealSqrtNonneg.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 9
+  },
+  {
+    "id": "subgroup-card-dvd",
+    "theme": "Lagrange's theorem",
+    "lean_name": "Subgroup.card_subgroup_dvd_card",
+    "lean_module": "Mathlib.GroupTheory.Coset.Card",
+    "axioms": ["propext", "Classical.choice", "Quot.sound"],
+    "tier": "T2",
+    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms"],
+    "agda_files": [
+      {"path": "SubgroupCardDvd.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 9
+  },
+  {
+    "id": "order-hom-map-lfp",
+    "theme": "lattices (Knaster and Tarski)",
+    "lean_name": "OrderHom.map_lfp",
+    "lean_module": "Mathlib.Order.FixedPoints",
+    "axioms": ["propext", "Quot.sound"],
+    "tier": "T1",
+    "features": ["impredicative-prop", "projections-and-let", "axioms"],
+    "agda_files": [
+      {"path": "OrderHomMapLfp.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 9
+  },
+  {
+    "id": "subtype-coe-eta",
+    "theme": "structure eta",
+    "lean_name": "Subtype.coe_eta",
+    "lean_module": "Mathlib.Data.Subtype",
+    "axioms": [],
+    "tier": "T0",
+    "features": ["structure-eta", "proof-irrelevance", "universe-levels", "projections-and-let"],
+    "agda_files": [
+      {"path": "SubtypeCoeEta.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 9
+  },
+  {
+    "id": "substructure-closure-le",
+    "theme": "model theory (agda-algebras)",
+    "lean_name": "FirstOrder.Language.Substructure.closure_le",
+    "lean_module": "Mathlib.ModelTheory.Substructures",
+    "axioms": ["propext", "Classical.choice", "Quot.sound"],
+    "tier": "T2",
+    "features": ["impredicative-prop", "universe-levels", "projections-and-let", "axioms"],
+    "agda_files": [
+      {"path": "SubstructureClosureLe.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+    ],
+    "status": "planned",
+    "issue": 9
+  }
+]
