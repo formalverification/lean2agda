@@ -9,9 +9,9 @@ predecessors' treatment, and the references (issue [#5]).  The catalog is the
 checklist the translator is built against and the vocabulary of everything that
 classifies: the corpus manifest's `features` field uses the entry slugs below
 ([`../../corpus/SCHEMA.md`][corpus-schema], section Features), the gap report
-of [#10] counts corpus entries per entry, and ADR 0001 ([#12]) cites it.  It
-supersedes the table "What the translation has to bridge" in the
-[README][readme].
+of [#10] counts corpus entries per entry, and ADR 0001 ([#12]), once written,
+is to cite it.  It supersedes the table "What the translation has to bridge" in
+the [README][readme].
 
 Everything here was checked on 2026-10-07 at the project's pins
 ([`../pinning.md`][pinning]): Lean v4.33.1 (commit `819816b`) with Mathlib
@@ -80,8 +80,8 @@ profiles.
 is a proposition and Lean's definitional equality identifies any two proofs of
 a proposition, `example {α : Sort u} {a b : α} (p q : a = b) : p = q := rfl` is
 accepted, and so is the same statement for `p q : α = β` with `α β : Type`
-(`probes/lean/DefEq.lean`, `UIP.lean`).  The recursor of `Eq` also carries
-K-like reduction: with `a : α` and `C : α → Sort v`,
+(`probes/lean/DefEq.lean`, `Recursors.lean`).  The recursor of `Eq` also
+carries K-like reduction: with `a : α` and `C : α → Sort v`,
 `example (x : C a) (h : a = a) : (h ▸ x) = x := rfl` is accepted on a variable
 proof `h`.  Agda's default theory has K as a principle of pattern matching, and
 `uip refl refl = refl` is accepted under `--safe` (probe `P05KAccepted`).
@@ -672,18 +672,19 @@ literals**.
 +  **Lean rule**.  A natural number literal is a kernel term (`Expr.lit`),
    interchangeable with `Nat.zero` and `Nat.succ` during conversion
    (`is_nat_zero`, `is_nat_succ`, [kernel-type-checker], lines 1058 to 1086),
-   and fourteen operations on literals are computed by the arbitrary-precision
-   library rather than by unfolding: `Nat.succ`, and the binary `Nat.add`,
-   `Nat.sub`, `Nat.mul`, `Nat.pow`, `Nat.gcd`, `Nat.mod`, `Nat.div`, `Nat.beq`,
-   `Nat.ble`, `Nat.land`, `Nat.lor`, `Nat.xor`, `Nat.shiftLeft` and
-   `Nat.shiftRight` (`reduce_nat`, lines 702 to 733), with a size limit on
-   results (`LEAN_NAT_MAX_SIZE`) and a refusal for `Nat.pow` beyond it.  The
-   manual: "In the kernel, there are special `Nat` literal values that use a
-   widely-trusted, efficient arbitrary-precision integer library (usually
-   GMP)".[^15]  A string literal is also a kernel term, expanded on demand to
-   `String.ofList [c₁, …, cₙ]` (`try_string_lit_expansion`, lines 1145 to 1156,
-   and `whnf_core`, line 421; the constant the kernel expands to is
-   `String.ofList`, line 1342).  At the pin `String` is a structure
+   and fifteen operations on literals are computed by the arbitrary-precision
+   library rather than by unfolding: the unary `Nat.succ`, and the fourteen
+   binary `Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.pow`, `Nat.gcd`, `Nat.mod`,
+   `Nat.div`, `Nat.beq`, `Nat.ble`, `Nat.land`, `Nat.lor`, `Nat.xor`,
+   `Nat.shiftLeft` and `Nat.shiftRight` (`reduce_nat`, lines 702 to 733), with
+   a size limit on results (`LEAN_NAT_MAX_SIZE`) and a refusal for `Nat.pow`
+   beyond it.  The manual: "In the kernel, there are special `Nat` literal
+   values that use a widely-trusted, efficient arbitrary-precision integer
+   library (usually GMP)".[^15]  A string literal is also a kernel term,
+   expanded on demand to `String.ofList [c₁, …, cₙ]`
+   (`try_string_lit_expansion`, lines 1145 to 1156, and `whnf_core`, line 421;
+   the constant the kernel expands to is `String.ofList`, line 1342).  At the
+   pin `String` is a structure
    `String.ofByteArray (toByteArray : ByteArray) (isValidUTF8 : …)`, "a logical
    model that specifies their behavior in terms of `ByteArray`s that contain
    UTF-8 scalar values",[^16] and `String.mk : List Char → String` is a
@@ -1012,9 +1013,9 @@ shell's `agda` from any directory
 file under `probes/lean/`, run from `translator/` as
 `lake env lean ../docs/foundations/probes/lean/DefEq.lean` (the two scans
 import all of Mathlib and need its cache, about 7 GB of memory and two and a
-half minutes).  The outcomes on 2026-10-07 are as follows; a rejected probe's
-first error line is the evidence quoted in the entries, and an accepted one
-checked with no output beyond Agda's `Checking` line.
+half minutes).  The outcomes, first measured on 2026-10-07, are as follows; a
+rejected probe's first error line is the evidence quoted in the entries, and an
+accepted one checked with no output beyond Agda's `Checking` line.
 
 | Probe | Flags | Shows | Outcome |
 | --- | --- | --- | --- |
@@ -1062,8 +1063,9 @@ theorem, a `partial` and an `unsafe` definition), `Strings.lean` (`String` and
 `Recursors.lean` (`WellFounded.Nat.fix.go`, large elimination of `Iff`,
 `Nonempty`, `Exists` and `Acc`, UIP on types, `HEq`), and `Scan.lean` and
 `ScanByRoot.lean` (the table of the section "What exists at the pin").  Each
-file carries the output it produced on 2026-10-07 in a comment at its end, the
-scan's 1,765-name list of Mathlib's large-eliminating propositions excepted.
+file carries, in a comment at its end, the output it produced on 2026-10-08
+when run by that command from its committed path, the scan's 1,765-name list of
+Mathlib's large-eliminating propositions excepted.
 
 ## References
 
