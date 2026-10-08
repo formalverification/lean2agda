@@ -661,7 +661,7 @@ The planning session found substantial prior work: lyphyser's proof-of-concept `
 
 ---
 
-### Issue M1-5: Foundational gap catalog (#5)
+### Issue M1-5: Foundational gap catalog (#5, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `foundations`
 
@@ -715,15 +715,15 @@ Translate by hand the constructive entries of the corpus: a `Nat` lemma (`Nat.gc
 
 ## Tasks
 
-- [ ] Export each declaration's kernel term with lean4export and record its size (nodes, bytes) in `notes.md`.
-- [ ] Write the idiomatic Agda versions; note where agda-stdlib already has the result and whether the statements match up to notation.
-- [ ] For `Nat.gcd`: document that Lean's kernel needs K-like reduction for its defining equation to hold definitionally (the reason Lean4Less aborts on large `Nat.gcd` computations) and how the Agda version avoids the issue.
-- [ ] Record uses of proof irrelevance, K, literals, and `WellFounded` in the kernel terms.
+- [x] Export each declaration's kernel term with lean4export and record its size (nodes, bytes) in `notes.md`.
+- [x] Write the idiomatic Agda versions; note where agda-stdlib already has the result and whether the statements match up to notation.
+- [x] For `Nat.gcd`: test the claim of Lean4Less's README that Lean's kernel needs K-like reduction for the defining equation to hold definitionally (its reason for aborting on large `Nat.gcd` computations), and document what the kernel term needed and how the Agda version avoids it.  At the pinned Lean, v4.33.1, the claim does not hold: since v4.27.0 `Nat.gcd` compiles through the fuel-based `WellFounded.Nat.fix`, the equation is not definitional, and no K-like reduction is involved.
+- [x] Record uses of proof irrelevance, K, literals, and `WellFounded` in the kernel terms.
 
 ## Acceptance criteria
 
-- [ ] All entries of this theme check under `--safe --cubical-compatible` via `make corpus-check`.
-- [ ] Each `notes.md` cross-references the gap catalog entries it exercised.
+- [x] All entries of this theme check under `--safe --cubical-compatible` via `make corpus-check`.
+- [x] Each `notes.md` cross-references the gap catalog entries it exercised.
 
 ---
 
@@ -801,15 +801,15 @@ Measure, for every constant in the pinned Mathlib, the axioms it transitively de
 
 ## Tasks
 
-- [ ] `lake exe atlas` in `translator/`: walks the environment, computes the axiom set of each constant (Lean's `CollectAxioms`), records kind, module, `noncomputable`, and whether the constant is auto-generated, and writes NDJSON to `atlas/`.
-- [ ] `scripts/python/atlas_report.py`: tiers T0 through T3 per top-level namespace and per module, with and without auto-generated declarations; Markdown output.
-- [ ] Compare with the two published counts and explain the differences in the report.
-- [ ] Wire `make atlas` and record the runtime.
+- [x] `lake exe atlas` in `translator/`: walks the environment, computes the axiom set of each constant (Lean's `CollectAxioms`), records kind, module, `noncomputable`, and whether the constant is auto-generated, and writes NDJSON to `atlas/`.
+- [x] `scripts/python/atlas_report.py`: tiers T0 through T3 per top-level namespace and per module, with and without auto-generated declarations; Markdown output.
+- [x] Compare with the two published counts and explain the differences in the report.
+- [x] Wire `make atlas` and record the runtime.
 
 ## Acceptance criteria
 
-- [ ] `make atlas` produces the NDJSON and the report for the pinned revision.
-- [ ] The report states the denominator and matches one of the published counts to within the differences it explains.
+- [x] `make atlas` produces the NDJSON and the report for the pinned revision.
+- [x] The report states the denominator and matches one of the published counts to within the differences it explains.
 
 ---
 

@@ -70,10 +70,11 @@ the selection are not obvious from the names:
    (`Quot.sound`).  `OrderHom.map_lfp`, Knaster and Tarski, is T1;
    `Subtype.coe_eta` is T0.
 +  **The gcd equation**.  `Nat.gcd` is defined by well-founded
-   recursion (`termination_by`, compiled through `WellFounded.fix`) and
-   is T0; the entry translates it with its defining equation at a
-   successor, `Nat.gcd_succ`, which is T1 through `Quot.sound`
-   (`funext` in the unfolding lemma).
+   recursion (`termination_by`, compiled at this version through the
+   fuel-based `WellFounded.Nat.fix`) and is T0; the entry translates it
+   with its defining equation at a successor, `Nat.gcd_succ`, which is
+   not definitional and is T1 through `Quot.sound` (`funext` in the
+   unfolding lemma).
 
 ## Coverage
 
@@ -102,14 +103,16 @@ No entry exercises the trust escape hatches (`native_decide`,
 `implemented_by`, `partial`, `unsafe`, `sorryAx`), and none can: a
 declaration that uses one is T3, which the translator refuses and
 reports, so there is no translation to write.  Testing the refusal is
-the work of M7's soundness-bug suite.  Two expectations rest on
-secondary sources and are for the translating session to confirm:
+the work of M7's soundness-bug suite.  Two expectations rested on
+secondary sources, for the translating sessions to confirm.  The first,
 that the defining equation of `Nat.gcd` needs K-like reduction in
-Lean's kernel (Lean4Less's README says so), and that the lattice and
-model-theory entries use impredicativity essentially (each takes an
-infimum over all subsets or all substructures, which Lean's `Prop`
-makes a small type and a predicative rendering has to place at a
-level).
+Lean's kernel (Lean4Less's README says so), does not hold at the pin:
+the equation is not definitional there, and no K-like reduction is
+involved ([`nat-gcd-succ/notes.md`](nat-gcd-succ/notes.md)).  The
+second, still open, is that the lattice and model-theory entries use
+impredicativity essentially (each takes an infimum over all subsets or
+all substructures, which Lean's `Prop` makes a small type and a
+predicative rendering has to place at a level).
 
 ## Checking
 
