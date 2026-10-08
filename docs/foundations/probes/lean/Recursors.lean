@@ -18,7 +18,8 @@ example (α β : Type) (p q : α = β) : p = q := rfl
 #print HEq
 example {α : Sort u} (a : α) (h : HEq a a) : (HEq.rec (motive := fun _ _ => Nat) 0 h : Nat) = 0 := rfl
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/Recursors.lean  (exit status 0, 0 s):
 @[implicit_reducible] def WellFounded.Nat.fix.go.{u, v} : {α : Sort u} →
   {motive : α → Sort v} →
     (h : α → Nat) →

@@ -51,7 +51,8 @@ structure Counts where
   IO.println s!"--- Mathlib constants depending on a non-standard axiom ({mathlibT3.size}) ---"
   for s in mathlibT3.qsort (· < ·) do IO.println s
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/ScanByRoot.lean  (exit status 0, 202 s, 6.95 GB peak):
 root constants unsafe partial implemented_by noncomputable nonstandard-axiom
 <none> 34 0 0 0 0 0
 Aesop 6504 120 60 15 0 6

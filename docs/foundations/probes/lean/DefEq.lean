@@ -53,14 +53,15 @@ example {α : Sort u} (r : α → α → Prop) (f : α → Nat) (h : ∀ a b, r 
     | _ => pure ()
   IO.println s!"Quot kind: {env.find? ``Quot |>.map (fun ci => match ci with | .quotInfo _ => "quotInfo" | _ => "other")}"
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
-DefEq.lean:18:41: error: Type mismatch
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/DefEq.lean  (exit status 1, 1 s):
+../docs/foundations/probes/lean/DefEq.lean:21:41: error: Type mismatch
   rfl
 has type
   ?m.5 = ?m.5
 but is expected to have type
   t = { children := t.children }
-DefEq.lean:25:16: warning: `String.mk` has been deprecated: Use `String.ofList` instead
+../docs/foundations/probes/lean/DefEq.lean:28:16: warning: `String.mk` has been deprecated: Use `String.ofList` instead
 Quotient primitive Quot.{u} : {α : Sort u} → (α → α → Prop) → Sort u
 Quotient primitive Quot.lift.{u, v} : {α : Sort u} →
   {r : α → α → Prop} → {β : Sort v} → (f : α → β) → (∀ (a b : α), r a b → f a = f b) → Quot r → β

@@ -31,7 +31,8 @@ example : @Lean.ofReduceNat = @Lean.ofReduceNat := rfl
     | some _ => IO.println s!"{n}: other"
     | none => IO.println s!"{n}: missing"
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/Strings.lean  (exit status 0, 1 s):
 structure String : Type
 number of parameters: 0
 fields:
@@ -56,10 +57,10 @@ Lean.Syntax.missing : Syntax
 Lean.Syntax.node : SourceInfo → SyntaxNodeKind → Array Syntax → Syntax
 Lean.Syntax.atom : SourceInfo → String → Syntax
 Lean.Syntax.ident : SourceInfo → Substring.Raw → Name → List Syntax.Preresolved → Syntax
-Strings.lean:11:10: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
-Strings.lean:11:31: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
-Strings.lean:13:11: warning: `Lean.ofReduceNat` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
-Strings.lean:13:31: warning: `Lean.ofReduceNat` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
+../docs/foundations/probes/lean/Strings.lean:14:10: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
+../docs/foundations/probes/lean/Strings.lean:14:31: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
+../docs/foundations/probes/lean/Strings.lean:16:11: warning: `Lean.ofReduceNat` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
+../docs/foundations/probes/lean/Strings.lean:16:31: warning: `Lean.ofReduceNat` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
 'Classical.decEq' depends on axioms: [propext, Classical.choice, Quot.sound]
 inductive Decidable : Prop → Type
 number of parameters: 1

@@ -25,13 +25,14 @@ unsafe def u1 : Nat := 0
   IO.println s!"loop._unsafe_rec present: {env.contains (``loop ++ `_unsafe_rec)}"
   IO.println s!"Classical.propDecidable noncomputable: {isNoncomputable env ``Classical.propDecidable}"
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/Hatches.lean  (exit status 0, 1 s):
 axiom sorryAx.{u} : (α : Sort u) → Bool → α
 axiom Lean.ofReduceBool : ∀ (a b : Bool), reduceBool a = b → a = b
 axiom Lean.trustCompiler : True
 Lean.ofReduceNat (a b : Nat) (h : reduceNat a = b) : a = b
-Hatches.lean:9:10: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
-Hatches.lean:9:31: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
+../docs/foundations/probes/lean/Hatches.lean:12:10: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
+../docs/foundations/probes/lean/Hatches.lean:12:31: warning: `Lean.trustCompiler` has been deprecated: in-kernel native reduction is deprecated; assert native evaluations with axioms instead
 unsafe axiom lcProof : ∀ {α : Prop}, α
 'nd' depends on axioms: [nd._native.native_decide.ax_1_1]
 opaque loop : Nat → Nat

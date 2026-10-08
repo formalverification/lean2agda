@@ -92,7 +92,8 @@ partial def resultSortIsProp (e : Expr) : Bool :=
   for s in nestedMutual.qsort (· < ·) do IO.println s
   IO.println s!"elapsed ms: {t1 - t0}"
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/Scan.lean  (exit status 0, 174 s, 6.93 GB peak):
 constants: 771136; inductives: 6790; recursors: 6913; opaque: 3062
 unsafe: 714; partial (opaque with _unsafe_rec): 1509; implemented_by: 341; noncomputable: 16021
 constants depending on an axiom outside propext/Quot.sound/Classical.choice: 255; on sorryAx: 1
@@ -382,5 +383,5 @@ Mathlib.Tactic.Translate.Reorder Mathlib.Tactic.Translate.ArgReorder nested=3 mu
 ProofWidgets.Data.Html ProofWidgets.Html nested=2 mutual=1
 Std.Tactic.Do.Syntax Lean.Parser.Tactic.MCasesPat nested=1 mutual=1
 Std.Tactic.Do.Syntax Lean.Parser.Tactic.MRefinePat nested=1 mutual=1
-elapsed ms: 145760
+elapsed ms: 169535
 -/

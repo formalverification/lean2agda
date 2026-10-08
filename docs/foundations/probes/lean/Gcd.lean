@@ -27,7 +27,8 @@ example (m n : Nat) : Nat.gcd m n = if m = 0 then n else Nat.gcd (n % m) m := by
     | some _ => IO.println s!"{n}: other"
     | none => IO.println s!"{n}: missing"
 
-/- Output on 2026-10-07 (Lean v4.33.1, Mathlib v4.33.1):
+/- Output on 2026-10-08 (Lean v4.33.1, Mathlib v4.33.1), from translator/ as
+   lake env lean ../docs/foundations/probes/lean/Gcd.lean  (exit status 1, 1 s):
 @[implicit_reducible] def WellFounded.Nat.fix.{u, v} : {α : Sort u} →
   {motive : α → Sort v} →
     (h : α → Nat) →
@@ -40,16 +41,18 @@ fun {α} {motive} h F x => WellFounded.Nat.fix.go h F (WellFounded.Nat.eager (h 
 theorem Nat.gcd.eq_1 : ∀ (m n : Nat), m.gcd n = if m = 0 then n else (n % m).gcd m :=
 fun m n => Eq.trans (Nat.gcd.eq_def m n) (Eq.refl (if m = 0 then n else (n % m).gcd m))
 'Nat.gcd.eq_1' depends on axioms: [Quot.sound]
-Probe4.lean:10:91: error: Tactic `rfl` failed: The left-hand side
+../docs/foundations/probes/lean/Gcd.lean:13:91: error: Tactic `rfl` failed: The left-hand side
   (x + 1).gcd y
 is not definitionally equal to the right-hand side
   (y % (x + 1)).gcd (x + 1)
+
 x y : Nat
 ⊢ (x + 1).gcd y = (y % (x + 1)).gcd (x + 1)
-Probe4.lean:13:100: error: Tactic `rfl` failed: The left-hand side
+../docs/foundations/probes/lean/Gcd.lean:16:100: error: Tactic `rfl` failed: The left-hand side
   m.gcd n
 is not definitionally equal to the right-hand side
   if m = 0 then n else (n % m).gcd m
+
 m n : Nat
 ⊢ m.gcd n = if m = 0 then n else (n % m).gcd m
 def WellFounded.fix.{u, v} : {α : Sort u} →
