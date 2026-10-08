@@ -51,11 +51,11 @@ an equation, followed by a `▸` along that equation in each case, as follows:
    `k + 1 = k + 1` with `eq_self`.
 
 `propext` comes from `eq_self` (how `simp` closes a goal), from `Nat.mod_self`,
-and from `Nat.gcd_zero_right`; `Quot.sound` comes from `Nat.gcd_succ`,
-`Nat.gcd_zero_left` and `Nat.gcd_zero_right`, all three of which unfold `gcd`
-through the equation lemma `Nat.gcd.eq_1`, whose proof uses `funext` in
-`WellFounded.Nat.fix_eq` (see `nat-gcd-succ`).  Neither Agda proof uses an
-axiom.
+and from `Nat.gcd_zero_right`; `Quot.sound` comes from `Nat.gcd_succ` and
+`Nat.gcd_zero_left`, which rewrite `gcd` with its equation lemma `Nat.gcd.eq_1`
+(stored as the private `_private.Init.Data.Nat.Gcd.0.Nat.gcd.eq_1`), whose
+proof uses `funext` in `WellFounded.Nat.fix_eq` (see `nat-gcd-succ`), and from
+`Nat.gcd_zero_right`, which cites those two.  Neither Agda proof uses an axiom.
 
 ## What the kernel term needed
 
