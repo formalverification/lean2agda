@@ -200,12 +200,61 @@ what it means for this project.  The severities are as follows:
    `proof-irrelevance` entry).
 +  **Upstream**.  Not reported; no Lean issue was searched for yet.
 
+## LF-5: constructor injectivity rests, unseen, on uniqueness of identity proofs on a universe
+
++  **Severity**.  S2.  It is Lean's design, not a defect: Lean's theory
+   proves uniqueness of identity proofs for every type, by definitional
+   proof irrelevance and K-like reduction (the gap catalog's
+   [`k-and-uip`][catalog-k] entry).  What the measurement adds is that
+   `#print axioms` cannot show it, and how far it reaches.
++  **Found**.  2026-10-08, by issue [#8]'s session (pull request [#69]);
+   issue [#7]'s session met the same use in its gcd entries.  Reproduced
+   by issue [#11]'s session at Lean v4.33.1 and Mathlib v4.33.1.
++  **What**.  `eq_of_heq : a ≍ a' → a = a'` is proved, with
+   `pp.proofs true`, as follows:
+
+   ```lean
+   fun {α} {a a'} h =>
+     have this := fun x x_1 x_2 x_3 h₁ =>
+       HEq.rec (motive := fun x_4 x_5 x_6 => ∀ (h : x = x_4), cast h x_2 = x_5) (fun x_4 => rfl) h₁;
+     this α α a a' h rfl
+   ```
+
+   The case `fun x_4 => rfl` has type `∀ (h : x = x), cast h x_2 = x_2`
+   for `x : Sort u`, and `cast h x_2` reduces to `x_2` only by K-like
+   reduction of `Eq.rec` on the variable `h`: uniqueness of identity
+   proofs on a universe (Coq's `JMeq_eq`), which univalence refutes,
+   since `not` gives `Bool = Bool` a second proof.  The kernel accepts
+   `example (α : Sort u) (h : α = α) (a : α) : cast h a = a := rfl`, and
+   its diagnostics count `[(Eq.rec, 2)]` when it re-checks `eq_of_heq`
+   (the `#k_reductions` probe of the `querying-a-pinned-mathlib` skill;
+   its two controls each count one `Eq.rec`, so the count alone is not
+   conclusive, and the term above is the evidence).  Yet `#print axioms`
+   says "does not depend on any axioms" for `eq_of_heq`,
+   `Option.some.inj` and `Nat.noConfusion`.
++  **How far it reaches**.  Every `<T>.noConfusion` definition, the
+   source of constructor injectivity and disjointness, was scanned for a
+   use of `eq_of_heq` in its value.  Under `import Lean`, 667 of 2,610
+   use it; under `import Mathlib`, 2,412 of 4,494.  In both, those are
+   exactly the inductive types with parameters or indices
+   (`numParams + numIndices > 0`).  So every injectivity or
+   disjointness proof for a constructor of such a type goes through it.
++  **What it means here**.  A mechanical translation of such a lemma to
+   profile CC or CU has no counterpart for `eq_of_heq`, which needs K;
+   the hand translations avoid it by proving injectivity with Agda's own
+   pattern matching ([#69]'s `corpus/multiset-map-map/notes.md` prints
+   the probe).  The atlas's tiers do not see it, since it is no axiom.
++  **Upstream**.  Known design; nothing to report.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
+[#8]: https://github.com/formalverification/lean2agda/issues/8
+[#69]: https://github.com/formalverification/lean2agda/pull/69
 [#70]: https://github.com/formalverification/lean2agda/pull/70
 [#11]: https://github.com/formalverification/lean2agda/issues/11
 [#71]: https://github.com/formalverification/lean2agda/pull/71
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
 [lean4#15385]: https://github.com/leanprover/lean4/pull/15385
 [catalog-hatches]: https://github.com/formalverification/lean2agda/blob/main/docs/foundations/gap-catalog.md#trust-escape-hatches
+[catalog-k]: https://github.com/formalverification/lean2agda/blob/main/docs/foundations/gap-catalog.md#k-and-uip
 [report]: reports/atlas-mathlib-v4.33.1-0df444a.md
 [atlas-readme]: ../atlas/README.md
