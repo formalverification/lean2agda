@@ -20,7 +20,11 @@ Description:
         [--modules MODULES.tsv] [--manifest corpus/manifest.json]
 
   The atlas defaults to the one `lake exe atlas` writes for the pin in
-  translator/lake-manifest.json.
+  translator/lake-manifest.json.  The run file is read from beside the
+  atlas and the module table written there, each named after the atlas
+  as `lake exe atlas` names the run file (`--out FILE.ndjson` gives
+  `FILE.run.json`); the report defaults to
+  docs/reports/atlas-<the atlas's name>.md.
 
   It exits with status 1 if the atlas is malformed or disagrees with the
   corpus manifest about an entry's axioms.
@@ -54,9 +58,13 @@ KINDS: tuple[str, ...] = (
     "theorem", "definition", "inductive", "constructor", "recursor",
     "opaque", "axiom", "quotient",
 )
+class StringList:
+    """Marks a field whose value must be a JSON array of strings."""
+
+
 RECORD_FIELDS: tuple[tuple[str, type], ...] = (
-    ("name", str), ("module", str), ("kind", str), ("axioms", list),
-    ("tier", str), ("lean_omits", list), ("noncomputable", bool),
+    ("name", str), ("module", str), ("kind", str), ("axioms", StringList),
+    ("tier", str), ("lean_omits", StringList), ("noncomputable", bool),
     ("unsafe", bool), ("partial", bool), ("private", bool),
     ("internal", bool), ("auto", bool),
 )
@@ -181,21 +189,36 @@ class Agreement:
 def field_errors(obj: Mapping[str, object], fields: Sequence[tuple[str, type]]) -> tuple[str, ...]:
     """The fields that are missing or of the wrong JSON type.  A Boolean
     is not accepted where a number is wanted, though Python's bool is an
-    int."""
+    int, and a `StringList` field must hold strings only."""
     def wrong(value: object, kind: type) -> bool:
+        if kind is StringList:
+            return not isinstance(value, list) or not all(isinstance(x, str) for x in value)
         return not isinstance(value, kind) or (kind is int and isinstance(value, bool))
+    def name_of(kind: type) -> str:
+        return "list of strings" if kind is StringList else kind.__name__
     return tuple(
-        f"field {name} is missing" if name not in obj else f"field {name} is not a {kind.__name__}"
+        f"field {name} is missing" if name not in obj else f"field {name} is not a {name_of(kind)}"
         for name, kind in fields if name not in obj or wrong(obj[name], kind)
     )
 
 
+def decode_atlas(raw: bytes) -> Result[str, str]:
+    """The atlas's bytes as text; Lean writes UTF-8."""
+    try:
+        return Result.ok(raw.decode("utf-8"))
+    except UnicodeDecodeError as e:
+        return Result.err(f"not UTF-8 text (byte {e.start}: {e.reason})")
+
+
 def parse_object(line: str) -> Result[dict, str]:
-    """One line as a JSON object."""
+    """One line as a JSON object.  Nesting too deep for the parser's stack
+    is malformed input like any other, not a crash."""
     try:
         value = json.loads(line)
     except json.JSONDecodeError as e:
         return Result.err(f"not JSON ({e.msg})")
+    except RecursionError:
+        return Result.err("not JSON (nested too deeply to parse)")
     return Result.ok(value) if isinstance(value, dict) else Result.err("not a JSON object")
 
 
@@ -207,7 +230,7 @@ def parse_header(line: str) -> Result[Header, str]:
             return Result.err("the first line is not the atlas header {\"atlas\": {...}}")
         errors = field_errors(inner, (
             ("version", int), ("lean", str), ("lean_commit", str), ("mathlib", str),
-            ("mathlib_commit", str), ("imports", list), ("constants", int)))
+            ("mathlib_commit", str), ("imports", StringList), ("constants", int)))
         if errors:
             return Result.err(f"header: {'; '.join(errors)}")
         return Result.ok(Header(inner["version"], inner["lean"], inner["lean_commit"],
@@ -583,13 +606,23 @@ def counted(n: int, kind: str) -> str:
 
 
 def series(items: Sequence[str]) -> str:
-    """'a', 'a and b', 'a, b and c'."""
+    """'none', 'a', 'a and b', 'a, b and c'."""
+    if not items:
+        return "none"
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
 
-def stem_of(header: Header) -> str:
-    """The name the atlas, the report and the module table share."""
-    return f"mathlib-{header.mathlib}-{header.mathlib_commit[:7]}"
+def beside(atlas: Path, suffix: str) -> Path:
+    """A file beside the atlas, named after it as `lake exe atlas` names
+    the run file (Atlas/Main.lean, `runFile`): the atlas's name up to its
+    last dot, then the suffix."""
+    return atlas.with_name(f"{atlas.stem}.{suffix}")
+
+
+def report_path(repo: Path, atlas: Path) -> Path:
+    """The report's default path, named after the atlas, so that the
+    report of an atlas written with --out never overwrites the pin's."""
+    return repo / "docs" / "reports" / f"atlas-{atlas.stem}.md"
 
 
 def pinned_stem(manifest: str) -> Result[str, str]:
@@ -793,19 +826,33 @@ def section_print_axioms(recs: Sequence[Record], mathlib: Sequence[Record]) -> s
              "instead, and records in `lean_omits` what Lean leaves out.  Lean never "
              "reports an axiom the atlas does not; the program checks that for every "
              "constant."),
+        print_axioms_findings(short, ml_short, by_axiom, by_kind, hatch, lean_ml, moves),
+    )
+
+
+def print_axioms_findings(short: Sequence[Record], ml_short: Sequence[Record],
+                          by_axiom: Sequence[str], by_kind: Sequence[str], hatch: str,
+                          lean_ml: TierCounts, moves: Mapping[tuple[str, str], int]) -> str:
+    """The counts of what Lean leaves out, or one sentence when it leaves
+    nothing out, as on a small environment or once Lean's cache is fixed."""
+    if not short:
+        return bullet("Lean's `collectAxioms` gives every constant of this environment its "
+                      "full axiom set.")
+    changed = [[a, b, num(n)] for (a, b), n in sorted(moves.items()) if a != b]
+    tiers = (f"With Lean's axiom sets, Mathlib's tiers would be T0 {num(lean_ml.t0)}, "
+             f"T1 {num(lean_ml.t1)}, T2 {num(lean_ml.t2)} and T3 {num(lean_ml.t3)}.  ")
+    return blocks(
         "\n".join([
             bullet(f"{num(len(short))} constants of the environment, {num(len(ml_short))} of "
                    "them in Mathlib, get an incomplete axiom set from Lean.  The axiom left "
                    f"out is {series(by_axiom)} of them."),
-            bullet(f"Mathlib's {num(len(ml_short))} are {series(by_kind)}."),
+            *([bullet(f"Mathlib's {num(len(ml_short))} are {series(by_kind)}.")] if ml_short else []),
             bullet(hatch),
-            bullet(f"With Lean's axiom sets, Mathlib's tiers would be T0 {num(lean_ml.t0)}, "
-                   f"T1 {num(lean_ml.t1)}, T2 {num(lean_ml.t2)} and T3 {num(lean_ml.t3)}.  "
-                   "The Mathlib constants whose tier changes are as follows:"),
+            bullet(tiers + ("The Mathlib constants whose tier changes are as follows:" if changed
+                            else "No Mathlib constant changes tier.")),
         ]),
-        table(["tier by Lean", "exact tier", "Mathlib constants"],
-              [[a, b, num(n)] for (a, b), n in sorted(moves.items()) if a != b],
-              [False, False, True]),
+        table(["tier by Lean", "exact tier", "Mathlib constants"], changed,
+              [False, False, True]) if changed else "",
     )
 
 
@@ -989,9 +1036,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
                         help="the atlas (default: atlas/mathlib-<tag>-<commit>.ndjson, "
                              "named after the pin in translator/lake-manifest.json)")
     parser.add_argument("--out", type=Path, default=None,
-                        help="the report (default: docs/reports/atlas-<stem>.md)")
+                        help="the report (default: docs/reports/atlas-<the atlas's name>.md)")
     parser.add_argument("--modules", type=Path, default=None,
-                        help="the per-module table (default: beside the atlas, <stem>.modules.tsv)")
+                        help="the per-module table (default: beside the atlas, <its name>.modules.tsv)")
     parser.add_argument("--manifest", type=Path, default=repo / "corpus" / "manifest.json",
                         help="the corpus manifest (default: corpus/manifest.json)")
     return parser.parse_args(argv)
@@ -1022,13 +1069,12 @@ def main(argv: Sequence[str]) -> int:
     if raw.is_err:
         print(f"atlas-report: {raw.unwrap_err()}", file=sys.stderr)
         return 1
-    parsed = parse_atlas(raw.unwrap().decode("utf-8"))
+    parsed = decode_atlas(raw.unwrap()).and_then(parse_atlas)
     if parsed.is_err:
         print(f"atlas-report: {args.atlas}: {parsed.unwrap_err()}", file=sys.stderr)
         return 1
     atlas = parsed.unwrap()
-    stem = stem_of(atlas.header)
-    run = load_json(args.atlas.with_name(f"{stem}.run.json")).map_err(str).and_then(parse_run)
+    run = load_json(beside(args.atlas, "run.json")).map_err(str).and_then(parse_run)
     manifest = read_text(args.manifest).map_err(str).and_then(decode_manifest)
     for what, result in (("run file", run), ("manifest", manifest)):
         if result.is_err:
@@ -1041,8 +1087,8 @@ def main(argv: Sequence[str]) -> int:
         return 1
     by_name = {r.name: r for r in atlas.records}
     agrees = agreements(entries, by_name)
-    out = args.out or repo / "docs" / "reports" / f"atlas-{stem}.md"
-    modules = args.modules or args.atlas.with_name(f"{stem}.modules.tsv")
+    out = args.out or report_path(repo, args.atlas)
+    modules = args.modules or beside(args.atlas, "modules.tsv")
     digest = hashlib.sha256(raw.unwrap()).hexdigest()
     report = render_report(atlas, run.unwrap(), agrees, len(raw.unwrap()), digest,
                            relative(args.atlas), relative(modules), relative(out))

@@ -39,9 +39,12 @@ writes the following files, named after the Mathlib tag and commit that
 +  `../docs/reports/atlas-mathlib-<tag>-<commit>.md`: the report, the
    one file of the four that is committed.
 
-`lake exe atlas --import MODULE --out FILE` writes the records of a
-smaller environment, which is quicker to look at; `--import` may be
-repeated.
+`lake exe atlas --import MODULE --out FILE.ndjson` writes the records
+of a smaller environment, which is quicker to look at; `--import` may
+be repeated.  `python3 scripts/python/atlas_report.py FILE.ndjson` then
+reads `FILE.run.json` from beside it, writes `FILE.modules.tsv` there,
+and writes its report to `docs/reports/atlas-FILE.md`, never over the
+pin's.
 
 At Mathlib v4.33.1 (commit `0df444a`) and Lean v4.33.1, the records
 file was 221,461,382 bytes with SHA-256

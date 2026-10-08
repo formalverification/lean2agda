@@ -26,7 +26,8 @@ from atlas_report import (
     counted, depends_on_choice, directory_of, field_errors, first_error, group_table,
     grouped, is_mathlib, largest, lean_axioms, main, modules_tsv, name_components,
     namespace_of, num, para, parse_atlas, parse_end, parse_header, parse_object,
-    parse_record, parse_run, pct, pinned_stem, render_report, rest, root_of, series, stem_of,
+    parse_record, parse_run, pct, pinned_stem, render_report, rest, root_of, series,
+    StringList, beside, decode_atlas, report_path,
     t3_safety,
     table, tier_cells, tier_counts, tier_table, user_name, without_auto, wrap,
 )
@@ -79,11 +80,21 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(field_errors({"a": 1, "b": True}, (("a", int), ("b", bool))), ())
         self.assertEqual(field_errors({"a": True}, (("a", int),)), ("field a is not a int",))
         self.assertEqual(field_errors({}, (("a", str),)), ("field a is missing",))
+        self.assertEqual(field_errors({"a": ["x", "y"]}, (("a", StringList),)), ())
+        self.assertEqual(field_errors({"a": ["x", []]}, (("a", StringList),)),
+                         ("field a is not a list of strings",))
+        self.assertEqual(field_errors({"a": "x"}, (("a", StringList),)),
+                         ("field a is not a list of strings",))
 
     def test_parse_object(self) -> None:
         self.assertEqual(parse_object('{"a": 1}').unwrap(), {"a": 1})
         self.assertTrue(parse_object("[1]").is_err)
         self.assertTrue(parse_object("{").is_err)
+        self.assertIn("nested too deeply", parse_object("[" * 100_000).unwrap_err())
+
+    def test_decode_atlas(self) -> None:
+        self.assertEqual(decode_atlas("«x»\n".encode("utf-8")).unwrap(), "«x»\n")
+        self.assertIn("not UTF-8 text (byte 0", decode_atlas(b"\xff\xfe").unwrap_err())
 
     def test_parse_header(self) -> None:
         h = parse_header(json.dumps(HEADER)).unwrap()
@@ -91,6 +102,8 @@ class TestParsing(unittest.TestCase):
         self.assertTrue(parse_header(json.dumps(RAWS[0])).is_err)
         broken = {"atlas": {**HEADER["atlas"], "constants": "3"}}
         self.assertIn("constants", parse_header(json.dumps(broken)).unwrap_err())
+        imports = {"atlas": {**HEADER["atlas"], "imports": [1]}}
+        self.assertIn("field imports is not a list of strings", parse_header(json.dumps(imports)).unwrap_err())
 
     def test_parse_end(self) -> None:
         self.assertEqual(parse_end(json.dumps(END)).unwrap(), End(3, 2, 1))
@@ -101,6 +114,10 @@ class TestParsing(unittest.TestCase):
         self.assertEqual((r.kind, r.axioms, r.lean_omits, r.tier), ("constructor", ("propext",), ("propext",), "T1"))
         self.assertIn("tier", parse_record(json.dumps({**RAWS[1], "tier": "T1"})).unwrap_err())
         self.assertIn("lean_omits", parse_record(json.dumps({**RAWS[1], "lean_omits": ["sorryAx"]})).unwrap_err())
+        self.assertIn("field axioms is not a list of strings",
+                      parse_record(json.dumps({**RAWS[1], "axioms": [[]]})).unwrap_err())
+        self.assertIn("field lean_omits is not a list of strings",
+                      parse_record(json.dumps({**RAWS[1], "lean_omits": [["x"]]})).unwrap_err())
         self.assertIn("field auto is missing",
                       parse_record(json.dumps({k: v for k, v in RAWS[1].items() if k != "auto"})).unwrap_err())
 
@@ -221,10 +238,13 @@ class TestFormatting(unittest.TestCase):
     def test_words(self) -> None:
         self.assertEqual((counted(1, "theorem"), counted(1, "opaque"), counted(3, "inductive")),
                          ("1 theorem", "1 opaque constant", "3 inductive types"))
-        self.assertEqual((series(["a"]), series(["a", "b"]), series(["a", "b", "c"])),
-                         ("a", "a and b", "a, b and c"))
+        self.assertEqual((series([]), series(["a"]), series(["a", "b"]), series(["a", "b", "c"])),
+                         ("none", "a", "a and b", "a, b and c"))
         self.assertEqual(blocks("a", "", "b"), "a\n\nb")
-        self.assertEqual(stem_of(ATLAS.header), "mathlib-v4.33.1-0df444a")
+        self.assertEqual(beside(Path("/a/foo.ndjson"), "run.json"), Path("/a/foo.run.json"))
+        self.assertEqual(beside(Path("/a/mathlib-v4.33.1-0df444a.ndjson"), "modules.tsv"),
+                         Path("/a/mathlib-v4.33.1-0df444a.modules.tsv"))
+        self.assertEqual(report_path(Path("/r"), Path("/a/foo.ndjson")), Path("/r/docs/reports/atlas-foo.md"))
 
     def test_pinned_stem(self) -> None:
         manifest = json.dumps({"packages": [
@@ -271,6 +291,33 @@ class TestFormatting(unittest.TestCase):
                             and "`atlas/" not in line))
 
 
+class TestDegenerateAtlases(unittest.TestCase):
+    """Atlases with nothing to say in some section: no omission by Lean (a
+    small import, or every atlas once Lean's cache is fixed), no T3, no
+    Mathlib constant at all."""
+
+    def render(self, lines: list[dict[str, Any]]) -> str:
+        header = {"atlas": {**HEADER["atlas"], "constants": len(lines)}}
+        end = {"end": {**END["end"], "records": len(lines)}}
+        atlas = parse_atlas(text_of([header, *lines, end])).unwrap()
+        return render_report(atlas, RUN, (), 1, "ab" * 32, "a.ndjson", "a.tsv", "r.md")
+
+    def test_no_omission(self) -> None:
+        report = self.render([RAWS[0], RAWS[1]])
+        self.assertIn("gives every constant of this environment its full axiom set",
+                      " ".join(report.split()))
+        self.assertNotIn("| tier by Lean |", report)
+
+    def test_omission_without_tier_change(self) -> None:
+        report = self.render([RAWS[1], {**RAWS[1], "name": "y", "lean_omits": ["propext"]}])
+        self.assertIn("No Mathlib constant changes tier.", report.replace("\n   ", " "))
+
+    def test_no_mathlib_and_no_t3(self) -> None:
+        report = self.render([RAWS[0], {**RAWS[0], "name": "z", "lean_omits": ["Classical.choice"]}])
+        self.assertIn("Of the 0, 0 are `unsafe`.", report.replace("\n", " "))
+        self.assertNotIn("Mathlib's 1 are", report)
+
+
 class TestMain(unittest.TestCase):
     def test_end_to_end(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -296,6 +343,34 @@ class TestMain(unittest.TestCase):
             with redirect_stdout(io.StringIO()), redirect_stderr(err):
                 self.assertEqual(main(argv), 1)
             self.assertIn("disagrees with the corpus about finset-card-image", err.getvalue())
+
+    def test_custom_name_reads_its_own_run_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "foo.ndjson").write_text(ATLAS_TEXT, "utf-8")
+            (d / "foo.run.json").write_text(json.dumps(
+                {"import_seconds": 1, "graph_seconds": 2, "records_seconds": 3,
+                 "total_seconds": 6, "peak_rss_kib": None}), "utf-8")
+            (d / "manifest.json").write_text("[]", "utf-8")
+            out = d / "report.md"
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(main([str(d / "foo.ndjson"), "--out", str(out),
+                                       "--manifest", str(d / "manifest.json")]), 0)
+            self.assertTrue((d / "foo.modules.tsv").is_file())
+            self.assertIn("a peak resident memory of not reported", out.read_text("utf-8"))
+
+    def test_malformed_input_is_an_error_not_a_traceback(self) -> None:
+        cases = {"utf8": b"\xff\xfe not UTF-8\n",
+                 "axioms": text_of([HEADER, {**RAWS[1], "axioms": [[]]}, RAWS[0], RAWS[2], END]).encode(),
+                 "deep": (json.dumps(HEADER) + "\n" + "[" * 100_000 + "\n" + json.dumps(END)).encode()}
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, content in cases.items():
+                atlas = Path(tmp) / f"{name}.ndjson"
+                atlas.write_bytes(content)
+                err = io.StringIO()
+                with redirect_stderr(err):
+                    self.assertEqual(main([str(atlas), "--out", str(Path(tmp) / "r.md")]), 1, name)
+                self.assertIn(f"{atlas}:", err.getvalue(), name)
 
     def test_missing_atlas(self) -> None:
         err = io.StringIO()
