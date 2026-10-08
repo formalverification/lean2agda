@@ -705,7 +705,7 @@ The corpus is the set of Lean declarations we translate by hand first and that t
 
 ---
 
-### Issue M1-7: Hand translations: arithmetic, lists, and well-founded recursion (#7)
+### Issue M1-7: Hand translations: arithmetic, lists, and well-founded recursion (#7, closed)
 
 **Labels:** `milestone-1-foundations`, `hand-translation`
 
@@ -727,7 +727,7 @@ Translate by hand the constructive entries of the corpus: a `Nat` lemma (`Nat.gc
 
 ---
 
-### Issue M1-8: Hand translations: quotients and extensionality (#8)
+### Issue M1-8: Hand translations: quotients and extensionality (#8, closed)
 
 **Labels:** `milestone-1-foundations`, `foundations`, `hand-translation`
 
