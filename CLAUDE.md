@@ -38,7 +38,9 @@ section before changing anything structural.
    (`corpus/README.md`); `make check` runs it, and the emitted-Agda check
    joins with M2-8.  `make test` runs the Python suite under
    `scripts/python/tests/`, Python-only until M2-1 adds the golden tests.
-   `make atlas` is a placeholder until M1-11, and says so.
+   `make atlas` writes the axiom atlas of the pinned Mathlib and its
+   report (`atlas/README.md`); it needs Mathlib's cache and about
+   7.5 GiB of memory, and no CI job runs it.
 +  `translator/` is a Lake package requiring Mathlib and lean4export at
    pinned tags (`docs/pinning.md`).  Mathlib's prebuilt `.olean` files
    come from `lake exe cache get` there (`make lean-cache`); never

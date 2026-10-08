@@ -4,9 +4,9 @@ File: scripts/python/tests/test_atlas_report.py
 Description:
   Tests of atlas_report.py: parsing, names, counts, formatting and the
   report on small atlases built by hand; main end to end on temporary
-  files; and consistency checks against the repository: the record
+  files; and two consistency checks against the repository: the record
   fields the Lean program writes (translator/Atlas/Record.lean) are the
-  ones the parser reads, and both sides name the atlas file alike.
+  ones the parser reads, and atlas/README.md documents each of them.
 """
 from __future__ import annotations
 
@@ -304,6 +304,11 @@ class TestRepository(unittest.TestCase):
         self.assertIn('s!"mathlib-{tag}-{rev.take 7}.ndjson"', main_lean)
         manifest = (REPO / "translator" / "lake-manifest.json").read_text("utf-8")
         self.assertTrue(pinned_stem(manifest).unwrap().startswith("mathlib-v"))
+
+    def test_readme_documents_every_field(self) -> None:
+        readme = (REPO / "atlas" / "README.md").read_text("utf-8")
+        for name, _ in RECORD_FIELDS:
+            self.assertIn(f"`{name}`", readme)
 
 
 if __name__ == "__main__":

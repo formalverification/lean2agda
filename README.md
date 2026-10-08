@@ -211,10 +211,13 @@ the summary.
    opened February 2026, on a custom Lean fork) counted 446,045
    declarations depending on `Classical.choice` on master (57.5 percent
    of the environment) against 430,049 of 775,824 on its branch (55.4
-   percent); an
-   independent 2026 study counts 171,522 classical against 299,738
-   constructive among 471,260 declarations.  The counts have different
-   denominators and dates; the project's atlas will state its own.
+   percent); an independent 2026 study counts 171,522 classical against
+   299,738 constructive among 471,260 declarations.  The counts have
+   different denominators, methods and dates.  The project's axiom atlas
+   reproduces both at their own revisions and, at the pinned Mathlib
+   v4.33.1, finds 365,216 of Mathlib's 569,189 constants (64.2 percent)
+   depending on `Classical.choice`; its report is
+   [`docs/reports/atlas-mathlib-v4.33.1-0df444a.md`](docs/reports/atlas-mathlib-v4.33.1-0df444a.md).
 
 ## Where the results live
 
@@ -249,7 +252,7 @@ nix develop         # Lean (from lean-toolchain), Agda 2.8.0, agda-stdlib 2.3,
 make doctor         # print versions; fail, naming any missing tool or library
 make corpus-check   # type-check every translated corpus entry (corpus/README.md)
 make test           # the Python tests (scripts/python/tests/)
-make atlas          # placeholder until M1-11: axiom profile of pinned Mathlib
+make atlas          # the axiom atlas of pinned Mathlib (atlas/README.md)
 make lint           # structural check of docs/GITHUB_PROJECT.md
 ```
 
