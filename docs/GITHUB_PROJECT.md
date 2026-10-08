@@ -575,7 +575,7 @@ Mathlib's toolchain moves monthly, and the tools we depend on (Lean4Less, lean2d
 
 ---
 
-### Issue M1-4: Related-work survey (#4)
+### Issue M1-4: Related-work survey (#4, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `research`, `upstream`
 
@@ -607,14 +607,14 @@ Write `docs/foundations/gap-catalog.md`: one entry per feature of Lean's kernel 
 
 ## Tasks
 
-- [ ] Entries for: impredicative `Prop` (and `imax`); definitional proof irrelevance; K-like reduction and UIP; large elimination from `Prop` for subsingletons (`Eq`, `HEq`, `Acc`, `And`, `True`, `False`); structure eta and unit eta; primitive quotients and their computation rule; `Nat` literals with GMP-accelerated kernel operations and `String` literals; universe polymorphism and level arithmetic; the axioms `propext`, `Quot.sound`, `Classical.choice`; `Decidable` and `noncomputable`; the trust escape hatches (`Lean.ofReduceBool`, `implemented_by`, `partial`, `unsafe`, `sorryAx`); nested and mutual inductives; projections and `let`.
-- [ ] For each: Agda's rule or absence, with the documentation link (`--prop` restricts elimination from `Prop` to absurd patterns; `--safe` disables postulates; `--cubical-compatible` implies `--without-K`).
-- [ ] State the two facts that shape the profiles: Lean's theory proves UIP for every type, so a translation to `--cubical-compatible` Agda must justify each use of K by an `isSet` proof; and global choice of Lean's `Classical.choice` form is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged.
-- [ ] Cite Carneiro's thesis on Lean's type theory, Abel and Coquand on the failure of normalization, Vaishnav's thesis, and the HoTT book for the choice argument.
+- [x] Entries for: impredicative `Prop` (and `imax`); definitional proof irrelevance; K-like reduction and UIP; large elimination from `Prop` for subsingletons (`Eq`, `HEq`, `Acc`, `And`, `True`, `False`); structure eta and unit eta; primitive quotients and their computation rule; `Nat` literals with GMP-accelerated kernel operations and `String` literals; universe polymorphism and level arithmetic; the axioms `propext`, `Quot.sound`, `Classical.choice`; `Decidable` and `noncomputable`; the trust escape hatches (`Lean.ofReduceBool`, `implemented_by`, `partial`, `unsafe`, `sorryAx`); nested and mutual inductives; projections and `let`.
+- [x] For each: Agda's rule or absence, with the documentation link (`--prop` restricts elimination from `Prop` to absurd patterns; `--safe` disables postulates; `--cubical-compatible` implies `--without-K`).
+- [x] State the two facts that shape the profiles: Lean's theory proves UIP for every type, so a translation to `--cubical-compatible` Agda must justify each use of K by an `isSet` proof; and global choice of Lean's `Classical.choice` form is inconsistent with univalence, so the classical layer cannot live under `--cubical` unchanged.
+- [x] Cite Carneiro's thesis on Lean's type theory, Abel and Coquand on the failure of normalization, Vaishnav's thesis, and the HoTT book for the choice argument.
 
 ## Acceptance criteria
 
-- [ ] Every entry has all five fields filled in.
+- [x] Every entry has all five fields filled in.
 - [ ] The catalog is linked from the README and from ADR 0001.
 
 ---
@@ -629,15 +629,15 @@ The corpus is the set of Lean declarations we translate by hand first and that t
 
 ## Tasks
 
-- [ ] Layout `corpus/<id>/`: `lean/` (the Lean statement and its elaborated term, exported with lean4export), `agda/` (the hand-written idiomatic Agda, with its `OPTIONS` pragma), and `notes.md` (what the translation needed, by gap-catalog entry).
-- [ ] Manifest `corpus/manifest.json`: id, Lean name, Mathlib module, axiom tier, features exercised, Agda profile the hand version checks under, status.
-- [ ] Select the entries across these themes: constructive arithmetic and lists; well-founded recursion (`Nat.gcd`); a `Quot`-based lemma (`Multiset`); set extensionality (`propext`, `funext`); a `Finset` lemma whose statement carries a classical `Decidable` instance; a `Real` lemma; Lagrange's theorem; a lattice lemma (Knaster and Tarski); a structure-eta reliance (`Subtype`); and a `Mathlib.ModelTheory` lemma that touches agda-algebras's domain.
-- [ ] `scripts/python/corpus_check.py` (functional house style) runs `agda` on each entry under its declared flags and prints a table; wire `make corpus-check`.
+- [x] Layout `corpus/<id>/`: `lean/` (the Lean statement and its elaborated term, exported with lean4export), `agda/` (the hand-written idiomatic Agda, with its `OPTIONS` pragma), and `notes.md` (what the translation needed, by gap-catalog entry).
+- [x] Manifest `corpus/manifest.json`: id, Lean name, Mathlib module, axiom tier, features exercised, Agda profile the hand version checks under, status.
+- [x] Select the entries across these themes: constructive arithmetic and lists; well-founded recursion (`Nat.gcd`); a `Quot`-based lemma (`Multiset`); set extensionality (`propext`, `funext`); a `Finset` lemma whose statement carries a classical `Decidable` instance; a `Real` lemma; Lagrange's theorem; a lattice lemma (Knaster and Tarski); a structure-eta reliance (`Subtype`); and a `Mathlib.ModelTheory` lemma that touches agda-algebras's domain.
+- [x] `scripts/python/corpus_check.py` (functional house style) runs `agda` on each entry under its declared flags and prints a table; wire `make corpus-check`.
 
 ## Acceptance criteria
 
-- [ ] The manifest lists twelve entries with their themes and features.
-- [ ] `make corpus-check` runs and reports per-entry status, in CI too.
+- [x] The manifest lists twelve entries with their themes and features.
+- [x] `make corpus-check` runs and reports per-entry status, in CI too.
 
 ---
 
