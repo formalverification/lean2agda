@@ -31,7 +31,9 @@ is as follows:
    instance `Set.instMembership`, which unfolds to `Set.Mem a x` and then
    to `a x`.  `↔` is `Iff`, a structure with the fields `mp` and `mpr`.
 +  CC: Lean's `Prop` is read as `Ω p = Σ (Set p) Irrelevant`, the
-   propositions among the types of `Set p` (encoding A of [#27]); Lean's
+   propositions among the types of `Set p` (encoding A of [#27]; the gap
+   catalog's [`proof-irrelevance`][cat-proof-irrelevance] entry uses the
+   two letters the other way round); Lean's
    `Set α` is `ℙ A p = A → Ω p`, and `x ∈ s = proj₁ (s x)`.  `Iff` is
    agda-stdlib's `_⇔_`, a record with the fields `to` and `from` (and
    two congruence fields that hold trivially for `_≡_`).
@@ -57,23 +59,38 @@ CC both principles are module parameters, and under CU both are
 theorems, `propext` by univalence and `funext` by the interval.  The
 statement is constructive.
 
+The export's axiom declarations are the same two, so the set is
+complete even though `#print axioms` can leave axioms out at this pin
+(Lean issue [lean4#15226], open; the `multiset-map-map` entry's notes
+say more).
+
 ## What the kernel term needed
 
 The export holds 20 declarations: 3 inductive types (`Iff`,
 `Membership`, `Eq`), the 4 quotient primitives, 8 definitions (`Set`,
 `outParam`, `Membership.mem`, `Set.Mem`, `Set.instMembership`,
 `Quot.liftOn`, `id`, `rfl`), 3 theorems (`congrArg`, `funext`,
-`Set.ext`), and the axioms `Quot.sound` and `propext`.  By feature, the
-term uses the following:
+`Set.ext`), and the axioms `Quot.sound` and `propext`.
 
-+  `quotients`: only inside `funext`, which forms the quotient of the
-   function space by pointwise equality and computes with `Quot.lift`
-   twice (next section).  Neither Agda file has a quotient: CC takes
-   `funext` as a parameter, and CU proves it with the interval.
-+  `axioms`: `propext` and `Quot.sound`, as the Tier section says.  The
-   CC file takes `propext` and `funext` as two records, `PropExt` and
-   `FunExt`; the CU file needs neither.
-+  `impredicative-prop` and `universe-levels`: one level parameter, `u`,
+The reductions the kernel performs were measured as for
+`multiset-map-map`, by the probe printed in that entry's notes, which
+re-checks each theorem and definition of the closure in Lean's kernel
+with its diagnostics on.  Of the 11, only `funext` reduces a quotient
+primitive (`Quot.lift`, twice), and none reduces a recursor that admits
+K-like reduction, which proves that the check uses none.
+
+By feature, the term uses the following, each named by its entry in the
+gap catalog ([`docs/foundations/gap-catalog.md`][catalog]):
+
++  [`quotients`][cat-quotients]: only inside `funext`, which forms the quotient
+   of the function space by pointwise equality and computes with `Quot.lift`
+   twice (next section).  Neither Agda file has a quotient: CC takes `funext`
+   as a parameter, and CU proves it with the interval.
++  [`axioms`][cat-axioms]: `propext` and `Quot.sound`, as the Tier section
+   says.  The CC file takes `propext` and `funext` as two records, `PropExt`
+   and `FunExt`; the CU file needs neither.
++  [`impredicative-prop`][cat-impredicative-prop] and
+   [`universe-levels`][cat-universe-levels]: one level parameter, `u`,
    for `α : Type u`.  Lean's `Set α = α → Prop` lives in `Type u`, the
    universe of `α`, because `Prop` holds every proposition, whatever
    universe it mentions, and is itself a type in `Type`.  Agda has no
@@ -90,25 +107,24 @@ term uses the following:
    maximum, and the equation `propext (h x)` proves, `a x = b x`, is an
    equation between propositions, `@Eq Prop`, one universe up, which CC
    renders as `_≡_` on `Ω p` and CU as a path in `hProp ℓ`.
-+  `projections-and-let`: `Membership.mem` is a projection, and the
-   kernel accepts `h x : Membership.mem a x ↔ Membership.mem b x` where
-   `propext` expects `a x ↔ b x` by unfolding the instance
-   `Set.instMembership = ⟨Set.Mem⟩`, projecting, and unfolding `Set.Mem`.
-   In both Agda files `_∈_` is an ordinary function, so the step is a
-   definition unfolding.  `funext`'s proof binds `eqv` and `extfunApp`
-   with `let`.
++  [`projections-and-let`][cat-projections-and-let]: `Membership.mem` is a
+   projection, and the kernel accepts
+   `h x : Membership.mem a x ↔ Membership.mem b x` where `propext` expects
+   `a x ↔ b x` by unfolding the instance `Set.instMembership = ⟨Set.Mem⟩`,
+   projecting, and unfolding `Set.Mem`.  In both Agda files `_∈_` is an
+   ordinary function, so the step is a definition unfolding.  `funext`'s
+   proof binds `eqv` and `extfunApp` with `let`.
 
-Reading the term finds no use of definitional proof irrelevance, K-like
-reduction, large elimination, literals or structure eta; as the seed
-entry says, Lean4Less (M3-1, [#26]) will settle the first two
-mechanically.
+Reading the term finds no use of definitional proof irrelevance, large
+elimination, literals or structure eta.  Proof irrelevance is the one
+rule the kernel's diagnostics do not count, since it is a conversion,
+not a reduction; as the seed entry says, Lean4Less (M3-1, [#26]) will
+settle it mechanically.
 
 ### Definitional computations of `Quot.lift`
 
-Two, both in `funext`, and neither made explicit by the CC file.  The
-only declarations in the export that mention `Quot.lift` or
-`Quot.liftOn` are `Quot.liftOn` and `funext`, and `Quot.liftOn` applies
-`Quot.lift` to a variable.  Lean proves
+Two, both in `funext`, as the kernel's count above says, and neither
+made explicit by the CC file.  Lean proves
 
     theorem funext {α : Sort u} {β : α → Sort v} {f g : (x : α) → β x}
         (h : ∀ x, f x = g x) : f = g := by
@@ -230,3 +246,11 @@ proof; whether [#30]'s task should change to say so is open.
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#30]: https://github.com/formalverification/lean2agda/issues/30
 [#33]: https://github.com/formalverification/lean2agda/issues/33
+[catalog]: ../../docs/foundations/gap-catalog.md
+[cat-axioms]: ../../docs/foundations/gap-catalog.md#axioms
+[cat-impredicative-prop]: ../../docs/foundations/gap-catalog.md#impredicative-prop
+[cat-projections-and-let]: ../../docs/foundations/gap-catalog.md#projections-and-let
+[cat-proof-irrelevance]: ../../docs/foundations/gap-catalog.md#proof-irrelevance
+[cat-quotients]: ../../docs/foundations/gap-catalog.md#quotients
+[cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
+[lean4#15226]: https://github.com/leanprover/lean4/issues/15226

@@ -73,6 +73,13 @@ follows:
    that the last two cite, which is proved by `Eq.propIntro`, that is,
    by `propext`.
 
+The export's axiom declarations are the same two.  That cross-check
+matters at this pin: `#print axioms` can leave axioms out of the set it
+prints for a constant whose dependencies form a cycle, such as an
+inductive type and its constructors (Lean issue [lean4#15226], open),
+and the export, which holds every constant the declaration reaches,
+does not depend on that walk.
+
 The statement is constructive, and so are both Agda proofs: the CC file
 uses `sound`, its parameter record's counterpart of `Quot.sound`, and
 nothing standing for `propext` or `funext`; the CU file uses the
@@ -87,78 +94,99 @@ The export holds 83 declarations: 11 inductive types (`Equivalence`,
 `Quot.sound` and `propext`.  Most of it proves `List.Perm.map`, through
 `List.Perm.filterMap`, `List.filterMap_eq_map`, `funext`, and the
 injectivity of `Option.some` (`Option.some.inj`, `Option.noConfusion`,
-`eq_of_heq`, `cast`).  By feature, the term uses the following:
+`eq_of_heq`, `cast`).
 
-+  `quotients`: `Multiset` is `Quot`, `Multiset.ofList` is `Quot.mk`,
-   `Multiset.map` is `Quot.lift` (through `Quot.liftOn`), its
+Which of Lean's definitional rules the check relied on was measured in
+Lean's own kernel.  The probe under Remarks re-checks each of the
+closure's 66 theorems and definitions under a fresh name with the
+kernel's diagnostics on, which count, by name, every definition the
+kernel unfolds and every recursor and quotient primitive it reduces.
+Two declarations reduce `Quot.lift` (next section).  One reduces a
+recursor that admits K-like reduction: `eq_of_heq`, two reductions of
+`Eq.rec`.  The second count over-counts, since it includes ordinary
+reductions on a constructor: of two controls, `cast h a = a` for a
+variable `h : Nat = Nat`, which only K-like reduction accepts, and
+`cast (Eq.refl Nat) a = a`, which the ordinary rule accepts, each counts
+one `Eq.rec`.  A zero is conclusive, and a positive count has to be
+read in the term.
+
+By feature, the term uses the following, each named by its entry in the
+gap catalog ([`docs/foundations/gap-catalog.md`][catalog]):
+
++  [`quotients`][cat-quotients]: `Multiset` is `Quot`, `Multiset.ofList` is
+   `Quot.mk`, `Multiset.map` is `Quot.lift` (through `Quot.liftOn`), its
    soundness is `Quot.sound`, and `map_map` is `Quot.ind` (through
-   `Quot.inductionOn`).  The kernel computes with `Quot.lift` five times,
-   listed in the next section; the CC file makes three of them explicit.
-+  `axioms`: `propext` and `Quot.sound`, as the Tier section says.  The
-   CC file takes `Quot.sound` as the field `sound` of its parameter; the
-   CU file needs no parameter.
-+  `impredicative-prop`: `Option.noConfusion.{u_1, u}` rewrites by
-   `Eq.ndrec` at the level `imax (u+1) u_1`, and `Option.some.inj` uses
-   it, through `Option.some.noConfusion`, at `u_1 = 0`, for a
-   proposition, where `imax (u+1) 0` is `0` and not the maximum.  A
-   translation of the closure has to specialize the constant, that is,
-   emit a copy of it at that instantiation with the `imax` resolved
-   ([#28]).  It goes with the injectivity of `Option.some`,
-   which neither Agda file proves (next item).
-+  `k-and-uip`: `eq_of_heq`, which `Option.noConfusion` calls and the
-   injectivity lemmas `Option.some.inj` and `Option.some.injEq` reach;
+   `Quot.inductionOn`).  The kernel reduces `Quot.lift` five times, listed in
+   the next section; the CC file makes three of them explicit.
++  [`axioms`][cat-axioms]: `propext` and `Quot.sound`, as the Tier section
+   says.  The CC file takes `Quot.sound` as the field `sound` of its parameter;
+   the CU file needs no parameter.
++  [`impredicative-prop`][cat-impredicative-prop]:
+   `Option.noConfusion.{u_1, u}` rewrites by `Eq.ndrec` at the level
+   `imax (u+1) u_1`, and `Option.some.inj` uses it, through
+   `Option.some.noConfusion`, at `u_1 = 0`, for a proposition, where
+   `imax (u+1) 0` is `0` and not the maximum.  A translation of the closure
+   has to specialize the constant, that is, emit a copy of it at that
+   instantiation with the `imax` resolved ([#28]).  It goes with the
+   injectivity of `Option.some`, which neither Agda file proves (next item).
++  [`k-and-uip`][cat-k-and-uip]: one use, measured as above, in
+   `eq_of_heq`, which `Option.noConfusion` calls and the injectivity
+   lemmas `Option.some.inj` and `Option.some.injEq` reach;
    `List.Perm.filterMap` and `List.filterMap_eq_map`, both in the proof
    of `List.Perm.map`, cite `Option.some.injEq`.  The proof of
    `eq_of_heq` applies `HEq.rec` to the minor premise `fun _ => rfl`,
    whose expected type is `(h : α = α) → cast h a = a`; `cast h a`
-   reduces to `a` only by
-   K-like reduction of `Eq.rec` on the variable proof `h`.  At the pin,
-   `example (a : α) (h : α = α) : cast h a = a := rfl` is accepted.
-   Neither Agda file proves `Option.some` injective: both prove
-   `List.Perm.map` by induction on the permutation.
-+  `large-elimination`: `cast` eliminates `Eq` into `Sort u` (`Eq.rec`
-   with the motive `fun x _ => x`), and `Option.some.inj` uses it at
-   `Type`, through `eq_of_heq.{u+1}`.  It goes with the injectivity
+   reduces to `a` only by K-like reduction of `Eq.rec` on the variable
+   proof `h`.  Since `α : Sort u`, that is uniqueness of identity proofs
+   on a universe, which profile CC cannot prove and univalence refutes
+   (`not` gives `Bool = Bool` a second proof), so a translation of the
+   whole closure would have no CC counterpart for `eq_of_heq` and would
+   have to avoid it.  Neither Agda file proves `Option.some` injective:
+   both prove `List.Perm.map` by induction on the permutation.
++  [`large-elimination`][cat-large-elimination]: `cast` eliminates `Eq` into
+   `Sort u` (`Eq.rec` with the motive `fun x _ => x`), and `Option.some.inj`
+   uses it at `Type`, through `eq_of_heq.{u+1}`.  It goes with the injectivity
    proof.
-+  `universe-levels`: three level parameters, one for each of `α`, `β`
-   and `γ` (`#check` names them `u_2`, `u_1` and `u_3`, the export `u_1`,
-   `v` and `u_2`).  `Multiset α` lives in the universe of `α` because
-   `Quot r : Sort u` for `α : Sort u`, whatever the relation; Agda's
-   quotient of `A : Set a` by `R : A → A → Set r` lives in `Set (a ⊔ r)`,
-   and both permutation relations live at the level `a` of the lists,
-   so `Multiset A : Set a` as in Lean.  `imax` also appears in the
-   types of `funext`, `congr` and `congrFun'`, which the term
-   instantiates only at successor levels, where it is the maximum.
-+  `projections-and-let`: `Setoid.r` is a projection, and the kernel
-   reduces `Setoid.r (List.isSetoid α)` to `List.Perm`, unfolding the
-   instance `List.isSetoid = ⟨Perm, Perm.eqv⟩`, when
++  [`universe-levels`][cat-universe-levels]: three level parameters, one for
+   each of `α`, `β` and `γ` (`#check` names them `u_2`, `u_1` and `u_3`, the
+   export `u_1`, `v` and `u_2`).  `Multiset α` lives in the universe of `α`
+   because `Quot r : Sort u` for `α : Sort u`, whatever the relation; Agda's
+   quotient of `A : Set a` by `R : A → A → Set r` lives in `Set (a ⊔ r)`, and
+   both permutation relations live at the level `a` of the lists, so
+   `Multiset A : Set a` as in Lean.  `imax` also appears in the types of
+   `funext`, `congr` and `congrFun'`, which the term instantiates only at
+   successor levels, where it is the maximum.
++  [`projections-and-let`][cat-projections-and-let]: `Setoid.r` is a
+   projection, and the kernel reduces `Setoid.r (List.isSetoid α)` to
+   `List.Perm`, unfolding the instance `List.isSetoid = ⟨Perm, Perm.eqv⟩`, when
    `Multiset.map._proof_1` passes a proof of `Setoid.r … l₁ l₂` to
-   `List.Perm.map`, and again for the proof it returns.  Agda quotients
-   by the relation itself, so neither projection nor reduction appears.
-   Three `let` expressions, `eqv` and `extfunApp` in `funext` and `this`
-   in `eq_of_heq`, go with those proofs.  `PProd` projections appear in
-   the structural recursions `List.brecOn` compiles, as in the seed
-   entry, and Agda's pattern matching replaces them.
+   `List.Perm.map`, and again for the proof it returns.  Agda quotients by the
+   relation itself, so neither projection nor reduction appears.  Three `let`
+   expressions, `eqv` and `extfunApp` in `funext` and `this` in `eq_of_heq`, go
+   with those proofs.  `PProd` projections appear in the structural recursions
+   `List.brecOn` compiles, as in the seed entry, and Agda's pattern matching
+   replaces them.
 
 Reading the term finds no use of definitional proof irrelevance other
 than the K-like reduction above, and no literals, structure eta, or
 `Decidable` instances (`instDecidableEqList.match_1` in the export is
 the matcher that the compiled `List.map` shares with that instance, not
-the instance).  As the seed entry says, Lean4Less (M3-1, [#26]) will
-settle the first mechanically.
+the instance).  Proof irrelevance is the one rule the kernel's
+diagnostics do not count, since it is a conversion, not a reduction; as
+the seed entry says, Lean4Less (M3-1, [#26]) will settle it
+mechanically.
 
 ### Definitional computations of `Quot.lift`
 
 Lean's kernel reduces `Quot.lift f h (Quot.mk r a)` to `f a`.  In the
 CC file, `Quot.lift` is the field `lift` of a module parameter, which
 does not compute, and the rule is the field `lift-β`, a propositional
-equation (`lift-β uip f h x : lift uip f h (mk R x) ≡ f x`).  A
-reduction of `Quot.lift` can only arise where a term mentions
-`Quot.lift` or a constant whose definition does; in the export, those
-are `Quot.liftOn` and `Multiset.map`, mentioned only in `Multiset.map`,
-`Multiset.map_map` and `funext`, and `Multiset.map` itself applies
-`Quot.liftOn` to a variable.  Reading the other two finds five uses,
-three in `Multiset.map_map` and two in `funext`, as follows:
+equation (`lift-β uip f h x : lift uip f h (mk R x) ≡ f x`).
+Re-checked in the kernel with its diagnostics on (the probe under
+Remarks), exactly two of the closure's 66 theorems and definitions
+reduce `Quot.lift`, and none reduces `Quot.ind`: `Multiset.map_map`,
+three times, and `funext`, twice.  The five reductions are as
+follows:
 
 1.  `Multiset.map_map`'s term is
     `Quot.inductionOn s (fun x => map g (map f x) = map (g ∘ f) x)
@@ -214,13 +242,16 @@ neither has an instance argument or a record in its place.
 so that one record serves every quotient, as Lean's `Quot` does.  Its
 fields are `Quot`, `mk`, `lift`, `ind`, `sound`, `lift-β` and `squash`.
 Three of them differ from a word-for-word rendering of Lean's
-primitives, each because Lean's `Prop` is proof irrelevant and Agda's
-`Set` is not, as follows:
+primitives, such as the gap catalog's probe
+[`P24QuotParam`][p24], each because Lean's `Prop` is proof irrelevant
+and Agda's `Set` is not, as follows:
 
 +  `ind`'s motive takes values in `Ω p = Σ (Set p) Irrelevant`, the
    propositions among the types of `Set p`, which is how the file reads
    Lean's `Prop` (encoding A of [#27], h-propositions in `Set` with a
-   proof that any two elements are equal).  With a motive in all of
+   proof that any two elements are equal; the gap catalog's
+   [`proof-irrelevance`][cat-proof-irrelevance] entry uses the two
+   letters the other way round).  With a motive in all of
    `Set`, `ind (λ x → x , refl)` proves that every quotient map has a
    section, `(q : Quot R) → Σ A (λ x → mk R x ≡ q)`; a scratch module
    checked that under `--safe --cubical-compatible`, and the proof is
@@ -330,6 +361,94 @@ The export was made on 2026-10-08 with lean4export v4.33.0 (format
 [`docs/pinning.md`](../../docs/pinning.md).  Two runs gave the same
 bytes (SHA-256 `c0eddfd3...f56ee790`).
 
+The reduction counts above come from the following probe, run from
+`translator/` as `lake env lean` on a scratch file on 2026-10-08.  Its
+closure walk is the one lean4export performs, and its re-check is the
+kernel's `addDecl` with the diagnostics of `Kernel.Environment.enableDiag`
+on; the same method measured the entries of [#7].
+
+```lean
+import Mathlib.Data.Multiset.MapFold
+import Mathlib.Data.Set.Defs
+open Lean Elab Command
+
+/-- The constants `n` depends on, `n` included, through types, values,
+constructors and recursors: the closure lean4export exports. -/
+partial def closure (env : Environment) (n : Name) : NameSet := Id.run do
+  let mut seen : NameSet := {}
+  let mut todo := [n]
+  while !todo.isEmpty do
+    let c := todo.head!
+    todo := todo.tail!
+    if seen.contains c then continue
+    seen := seen.insert c
+    let some ci := env.find? c | continue
+    let mut deps := ci.type.getUsedConstants.toList
+    if let some v := ci.value? (allowOpaque := true) then
+      deps := deps ++ v.getUsedConstants.toList
+    match ci with
+    | .inductInfo v => deps := deps ++ v.ctors ++ v.all
+    | .ctorInfo v => deps := deps ++ [v.induct]
+    | .recInfo v => deps := deps ++ v.all
+    | _ => pure ()
+    todo := deps ++ todo
+  return seen
+
+/-- The recursors with `k = true` and the quotient primitives among a
+kernel check's reduction counters. -/
+def watched (env : Environment) (kenv : Kernel.Environment) : List (Name × Nat) :=
+  kenv.diagnostics.unfoldCounter.toList.filter fun (r, _) =>
+    r == ``Quot.lift || r == ``Quot.ind ||
+      match env.find? r with
+      | some (.recInfo v) => v.k
+      | _ => false
+
+/-- Re-check every theorem and definition in the closure of `n` in the kernel,
+under a fresh name, with diagnostics on; list those whose check reduced a
+watched constant. -/
+elab "#reductions " nm:ident : command => do
+  let env ← getEnv
+  let mut checked : Nat := 0
+  let mut hits : Array String := #[]
+  for c in (closure env nm.getId).toList do
+    let decl? := match env.find? c with
+      | some (.thmInfo v) => some (Declaration.thmDecl { v with name := c ++ `_recheck })
+      | some (.defnInfo v) => some (Declaration.defnDecl { v with name := c ++ `_recheck })
+      | _ => none
+    let some decl := decl? | continue
+    checked := checked + 1
+    match (env.toKernelEnv.enableDiag true).addDecl {} decl with
+    | .error _ => hits := hits.push s!"  {c}: rejected"
+    | .ok kenv =>
+      let ws := watched env kenv
+      unless ws.isEmpty do hits := hits.push s!"  {c}: {ws}"
+  logInfo m!"{nm.getId}: {checked} re-checked\n{"\n".intercalate hits.toList}"
+
+#reductions Multiset.map_map
+#reductions Set.ext
+
+-- Controls: K-like reduction only, and the ordinary rule only.
+theorem kOnly (h : Nat = Nat) (a : Nat) : cast h a = a := rfl
+theorem iotaOnly (a : Nat) : cast (Eq.refl Nat) a = a := rfl
+#reductions kOnly
+#reductions iotaOnly
+```
+
+It printed the following:
+
+```text
+Multiset.map_map: 66 re-checked
+  funext: [(Quot.lift, 2)]
+  eq_of_heq: [(Eq.rec, 2)]
+  Multiset.map_map: [(Quot.lift, 3)]
+Set.ext: 11 re-checked
+  funext: [(Quot.lift, 2)]
+kOnly: 3 re-checked
+  kOnly: [(Eq.rec, 1)]
+iotaOnly: 3 re-checked
+  iotaOnly: [(Eq.rec, 1)]
+```
+
 K-like reduction, large elimination, an `imax` at a proposition, and
 `funext` enter the closure through how Lean's core library proves
 `List.Perm.map`, not through `Multiset`: a translator that emits the
@@ -339,6 +458,7 @@ Mathlib declarations reach `eq_of_heq`, and so K-like reduction, through
 the injectivity theorems Lean generates for each constructor
 (`Option.some.inj`, `Option.some.injEq`), which `simp` rewrites with.
 
+[#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#11]: https://github.com/formalverification/lean2agda/issues/11
 [#26]: https://github.com/formalverification/lean2agda/issues/26
@@ -347,3 +467,14 @@ the injectivity theorems Lean generates for each constructor
 [#30]: https://github.com/formalverification/lean2agda/issues/30
 [#33]: https://github.com/formalverification/lean2agda/issues/33
 [#34]: https://github.com/formalverification/lean2agda/issues/34
+[catalog]: ../../docs/foundations/gap-catalog.md
+[cat-axioms]: ../../docs/foundations/gap-catalog.md#axioms
+[cat-impredicative-prop]: ../../docs/foundations/gap-catalog.md#impredicative-prop
+[cat-k-and-uip]: ../../docs/foundations/gap-catalog.md#k-and-uip
+[cat-large-elimination]: ../../docs/foundations/gap-catalog.md#large-elimination
+[cat-projections-and-let]: ../../docs/foundations/gap-catalog.md#projections-and-let
+[cat-proof-irrelevance]: ../../docs/foundations/gap-catalog.md#proof-irrelevance
+[cat-quotients]: ../../docs/foundations/gap-catalog.md#quotients
+[cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
+[lean4#15226]: https://github.com/leanprover/lean4/issues/15226
+[p24]: ../../docs/foundations/probes/agda/P24QuotParam.agda
