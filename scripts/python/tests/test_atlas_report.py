@@ -21,10 +21,9 @@ from pathlib import Path
 from typing import Any
 
 from atlas_report import (
-    RECORD_FIELDS, ROOT, Agreement, Atlas, Count, End, Header, Record, Run, TierCounts,
+    RECORD_FIELDS, ROOT, Count, End, Record, Run, TierCounts,
     agreements, atlas_counts, blocks, bullet, code, comparison_rows, count_records, count_row,
-    counted,
-    depends_on_choice, directory_of, field_errors, first_error, group_table,
+    counted, depends_on_choice, directory_of, field_errors, first_error, group_table,
     grouped, is_mathlib, largest, lean_axioms, main, modules_tsv, name_components,
     namespace_of, num, para, parse_atlas, parse_end, parse_header, parse_object,
     parse_record, parse_run, pct, pinned_stem, render_report, rest, root_of, series, stem_of,
