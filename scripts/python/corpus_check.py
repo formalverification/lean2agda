@@ -132,6 +132,23 @@ def summarize(rows: Sequence[Row]) -> Summary:
     )
 
 
+def agda_dir_problem(value: Optional[str], has_registry: bool) -> Optional[str]:
+    """Why the environment is not the Nix shell's, or None when it is.
+
+    The shell's hook sets AGDA_DIR to the repository's .agda directory and
+    writes the libraries and defaults files there.  An empty AGDA_DIR is
+    not the shell's: Agda then warns and falls back to ~/.config/agda,
+    whose defaults decide which libraries a corpus file sees.
+    """
+    if not value:
+        return ("AGDA_DIR is not set, or is empty; run inside the Nix shell "
+                "(nix develop), whose agda sees the pinned libraries")
+    if not has_registry:
+        return (f"AGDA_DIR={value} holds no libraries and defaults files; run inside "
+                "the Nix shell (nix develop), whose hook writes them")
+    return None
+
+
 def exit_status(report: Report) -> int:
     """0 when nothing failed and everything is well formed, else 1."""
     summary = summarize(report.rows)
@@ -283,9 +300,13 @@ def main(argv: Sequence[str]) -> int:
     # The libraries the corpus imports are the ones the Nix shell's agda
     # wrapper registers in $AGDA_DIR; a host agda would read
     # ~/.config/agda and check against whatever is installed there.
-    if "AGDA_DIR" not in os.environ:
-        print("corpus-check: AGDA_DIR is not set; run inside the Nix shell "
-              "(nix develop), whose agda sees the pinned libraries", file=sys.stderr)
+    agda_dir = os.environ.get("AGDA_DIR")
+    has_registry = bool(agda_dir) and all(
+        (Path(str(agda_dir)) / name).is_file() for name in ("libraries", "defaults")
+    )
+    problem = agda_dir_problem(agda_dir, has_registry)
+    if problem is not None:
+        print(f"corpus-check: {problem}", file=sys.stderr)
         return 1
     result = check_corpus(args.corpus, run_agda, real_clock, args.agda, args.timeout)
     if result.is_err:

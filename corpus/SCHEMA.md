@@ -4,9 +4,10 @@
 
 This file defines what a corpus entry contains, the fields of
 `manifest.json`, and what makes an entry malformed.
-`scripts/python/corpus_check.py` enforces every rule stated here; the
-Python standard library has no JSON Schema validator, so the rules are
-written as prose and as code, and the two must change together.
+`scripts/python/corpus_check.py` enforces every rule stated here, with
+the rules themselves in `scripts/python/corpus_manifest.py`; the Python
+standard library has no JSON Schema validator, so the rules are written
+as prose and as code, and the two must change together.
 [`README.md`](README.md) lists the entries and says how to translate
 one.
 
@@ -32,8 +33,9 @@ following:
    Its first line records the exporter's version and the Lean commit
    that ran it.  At the pinned versions the export is deterministic: two
    runs give the same bytes.
-+  `lean/term.sidecar.json`, in place of `term.ndjson`, when the export
-   is larger than 1 MB (1,000,000 bytes).  The repository then records
++  `lean/term.sidecar.json`, in place of `term.ndjson` (never beside
+   it), when the export is larger than 1 MB (1,000,000 bytes).  A
+   `term.ndjson` over that size is malformed.  The repository then records
    the export's size, its SHA-256 and the command that regenerates it,
    so that the layout stays the one the issue, the README and this file
    describe without committing megabytes of NDJSON per entry.  It is a
@@ -49,10 +51,16 @@ following:
 
    `command` runs from `translator/` and writes the export to standard
    output; `sha256sum` of that output must print `sha256`.
-+  `agda/`: the hand-written Agda, one or more `.agda` files, every one
-   of them listed in the entry's `agda_files`, each declaring its flags
-   in a single `OPTIONS` pragma.  Two files are usual when one
-   translation targets two profiles, as issue M1-8's entries do.
++  `agda/`: the hand-written Agda, one or more plain `.agda` files
+   directly in `agda/` (no subdirectories, no literate files), every
+   one of them listed in the entry's `agda_files`.  Each declares its
+   flags in a single `OPTIONS` pragma at the top, before the module
+   declaration: Agda ignores an `OPTIONS` pragma inside a comment, and
+   one after the module header with only a warning (both measured with
+   Agda 2.8.0, where a file that postulated passed with the ignored
+   `--safe`), so the checker reads the pragma only where Agda does.
+   Two files are usual when one translation targets two profiles, as
+   issue M1-8's entries do.
 +  `notes.md`: what the translation needed, written from
    [`notes-template.md`](notes-template.md).
 
@@ -133,7 +141,7 @@ is to have, each under a kebab-case slug.  The first ten are the rows
 of the README's table "What the translation has to bridge"; the last
 three are entries the catalog's issue lists that the table does not.
 When the catalog exists, its entries become the vocabulary, and the
-slugs here, the `FEATURES` constant in `corpus_check.py` and the
+slugs here, the `FEATURES` constant in `corpus_manifest.py` and the
 manifest change together.
 
 | Slug | README row | Gap-catalog entry (issue M1-5) |
@@ -169,12 +177,14 @@ status 1 when any of the following holds:
    profile, a repeated feature, axiom or file, flags that disagree with
    the profile);
 +  the entry is `translated` and one of the following holds: it lists
-   no Agda file; a listed file is missing, or has no `OPTIONS` pragma,
-   or more than one, or a pragma whose flags differ from the manifest's;
-   its `agda/` directory holds an `.agda` file the manifest does not
+   no Agda file; a listed file is missing, has no `OPTIONS` pragma
+   before its module declaration, has more than one there, declares
+   flags that differ from the manifest's, or has an `OPTIONS` pragma
+   after its module header; its `agda/` directory holds an Agda source
+   file, plain or literate and at any depth, that the manifest does not
    list; `lean/Statement.lean` or `notes.md` is missing; `lean/` holds
-   neither `term.ndjson` nor `term.sidecar.json`; or the sidecar breaks
-   its rules above.
+   neither `term.ndjson` nor `term.sidecar.json`, or both; `term.ndjson`
+   is larger than 1 MB; or the sidecar breaks its rules above.
 
 Two conditions concern the corpus as a whole and also fail the check:
 `manifest.json` is missing or is not a JSON array, or `corpus/` holds a

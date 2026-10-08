@@ -23,7 +23,7 @@ from unittest import mock
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import FileRun, Outcome
 from corpus_check import (
-    Report, Row, Summary, check_corpus, exit_status, failure_detail,
+    Report, Row, Summary, agda_dir_problem, check_corpus, exit_status, failure_detail,
     file_record, fold_files, format_details, format_json, format_seconds,
     format_summary, format_table, format_text, main, malformed_row,
     parse_args, planned_row, result_cell, summarize,
@@ -226,6 +226,17 @@ class TestCommandLine(unittest.TestCase):
         args = parse_args([])
         self.assertEqual((args.agda, args.timeout, args.json), ("agda", 300.0, False))
         self.assertEqual(args.corpus.name, "corpus")
+
+    def test_agda_dir_problem(self) -> None:
+        self.assertIsNone(agda_dir_problem("/repo/.agda", True))
+        self.assertIn("not set, or is empty", agda_dir_problem(None, False) or "")
+        self.assertIn("not set, or is empty", agda_dir_problem("", False) or "")
+        self.assertIn("holds no libraries and defaults files", agda_dir_problem("/tmp/x", False) or "")
+
+    def test_main_refuses_an_empty_agda_dir(self) -> None:
+        with mock.patch.dict(os.environ, {"AGDA_DIR": ""}), redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main([]), 1)
+        self.assertIn("AGDA_DIR is not set, or is empty", err.getvalue())
 
     def test_main_refuses_to_run_outside_the_shell(self) -> None:
         environment = {k: v for k, v in os.environ.items() if k != "AGDA_DIR"}

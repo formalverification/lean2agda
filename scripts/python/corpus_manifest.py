@@ -23,10 +23,11 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from itertools import accumulate
 from pathlib import Path
-from typing import Mapping, Optional, Sequence, Union
+from typing import Iterator, Mapping, Optional, Sequence, Union
 
-from _utils.file_ops import ls_dir, read_text
+from _utils.file_ops import file_size, ls_dir, read_text
 from _utils.pipeline_types import PipelineError, Result
 
 # ---------------------------------------------------------------------------
@@ -78,10 +79,24 @@ FORBIDDEN_FLAGS: Mapping[str, tuple[str, ...]] = {
 
 _ID = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
-# An OPTIONS pragma at the start of a line, possibly over several lines.
-# A pragma inside a line comment ("-- {-# OPTIONS ... #-}") does not
-# start its line and is not matched.
-_OPTIONS = re.compile(r"^[ \t]*\{-#[ \t\n]*OPTIONS\b(.*?)#-\}", re.MULTILINE | re.DOTALL)
+# The tokens that decide where an Agda file's header ends: whitespace,
+# pragmas, block comments (whose ends block_comment_end finds, since they
+# nest), line comments, string literals, and anything else, which is a
+# declaration and ends the header.  A "--" inside a name such as "a--b"
+# reads as a line comment here; that can only hide an OPTIONS pragma
+# placed later on the same line, after the header, where Agda ignores it.
+_TOKEN = re.compile(r"""
+    (?P<space>\s+)
+  | (?P<pragma>\{-\#.*?(?:\#-\}|\Z))
+  | (?P<comment>\{-)
+  | (?P<line>--[^\n]*)
+  | (?P<string>"(?:[^"\\\n]|\\.)*"?)
+  | (?P<other>[^\s"{-]+|.)
+""", re.VERBOSE | re.DOTALL)
+_COMMENT_BRACKET = re.compile(r"\{-|-\}")
+# Agda's source files: plain, and literate in any markup (.lagda,
+# .lagda.md, .lagda.tex, ...).  Interface files (.agdai) are not sources.
+_AGDA_SOURCE = re.compile(r"\.(agda|lagda(\.[A-Za-z]+)?)$")
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +146,9 @@ class EntryFiles:
     """What a translated entry's directory holds, read once at the edge.
 
     `sources` maps each listed Agda file that exists to its text;
-    `present` names every .agda file in agda/; `sidecar` is the text of
+    `present` names every Agda source file under agda/, plain or
+    literate, by its path relative to agda/; `term_bytes` is the size of
+    lean/term.ndjson, None when there is none; `sidecar` is the text of
     lean/term.sidecar.json if it exists.
     """
 
@@ -139,8 +156,20 @@ class EntryFiles:
     present: tuple[str, ...]
     has_statement: bool
     has_notes: bool
-    has_term: bool
+    term_bytes: Optional[int]
     sidecar: Optional[str]
+
+
+@dataclass(frozen=True)
+class Pragmas:
+    """The OPTIONS pragmas of an Agda file, each as its flags, split where
+    Agda splits them: `header` holds those before the file's first
+    declaration (its module header), which Agda honors; `later` holds
+    those after it, which Agda ignores with a warning.  A pragma inside a
+    comment is in neither, since Agda ignores it silently."""
+
+    header: tuple[tuple[str, ...], ...]
+    later: tuple[tuple[str, ...], ...]
 
 
 # ---------------------------------------------------------------------------
@@ -373,23 +402,69 @@ def decode_manifest(text: str) -> Result[tuple[Item, ...], str]:
     return parse_manifest(data)
 
 
-def options_pragmas(text: str) -> tuple[tuple[str, ...], ...]:
-    """The flags of each OPTIONS pragma in an Agda file, in order."""
-    return tuple(tuple(m.group(1).split()) for m in _OPTIONS.finditer(text))
+def block_comment_end(text: str, start: int) -> int:
+    """The index just past the block comment that opens at `start`.  Block
+    comments nest, and one left open runs to the end of the text."""
+    steps = (
+        (m.end(), 1 if m.group() == "{-" else -1)
+        for m in _COMMENT_BRACKET.finditer(text, start)
+    )
+    running = accumulate(steps, lambda total, step: (step[0], total[1] + step[1]))
+    return next((end for end, depth in running if depth == 0), len(text))
+
+
+def tokens(text: str) -> Iterator[tuple[str, str]]:
+    """The file's tokens as (kind, text) pairs, in the kinds of _TOKEN."""
+    position = 0
+    while position < len(text):
+        match = _TOKEN.match(text, position)
+        assert match is not None and match.lastgroup is not None  # "other" matches any character
+        end = block_comment_end(text, position) if match.lastgroup == "comment" else match.end()
+        yield match.lastgroup, text[position:end]
+        position = end
+
+
+def options_of(span: Sequence[tuple[str, str]]) -> tuple[tuple[str, ...], ...]:
+    """The flags of each OPTIONS pragma among the tokens."""
+    words = (lexeme[3:].removesuffix("#-}").split() for kind, lexeme in span if kind == "pragma")
+    return tuple(tuple(w[1:]) for w in words if w[:1] == ["OPTIONS"])
+
+
+def scan_pragmas(text: str) -> Pragmas:
+    """The OPTIONS pragmas of an Agda file, where Agda honors or ignores
+    them (measured with Agda 2.8.0: one inside a block comment, nested or
+    not, is ignored silently; one after the module header is ignored with
+    the warning UselessPragma)."""
+    found = list(tokens(text))
+    first = next((i for i, (kind, _) in enumerate(found) if kind in ("string", "other")), len(found))
+    return Pragmas(options_of(found[:first]), options_of(found[first:]))
 
 
 def pragma_problems(agda_file: AgdaFile, text: str) -> tuple[str, ...]:
-    """The ways a file's OPTIONS pragma disagrees with its manifest entry."""
+    """The ways a file's OPTIONS pragmas disagree with its manifest entry:
+    the one pragma Agda honors must carry the manifest's flags, and no
+    pragma may sit where Agda ignores it."""
     where = f"agda/{agda_file.path}"
-    pragmas = options_pragmas(text)
-    if not pragmas:
-        return (f"{where} has no OPTIONS pragma",)
-    if len(pragmas) > 1:
-        return (f"{where} has {len(pragmas)} OPTIONS pragmas; write its flags in one",)
-    if pragmas[0] != agda_file.flags:
-        return (f"{where} declares {' '.join(pragmas[0])} but the manifest lists "
-                f"{' '.join(agda_file.flags)}",)
-    return ()
+    pragmas = scan_pragmas(text)
+    late = (
+        (f"{where} has an OPTIONS pragma after its module header, which Agda ignores; "
+         "move it to the top of the file",)
+        if pragmas.later else ()
+    )
+    if not pragmas.header:
+        return (f"{where} has no OPTIONS pragma before its module declaration, the only "
+                "place Agda honors one (not inside a comment)",) + late
+    if len(pragmas.header) > 1:
+        return (f"{where} has {len(pragmas.header)} OPTIONS pragmas; write its flags in one",) + late
+    if pragmas.header[0] != agda_file.flags:
+        return (f"{where} declares {' '.join(pragmas.header[0])} but the manifest lists "
+                f"{' '.join(agda_file.flags)}",) + late
+    return late
+
+
+def is_agda_source(path: str) -> bool:
+    """Whether a path names an Agda source file, plain or literate."""
+    return _AGDA_SOURCE.search(path) is not None
 
 
 def sidecar_problems(text: str) -> tuple[str, ...]:
@@ -415,6 +490,22 @@ def sidecar_problems(text: str) -> tuple[str, ...]:
     )
 
 
+def term_problems(term_bytes: Optional[int], sidecar: Optional[str]) -> tuple[str, ...]:
+    """The exported term is either lean/term.ndjson, at most 1 MB, or the
+    sidecar that stands in its place, never both."""
+    if sidecar is not None and term_bytes is not None:
+        return ("lean/ holds both term.ndjson and term.sidecar.json; the sidecar stands in "
+                "place of an export over 1 MB, so keep one",) + sidecar_problems(sidecar)
+    if sidecar is not None:
+        return sidecar_problems(sidecar)
+    if term_bytes is None:
+        return ("lean/ holds neither term.ndjson nor term.sidecar.json",)
+    if term_bytes > SIDECAR_THRESHOLD:
+        return (f"lean/term.ndjson is {term_bytes:,} bytes, over the {SIDECAR_THRESHOLD:,}-byte "
+                "limit; commit lean/term.sidecar.json in its place",)
+    return ()
+
+
 def entry_file_problems(entry: Entry, files: EntryFiles) -> tuple[str, ...]:
     """Everything wrong with a translated entry's directory."""
     sources = dict(files.sources)
@@ -426,17 +517,13 @@ def entry_file_problems(entry: Entry, files: EntryFiles) -> tuple[str, ...]:
         (),
     )
     unlisted = tuple(
-        f"agda/{name} is not listed in the manifest, so it would never be checked"
+        f"agda/{name} is not one of the files the manifest lists (plain .agda files "
+        "directly in agda/), so it would never be checked"
         for name in files.present if name not in listed
     )
     statement = () if files.has_statement else ("lean/Statement.lean is missing",)
     notes = () if files.has_notes else ("notes.md is missing",)
-    term = (
-        sidecar_problems(files.sidecar) if files.sidecar is not None
-        else () if files.has_term
-        else ("lean/ holds neither term.ndjson nor term.sidecar.json",)
-    )
-    return agda + unlisted + statement + notes + term
+    return agda + unlisted + statement + notes + term_problems(files.term_bytes, files.sidecar)
 
 
 def orphan_problems(directories: Sequence[str], items: Sequence[Item]) -> tuple[str, ...]:
@@ -458,12 +545,17 @@ def gather_entry_files(entry_dir: Path, entry: Entry) -> Result[EntryFiles, Pipe
     is not an error here: entry_file_problems reports the files as
     missing."""
     agda_dir = entry_dir / "agda"
+    # Recursive, and every Agda source: a file in a subdirectory, or a
+    # literate one, would otherwise sit beside the listed files unchecked.
     listing: Result[list[Path], PipelineError] = (
-        ls_dir(agda_dir, "*.agda") if agda_dir.is_dir() else Result.ok([])
+        ls_dir(agda_dir, "**/*") if agda_dir.is_dir() else Result.ok([])
     )
     if listing.is_err:
         return Result.err(listing.unwrap_err())
-    present = tuple(p.name for p in listing.unwrap())
+    present = tuple(
+        rel for rel in (p.relative_to(agda_dir).as_posix() for p in listing.unwrap())
+        if is_agda_source(rel)
+    )
     readable = tuple(
         (f.path, read_text(agda_dir / f.path)) for f in entry.agda_files if f.path in present
     )
@@ -474,11 +566,15 @@ def gather_entry_files(entry_dir: Path, entry: Entry) -> Result[EntryFiles, Pipe
     sidecar = read_text(sidecar_path) if sidecar_path.is_file() else None
     if sidecar is not None and sidecar.is_err:
         return Result.err(sidecar.unwrap_err())
+    term_path = entry_dir / "lean" / "term.ndjson"
+    term_size = file_size(term_path) if term_path.is_file() else None
+    if term_size is not None and term_size.is_err:
+        return Result.err(term_size.unwrap_err())
     return Result.ok(EntryFiles(
         sources=tuple((path, r.unwrap()) for path, r in readable),
         present=present,
         has_statement=(entry_dir / "lean" / "Statement.lean").is_file(),
         has_notes=(entry_dir / "notes.md").is_file(),
-        has_term=(entry_dir / "lean" / "term.ndjson").is_file(),
+        term_bytes=term_size.unwrap() if term_size is not None else None,
         sidecar=sidecar.unwrap() if sidecar is not None else None,
     ))

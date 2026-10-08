@@ -171,8 +171,8 @@ repository root, inside `nix develop`:
    it).  Mathlib's cache must be in place first (`make lean-cache`; see
    [`../translator/README.md`](../translator/README.md)).
 3. Write the Agda files the manifest names under `corpus/<id>/agda/`,
-   each with its `OPTIONS` pragma, or change `agda_files` if the plan
-   was wrong.
+   each with its `OPTIONS` pragma at the top, before the module
+   declaration, or change `agda_files` if the plan was wrong.
 4. Write `corpus/<id>/notes.md` from the template, and correct the
    manifest's `features` by what the kernel term turned out to use.
 5. Set the entry's `status` to `translated` and run
