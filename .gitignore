@@ -19,3 +19,9 @@ result-*
 *~
 .vscode/
 .idea/
+
+# The atlas's records, run file and module table: regenerable by `make
+# atlas` and large; the report under docs/reports/ is committed
+atlas/*.ndjson
+atlas/*.run.json
+atlas/*.tsv

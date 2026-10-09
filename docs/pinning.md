@@ -107,10 +107,13 @@ candidate; see its section below for what that means for M3-1.
    dependencies at a revision other than Mathlib's own, since its hashes
    would then be wrong.
 +  **Moves with it**.  Lean, lean4export, and everything computed from
-   Mathlib: the atlas (M1-11, [#11]), the exported terms of the corpus
-   entries and the axioms and tiers `corpus/manifest.json` records for
-   every entry, the translator's golden tests, and the provenance record
-   of any generated library.
+   Mathlib: the atlas (M1-11, [#11]) and its report under
+   `docs/reports/`, the exported terms of the corpus entries and the
+   axioms and tiers `corpus/manifest.json` records for every entry, the
+   translator's golden tests, and the provenance record of any generated
+   library.  `translator/Atlas/AutoDecl.lean` copies Batteries' test for
+   auto-generated declarations at the Batteries revision Mathlib's
+   manifest pins; compare it with Batteries' at the new one.
 
 Mathlib's prebuilt `.olean` files come from `lake exe cache get` (or
 `make lean-cache`); nothing in the project builds Mathlib from source.
@@ -253,9 +256,10 @@ each in a pull request of its own.
     did not write through the symlink.  (That `lake-manifest.json` pins
     Mathlib's dependencies at the commits of Mathlib's own manifest needs
     no check of yours: the cache tool refuses to run otherwise.)
-9.  Regenerate what is computed from Mathlib: the atlas, the corpus's
-    exported terms, the translator's golden tests; compare the atlas with
-    the previous one.
+9.  Regenerate what is computed from Mathlib: the atlas (`make atlas`,
+    which also checks it against the corpus manifest), the corpus's
+    exported terms, the translator's golden tests; compare the atlas's
+    report with the previous one.
 10. Update this document's pins, tables and dates, and commit
     `lean-toolchain`, `flake.lock` (if it moved), `translator/lakefile.toml`
     and `translator/lake-manifest.json` together.

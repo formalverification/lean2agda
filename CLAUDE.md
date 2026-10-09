@@ -38,7 +38,9 @@ section before changing anything structural.
    (`corpus/README.md`); `make check` runs it, and the emitted-Agda check
    joins with M2-8.  `make test` runs the Python suite under
    `scripts/python/tests/`, Python-only until M2-1 adds the golden tests.
-   `make atlas` is a placeholder until M1-11, and says so.
+   `make atlas` writes the axiom atlas of the pinned Mathlib and its
+   report (`atlas/README.md`); it needs Mathlib's cache and about
+   7.5 GiB of memory, and no CI job runs it.
 +  `translator/` is a Lake package requiring Mathlib and lean4export at
    pinned tags (`docs/pinning.md`).  Mathlib's prebuilt `.olean` files
    come from `lake exe cache get` there (`make lean-cache`); never
@@ -93,8 +95,10 @@ before any pull request.  The committed skills `project-setup` and
    copy fixed the upstream trap in which `unwrap` treated
    `Result.ok(None)` as an error; the other copies still have it.
 +  `docs/`: the roadmap, the design records under `docs/adr/`, the
-   foundational notes under `docs/foundations/`, and the engine's
-   command reference `docs/HowToRun.md`.
+   foundational notes under `docs/foundations/`, the register of
+   findings about Lean's internals `docs/lean-findings.md`, the reports
+   under `docs/reports/`, and the engine's command reference
+   `docs/HowToRun.md`.
 
 ## Conventions
 
@@ -120,6 +124,12 @@ before any pull request.  The committed skills `project-setup` and
    grammar, not prose).  American spelling.  Never bold punctuation.
 +  Git identity is the human author's; provenance of AI-assisted
    changes goes in a line of the commit body, never in a trailer.
++  Anything questionable a session finds about Lean's kernel,
+   elaborator or tooling (a possible inconsistency, a trusted tool that
+   answers wrongly, an assumption a proof can make unseen), and any such
+   question checked and found sound, gets an entry in
+   `docs/lean-findings.md` with its evidence, and the session's final
+   message says so.
 
 ## Environment gotchas
 

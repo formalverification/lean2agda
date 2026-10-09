@@ -595,11 +595,12 @@ Checked on 2026-10-07.
    comparison, `master` has 446045 use of choice (57.5%)."  The total of
    775,824 is the branch's; the body gives master's count and percentage but no
    total for it.  The master figure is a measurement of Mathlib as it was when
-   the body was written (the pull request was opened in February 2026 and its
-   body last edited in September 2026, comparing its fork against Lean
-   v4.34.0); the branch figure is the experiment's.  The project's first README
-   draft read this as a reduction Mathlib had made; the README and issue [#11]
-   have been corrected.
+   it was written: the body's edit history shows it entered on 2026-08-25,
+   when master was commit `661ab0b` on Lean v4.34.0-rc2, and the body was last
+   edited that day (the pull request itself was last updated on
+   2026-09-15).[^60]  The branch figure is the experiment's.  The project's
+   first README draft read this as a reduction Mathlib had made; the README
+   and issue [#11] have been corrected.
 +  **Mendoza-Smith, *Geometric Measurements of the Axiom of Choice in Neural
    Proof Embeddings*** (arXiv 2606.28572, 2026-06-26).[^57]  "The full kernel
    dependency graph contains 471,260 Mathlib declarations, of which 171,522 are
@@ -612,14 +613,17 @@ Checked on 2026-10-07.
    `env.constants` of an environment that imports all of Mathlib: Lean core,
    Batteries and Mathlib together, every auxiliary and compiler-generated
    constant included (equation lemmas, `match` auxiliaries, `_proof_n` terms,
-   instances), at the master of the body's writing.  The paper's population is
-   "Mathlib declarations" of a kernel dependency graph built by its own script,
-   at the revision its repository pins, with a selection the paper leaves to
-   the repository.  The two are counts of different sets at different
-   revisions, 57.5 against 36.4 percent classical, and cannot be reconciled
-   from what is published; the atlas ([#11]) computes both kinds of count
-   itself, states its denominator, reports with and without auto-generated
-   declarations, and explains its distance from each.
+   instances), at the master of the body's writing.  The paper's population,
+   "Mathlib declarations", is in its repository's `scripts/build_decl_graph.py`
+   every constant of `import Lean` and `import Mathlib` whose name is not
+   internal, Lean core included, and its graph has edges only from the values
+   of definitions and theorems to constants whose names are not internal.  The
+   two are counts of different sets by different methods at different
+   revisions, 57.5 against 36.4 percent classical.  The atlas ([#11])
+   reproduces each at its own revision, to within 36 constants and one, and
+   measures how far each method falls from the exact count; its report
+   ([`reports/atlas-mathlib-v4.33.1-0df444a.md`][atlas-report]) has the
+   figures.
 +  **Mathlib's statistics page**, read 2026-10-07: 137,930 definitions, 290,195
    theorems, 772 contributors.  The page has no history, so the day is part of
    the figure.[^59]
@@ -843,6 +847,7 @@ number.
 [mendoza-smith]: https://arxiv.org/abs/2606.28572
 [mendoza-smith-repo]: https://github.com/rodrgo/geometric-axiom-of-choice
 [mathlib-stats]: https://leanprover-community.github.io/mathlib_stats.html
+[atlas-report]: reports/atlas-mathlib-v4.33.1-0df444a.md
 
 [^1]: [lyphyser-lean2agda], `README.md` at `fbd86b6`: the first line and the
     section "Current status".
@@ -1074,3 +1079,9 @@ number.
     `1bc7728a`".  The paper's appendix A says only that the repository "records
     the exact Lean, Mathlib, and LeanDojo revisions used in all experiments".
 [^59]: [mathlib-stats], section "Counts", read 2026-10-07.
+[^60]: GitHub GraphQL API, `userContentEdits` of pull request 35685, read
+    2026-10-08: the body's 54 edits; the master figure changed from 391,709
+    (54.2%) to 446,045 (57.5%) in the edit of 2026-08-25T09:41:22Z, and
+    `lastEditedAt` is 2026-08-25T18:55:39Z.  Mathlib's master at 09:41 that day
+    was `661ab0b` (committed 09:28:00Z), whose `lean-toolchain` reads
+    `leanprover/lean4:v4.34.0-rc2`.

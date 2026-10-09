@@ -129,9 +129,13 @@ applies decides:
 
 The axioms were measured with `#print axioms` at Mathlib v4.33.1 (the
 pin in [`../docs/pinning.md`](../docs/pinning.md)) for every entry,
-planned ones included.  When the pin moves, they are measured again;
-the atlas of issue M1-11 computes the same sets for all of Mathlib and
-should agree with them.
+planned ones included.  When the pin moves, they are measured again.
+The atlas of issue M1-11 computes the same sets for every constant, and
+`make atlas` fails if it disagrees with an entry.  At Lean v4.33.1
+`#print axioms` can leave an axiom out for a constant that reaches it
+only through an inductive type's constructors (Lean issue 15226); the
+atlas does not, and its field `lean_omits` names what Lean left out
+(`../atlas/README.md`).  None of the twelve entries is affected.
 
 ### Features
 

@@ -17,3 +17,9 @@ of the copy in ualib/agda-algebras (https://github.com/ualib/agda-algebras),
 scripts/python/_utils/ at commit ee830be, Copyright 2018-2026 The
 agda-algebras development team.  Both are licensed under the Apache License,
 Version 2.0.  The header of each file names its source and what changed.
+
+translator/Atlas/AutoDecl.lean adapts Lean.Environment.isAutoDecl from
+Batteries (https://github.com/leanprover-community/batteries),
+Batteries/Tactic/Lint/Basic.lean at commit 4488d40, Copyright (c) 2020 Floris
+van Doorn, licensed under the Apache License, Version 2.0.  The file's header
+says what changed.

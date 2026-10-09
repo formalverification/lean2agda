@@ -1,0 +1,260 @@
+<!-- File: docs/lean-findings.md -->
+
+# Findings about Lean's internals
+
+The register of everything this project finds questionable in Lean's
+kernel, elaborator or tooling: a possible inconsistency, a trusted tool
+that answers wrongly, an assumption a proof can make without saying so.
+Every session that meets one adds an entry here with its evidence, as
+`CLAUDE.md` asks, whether or not it is already known upstream; a
+question asked and answered with nothing found is recorded too, so that
+it is not asked again and is rerun when the pin moves.
+
+Each entry has a number that never changes, a severity, how it was
+found, the evidence and how to reproduce it, its upstream status, and
+what it means for this project.  The severities are as follows:
+
++  **S0, kernel soundness**: the kernel accepts a proof of `False`, or a
+   declaration it should reject.  Report upstream at once.
++  **S1, trust tooling**: a tool users rely on to see what a proof
+   assumes (`#print axioms`, the exporter, Lake's checks) answers wrongly,
+   so an assumption can go unseen.
++  **S2, surprising by design**: documented behavior that a translator or
+   a reader can misread.  The trust escape hatches (`sorryAx`, the
+   `native_decide` axioms, the native-reduction family, the compiler's
+   `lc*` axioms, `partial`, `implemented_by`, `unsafe`) are catalogued in
+   the gap catalog's entry [`trust-escape-hatches`][catalog-hatches]; an
+   entry here adds only what a measurement found.
++  **Checked**: a question that was asked and answered with nothing
+   wrong found.
+
+## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
+
++  **Severity**.  S1.  The kernel checked every declaration involved; the
+   audit of what they assume is what goes wrong.
++  **Found**.  2026-10-08, by the axiom atlas ([#11], pull request [#71]),
+   at Lean v4.33.1 and Mathlib v4.33.1.
++  **What**.  `Lean.collectAxioms`, which `#print axioms` calls, caches the
+   axioms of a constant it reaches while one of that constant's own
+   dependencies is still being visited, counting the dependency as having
+   none.  The cycles where this happens are an inductive type and its
+   constructors (a constructor's type mentions its type, and the type
+   depends on its constructors) and mutually recursive definitions, such as
+   the `_unsafe_rec` companions of mutual `partial def`s.  Since Lean
+   v4.30.0 every `.olean` stores, for its exported declarations, axioms
+   computed this way, and a module that imports it trusts the table instead
+   of walking the bodies, so the omission depends on hash order and
+   outlives the module.  A query in the defining module is right; one from
+   an importing module can be wrong.
++  **It hides `sorry`**.  The upstream report shows `Classical.choice`
+   hidden.  The same two files with `sorry` in place of the choice, under
+   the pinned Lean (2026-10-08), as follows:
+
+   ```lean
+   -- A.lean
+   def pick : Nat := sorry
+
+   structure S9 where
+     x : Fin (pick + 1)
+
+   #print axioms S9        -- 'S9' depends on axioms: [sorryAx]
+   ```
+
+   ```lean
+   -- B.lean
+   import A
+
+   theorem usesS9 (_ : S9) : True := trivial
+
+   #print axioms S9        -- 'S9' does not depend on any axioms
+   #print axioms S9.mk     -- 'S9.mk' depends on axioms: [sorryAx]
+   #print axioms usesS9    -- 'usesS9' does not depend on any axioms
+   ```
+
+   Run in the Nix shell as `lean -o A.olean A.lean`, then `LEAN_PATH=.
+   lean B.lean`.  Only `A.lean` warns "declaration uses `sorry`", so a
+   reader of `B` sees neither a warning nor an axiom.
++  **Could it hide a proof of `False`?**  Not that we have found.  What
+   it hides is a dependence that passes through an inductive type's name,
+   such as a statement about `S9`.  A proof that uses an axiom's content
+   has to build or take apart a value with a constructor or a recursor,
+   and in every case seen those constants' own entries were right, since
+   their types mention the fields directly.  This is an argument, not a
+   proof; until upstream fixes the cache, `#print axioms` on an imported
+   declaration is not evidence that it is free of `sorry`.
++  **Measured at Mathlib scale**.  Over the 771,129 constants of `import
+   Mathlib`, `collectAxioms` gives 1,837 an incomplete axiom set, 550 of
+   them Mathlib's, and 532 Mathlib constants would get the wrong tier.  It
+   never reports an axiom that is not there.  At the pin the axiom it omits
+   is always `propext`, `Quot.sound` or `Classical.choice`, never `sorryAx`
+   or a compiler axiom.  The 383 places where an omission starts are 267
+   constructors, 107 inductive types and 9 definitions; the one definition
+   examined, `Mathlib.Tactic.Ring.Common.ExBaseNat.evalPos._unsafe_rec`, is
+   the companion of a `partial def` in a mutual block, and its safety is
+   `partial` (LF-3).  The atlas's report,
+   [`reports/atlas-mathlib-v4.33.1-0df444a.md`][report], has the numbers.
++  **Upstream**.  Lean issue [lean4#15226] (opened 2026-09-19 by someone
+   outside this project, open on 2026-10-08), with the mechanism, the
+   reproduction for `Classical.choice`, and the versions affected (v4.30.0
+   on).  A maintainer called the inconsistency "not nice" but "arguably
+   neither result is wrong".  Pull request [lean4#15385] (open) treats each
+   inductive block as one unit and says that cycles of `unsafe` and
+   `partial` definitions stay out of its scope, which is where the 9
+   definitions above fall.  This project has filed nothing upstream; the
+   `sorry` case and the Mathlib-scale counts are not in the issue.
++  **What the project does**.  The atlas computes exact axiom sets by
+   reachability over the edges `collectAxioms` follows, records in
+   `lean_omits` what Lean leaves out, and stops if Lean ever reports an
+   axiom the graph does not reach ([`../atlas/README.md`][atlas-readme]).
+   `make atlas` checks the corpus's axioms, which `#print axioms`
+   printed, against the exact sets; none of the twelve entries is
+   affected.  When the pin moves, compare the count of nonempty
+   `lean_omits` with this one.
+
+## LF-2: nothing safe rests on an unsafe axiom, and nothing on `sorryAx`
+
++  **Severity**.  Checked.
++  **Found**.  2026-10-08, from the atlas's exact axiom sets at Lean
+   v4.33.1 and Mathlib v4.33.1, over all 771,129 constants of `import
+   Mathlib`.
++  **What was asked**.  The compiler's axiom `lcProof : ∀ {α : Prop}, α`
+   proves anything, and 242 constants depend on it.  Can a theorem, or
+   any declaration the kernel treats as safe, reach it or another axiom
+   outside the standard three?
++  **The answer**.  No.  Every constant that depends on one of the eight
+   `unsafe` compiler axioms (`lcProof`, `lcCast`, `lcAny`, `lcErased`,
+   `lcUnreachable`, `lcVoid`, `isScalarObj`, `Quot.lcInv`) is itself
+   `unsafe`: 241 definitions and the axioms themselves, among them
+   Mathlib's 41 (`Real.instRepr`, `Part.unwrap`, `Quot.unquot` and the
+   floating-point arithmetic of `Mathlib.Data.FP.Basic`).  No theorem is
+   T3.  The only safe T3 constants are `sorryAx`, `Lean.trustCompiler`,
+   `Lean.ofReduceBool`, `Lean.ofReduceNat`, and the opaque
+   `Lean.reduceBool` and `Lean.reduceNat`, the native-reduction family.
+   `sorryAx` has no dependent but itself, and no `native_decide` axiom
+   exists.
++  **To rerun**.  `make atlas`, then filter the records on `tier`,
+   `unsafe` and `axioms`.
+
+## LF-3: the kernel's safety separation holds, and `_unsafe_rec` is `partial`
+
++  **Severity**.  Checked, with a correction to the project's documents.
++  **Found**.  2026-10-08, by `atlas/probes/Safety.lean`
+   ([`../atlas/README.md`][atlas-readme], "Probes") at Lean v4.33.1 and
+   Mathlib v4.33.1, over all 771,129 constants of `import Mathlib`.
++  **What was asked**.  The kernel checks a declaration once, when it is
+   added; a module that imports an `.olean` does not check its
+   declarations again.  A safe declaration may use only safe ones, and a
+   `partial` one no `unsafe` one, or a proof could rest on code the kernel
+   never checked for termination or at all.  Does every constant of the
+   environment respect that?
++  **The answer**.  Yes.  By `DefinitionVal.safety` (and
+   `ConstantInfo.isUnsafe` for the other kinds), 766,708 constants are
+   safe, 3,707 `partial` and 714 `unsafe`.  None of the 770,415 safe or
+   `partial` ones uses, in its type, its value or its constructors, a
+   constant it may not.  As a control, the same scan counts 141,293 uses
+   of safe constants by `partial` ones and 15,635 by `unsafe` ones, so it
+   does see edges between safeties.
++  **The correction**.  All 3,649 `_unsafe_rec` companions have safety
+   `partial`, not `unsafe`, so `ConstantInfo.isUnsafe` does not flag them.
+   The atlas's documents said `unsafe` and were corrected; the gap
+   catalog's `trust-escape-hatches` entry on `main` still says that a
+   `partial def` gets "an `unsafe` companion".  The atlas's `partial`
+   field is unaffected: it flags the `opaque` constant, by its companion.
+
+## LF-4: `proofIrrelevance := false` leaves proofs in arguments identified
+
++  **Severity**.  S2.  The elaborator is not trusted; the kernel has
+   definitional proof irrelevance as a rule of Lean's theory and is
+   unaffected.
++  **Found**.  2026-10-08, by issue [#7]'s session (pull request [#70]),
+   looking for a way to make Lean say where a proof relies on
+   definitional proof irrelevance; reproduced by issue [#11]'s session at
+   Lean v4.33.1.
++  **What**.  `Meta.Config.proofIrrelevance`, documented as "Enables proof
+   irrelevance at `isDefEq`", does not switch it off everywhere.  With it
+   `false`, `isDefEq h₁ h₂` fails for two proofs of one proposition, but
+   `isDefEq (h₁ = h₁) (h₁ = h₂)` still succeeds, since proofs in argument
+   position are compared another way.  The file that shows it, run with
+   `lake env lean` (it needs only `import Lean`), is as follows:
+
+   ```lean
+   import Lean
+   open Lean Meta
+
+   #eval show MetaM Unit from do
+     withLocalDeclD `p (mkSort Level.zero) fun p => do
+     withLocalDeclD `h1 p fun h1 => do
+     withLocalDeclD `h2 p fun h2 => do
+       let e1 ← mkEq h1 h1
+       let e2 ← mkEq h1 h2
+       for pi in [true, false] do
+         withConfig (fun c => { c with proofIrrelevance := pi }) do
+           IO.println s!"{pi}: {← isDefEq h1 h2} {← isDefEq e1 e2}"
+   ```
+
+   It printed `true: true true` and `false: false true`.
++  **What it means here**.  The elaborator cannot be made to report where
+   a proof needs definitional proof irrelevance, which Agda lacks without
+   `--prop`; the normalizer, Lean4Less, which makes those uses explicit
+   casts, is the instrument instead (the gap catalog's
+   `proof-irrelevance` entry).
++  **Upstream**.  Not reported; no Lean issue was searched for yet.
+
+## LF-5: constructor injectivity rests, unseen, on uniqueness of identity proofs on a universe
+
++  **Severity**.  S2.  It is Lean's design, not a defect: Lean's theory
+   proves uniqueness of identity proofs for every type, by definitional
+   proof irrelevance and K-like reduction (the gap catalog's
+   [`k-and-uip`][catalog-k] entry).  What the measurement adds is that
+   `#print axioms` cannot show it, and how far it reaches.
++  **Found**.  2026-10-08, by issue [#8]'s session (pull request [#69]);
+   issue [#7]'s session met the same use in its gcd entries.  Reproduced
+   by issue [#11]'s session at Lean v4.33.1 and Mathlib v4.33.1.
++  **What**.  `eq_of_heq : a ≍ a' → a = a'` is proved, with
+   `pp.proofs true`, as follows:
+
+   ```lean
+   fun {α} {a a'} h =>
+     have this := fun x x_1 x_2 x_3 h₁ =>
+       HEq.rec (motive := fun x_4 x_5 x_6 => ∀ (h : x = x_4), cast h x_2 = x_5) (fun x_4 => rfl) h₁;
+     this α α a a' h rfl
+   ```
+
+   The case `fun x_4 => rfl` has type `∀ (h : x = x), cast h x_2 = x_2`
+   for `x : Sort u`, and `cast h x_2` reduces to `x_2` only by K-like
+   reduction of `Eq.rec` on the variable `h`: uniqueness of identity
+   proofs on a universe (Coq's `JMeq_eq`), which univalence refutes,
+   since `not` gives `Bool = Bool` a second proof.  The kernel accepts
+   `example (α : Sort u) (h : α = α) (a : α) : cast h a = a := rfl`, and
+   its diagnostics count `[(Eq.rec, 2)]` when it re-checks `eq_of_heq`
+   (the `#k_reductions` probe of the `querying-a-pinned-mathlib` skill;
+   its two controls each count one `Eq.rec`, so the count alone is not
+   conclusive, and the term above is the evidence).  Yet `#print axioms`
+   says "does not depend on any axioms" for `eq_of_heq`,
+   `Option.some.inj` and `Nat.noConfusion`.
++  **How far it reaches**.  Every `<T>.noConfusion` definition, the
+   source of constructor injectivity and disjointness, was scanned for a
+   use of `eq_of_heq` in its value.  Under `import Lean`, 667 of 2,610
+   use it; under `import Mathlib`, 2,412 of 4,494.  In both, those are
+   exactly the inductive types with parameters or indices
+   (`numParams + numIndices > 0`).  So every injectivity or
+   disjointness proof for a constructor of such a type goes through it.
++  **What it means here**.  A mechanical translation of such a lemma to
+   profile CC or CU has no counterpart for `eq_of_heq`, which needs K;
+   the hand translations avoid it by proving injectivity with Agda's own
+   pattern matching ([#69]'s `corpus/multiset-map-map/notes.md` prints
+   the probe).  The atlas's tiers do not see it, since it is no axiom.
++  **Upstream**.  Known design; nothing to report.
+
+[#7]: https://github.com/formalverification/lean2agda/issues/7
+[#8]: https://github.com/formalverification/lean2agda/issues/8
+[#69]: https://github.com/formalverification/lean2agda/pull/69
+[#70]: https://github.com/formalverification/lean2agda/pull/70
+[#11]: https://github.com/formalverification/lean2agda/issues/11
+[#71]: https://github.com/formalverification/lean2agda/pull/71
+[lean4#15226]: https://github.com/leanprover/lean4/issues/15226
+[lean4#15385]: https://github.com/leanprover/lean4/pull/15385
+[catalog-hatches]: https://github.com/formalverification/lean2agda/blob/main/docs/foundations/gap-catalog.md#trust-escape-hatches
+[catalog-k]: https://github.com/formalverification/lean2agda/blob/main/docs/foundations/gap-catalog.md#k-and-uip
+[report]: reports/atlas-mathlib-v4.33.1-0df444a.md
+[atlas-readme]: ../atlas/README.md

@@ -15,7 +15,7 @@
 # toolchain through the symlink.
 
 name = "lean2agda"
-defaultTargets = ["Lean2Agda"]
+defaultTargets = ["Lean2Agda", "atlas"]
 
 [leanOptions]
 autoImplicit = false
@@ -43,3 +43,16 @@ rev = "v4.33.1"
 # Lean2Agda/Core/ and the command line in Lean2Agda/Main.lean.
 [[lean_lib]]
 name = "Lean2Agda"
+
+# The axiom atlas (issue M1-11): `lake exe atlas` writes one NDJSON record
+# per constant of the pinned Mathlib to ../atlas/.  Its code imports Lean
+# only and loads Mathlib's .olean files when it runs, so building it never
+# needs Mathlib's modules; supportInterpreter lets the import run the
+# `initialize` declarations of Mathlib's modules.
+[[lean_lib]]
+name = "Atlas"
+
+[[lean_exe]]
+name = "atlas"
+root = "Atlas.Main"
+supportInterpreter = true

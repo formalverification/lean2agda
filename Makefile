@@ -11,8 +11,7 @@
 #             (A `local` mode exists for template copies that have not run
 #             `make init`; this project has.)
 #   project   doctor / check / test / corpus-check / atlas are the project's
-#             own targets; atlas, not yet implemented, says which roadmap
-#             issue implements it.
+#             own targets.
 #   lean      lean-cache / lean-build / lean-smoke run Lake in translator/,
 #             the Lake package that carries Mathlib (docs/pinning.md).
 #
@@ -148,8 +147,14 @@ test: ## Run the Python test suite (Python-only until M2-1 adds the golden tests
 corpus-check: ## Type-check every translated corpus entry under the flags its files declare
 	$(PYTHON) scripts/python/corpus_check.py --agda $(AGDA) --timeout $(CORPUS_TIMEOUT)
 
-atlas: ## Compute the axiom profile of the pinned Mathlib revision (placeholder: lands with M1-11)
-	@echo "atlas: the atlas producer lands with issue M1-11; see atlas/README.md."
+# The axiom atlas (issue M1-11; atlas/README.md): `lake exe atlas` writes a
+# record per constant of the pinned Mathlib to atlas/, then the report goes
+# to docs/reports/.  It needs Mathlib's cache in translator/.lake (make
+# lean-cache), about 7.5 GiB of memory and three to four minutes.  No CI
+# job runs it: the cache is several gigabytes.
+atlas: ## Write the axiom atlas of the pinned Mathlib (atlas/) and its report (docs/reports/)
+	cd translator && $(LAKE) exe atlas
+	$(PYTHON) scripts/python/atlas_report.py
 
 # ---- lean ----------------------------------------------------------------
 
