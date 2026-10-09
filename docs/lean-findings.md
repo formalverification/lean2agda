@@ -28,6 +28,19 @@ what it means for this project.  The severities are as follows:
 +  **Checked**: a question that was asked and answered with nothing
    wrong found.
 
+The entries so far are as follows; none is S0.  A session that adds an
+entry adds its row here too.
+
+| Entry | Severity | Finding |
+| --- | --- | --- |
+| LF-1 | S1 | `#print axioms` omits axioms behind an inductive type, `sorryAx` included |
+| LF-2 | Checked | nothing safe rests on an unsafe axiom, and nothing on `sorryAx` |
+| LF-3 | Checked | the kernel's safety separation holds; `_unsafe_rec` is `partial` |
+| LF-4 | S2 | `proofIrrelevance := false` leaves proofs in arguments identified |
+| LF-5 | S2 | constructor injectivity rests, unseen, on UIP on a universe |
+| LF-6 | Checked | `Nat.gcd`'s equation needs no K-like reduction at the pin |
+| LF-7 | S2 | Mathlib proofs rely, unseen, on K-like reduction and structure eta |
+
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
 +  **Severity**.  S1.  The kernel checked every declaration involved; the
@@ -246,11 +259,79 @@ what it means for this project.  The severities are as follows:
    the probe).  The atlas's tiers do not see it, since it is no axiom.
 +  **Upstream**.  Known design; nothing to report.
 
+## LF-6: `Nat.gcd`'s defining equation needs no K-like reduction at the pin
+
++  **Severity**.  Checked, with a correction to a claim from outside the
+   project that the roadmap relied on.
++  **Found**.  2026-10-08, by issue [#7]'s session (pull request [#70]), at
+   Lean v4.33.1.
++  **What was asked**.  Lean4Less's README says that "for the equation
+   `Nat.gcd (succ y) x = Nat.gcd (mod x (succ y)) (succ y)` to hold
+   definitionally in Lean, the typechecker must use K-like reduction", and
+   gives that as its reason for not treating `Nat.gcd` as a kernel primitive.
+   Issue [#7] expected the corpus entry `nat-gcd-succ` to show it.
++  **The answer**.  Not at the pin.  The paragraph dates from 2025-01-12, when
+   Lean's release was v4.15.0.  Since v4.27.0 a definition by well-founded
+   recursion on a `Nat` measure compiles through the fuel-based
+   `WellFounded.Nat.fix`, while the source of `Nat.gcd` is unchanged.  At
+   v4.33.1 the kernel rejects `Eq.refl` as a proof of the equation over
+   variables, so the equation is not definitional at all, and `Nat.gcd_succ` is
+   a theorem through `funext`.  Re-checking the 192 theorems and definitions of
+   its closure in the kernel with its diagnostics on, only `eq_of_heq` (LF-5)
+   reduces a recursor that admits K-like reduction; computing `Nat.gcd._unary`
+   on literals reduces only `Nat.rec`, `Bool.rec`, `Decidable.rec` and
+   `PSigma.rec`.  A hand-written copy compiled the old way,
+   `WellFounded.fix Nat.lt_wfRel.wf` on the same step, satisfies the equation
+   by `Eq.refl` with one `Acc.rec` step and no reduction of a recursor that
+   admits K.  Its two sides then differ only in their `Acc` arguments, so proof
+   irrelevance identifies them, not K-like reduction.  The README's conclusion,
+   that the equation fails in Lean⁻, which has neither rule, does not depend on
+   which of the two Lean used.
++  **To rerun**.  The two probes printed in the Remarks of
+   [`corpus/nat-gcd-succ/notes.md`][gcd-succ-notes].
++  **Upstream**.  Nothing filed.  Whether Lean4Less still refuses `Nat.gcd` at
+   the pin needs a run of Lean4Less, whose own toolchain (v4.28.0-rc1) is past
+   v4.27.0; that is M3-1 ([#26]).
+
+## LF-7: Mathlib proofs rely, unseen, on K-like reduction and structure eta
+
++  **Severity**.  S2.  Both are rules of Lean's theory, not defects; LF-5 makes
+   the same point for `eq_of_heq`, and this entry adds two uses written in
+   Mathlib's own proofs.
++  **Found**.  2026-10-08, by issue [#7]'s session (pull request [#70]), at
+   Lean v4.33.1 and Mathlib v4.33.1, in the closure of `Lists'.Subset.refl`.
++  **What**.  `#print axioms` prints `[propext]` for each of the following two
+   lemmas of `Mathlib.SetTheory.Lists`, and neither rule shows:
+   +  `Lists'.of_toList` generalizes the index of `Lists' α true` to
+      `∀ b (h : true = b)`, because Lean's `induction` tactic needs a variable
+      index, and transports along `h`.  In the cases `nil` and `cons'`,
+      `h : true = true` is a bound variable, and the kernel reduces the
+      transport only by K-like reduction.  Its diagnostics count ten `Eq.rec`
+      reductions while re-checking the lemma; the term is the evidence, since
+      the count includes ordinary reductions too.
+   +  `Lists'.to_ofList` holds at `head :: tail` only because the kernel
+      expands the variable `head : Lists α` into `⟨head.1, head.2⟩`, structure
+      eta for `Sigma`.  The elaborator's checker rejects it with
+      `etaStruct := .none`, as it rejects a control (`x = ⟨x.1, x.2⟩ := rfl` on
+      a sigma type); no other theorem or definition in the closures of [#7]'s
+      four corpus entries needs it.
++  **Could it prove `False`?**  No.  Uniqueness of identity proofs on `Bool` is
+   harmless, since `Bool` has decidable equality and Hedberg's theorem proves
+   it without K, and structure eta is consistent.  What it affects is
+   translation: under `--cubical-compatible` the corpus's Agda replaces the
+   K-like step by agda-stdlib's `Decidable⇒UIP` for `Bool`, and Agda's records
+   have eta.
++  **To rerun**.  The notes of `lists-subset-refl`
+   ([`corpus/lists-subset-refl/notes.md`][lists-notes]), which use the probes
+   printed in `nat-gcd-succ`'s notes.
++  **Upstream**.  Known design; nothing to report.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
 [#70]: https://github.com/formalverification/lean2agda/pull/70
 [#11]: https://github.com/formalverification/lean2agda/issues/11
+[#26]: https://github.com/formalverification/lean2agda/issues/26
 [#71]: https://github.com/formalverification/lean2agda/pull/71
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
 [lean4#15385]: https://github.com/leanprover/lean4/pull/15385
@@ -258,3 +339,5 @@ what it means for this project.  The severities are as follows:
 [catalog-k]: https://github.com/formalverification/lean2agda/blob/main/docs/foundations/gap-catalog.md#k-and-uip
 [report]: reports/atlas-mathlib-v4.33.1-0df444a.md
 [atlas-readme]: ../atlas/README.md
+[gcd-succ-notes]: ../corpus/nat-gcd-succ/notes.md
+[lists-notes]: ../corpus/lists-subset-refl/notes.md
