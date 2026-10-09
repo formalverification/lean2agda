@@ -352,9 +352,10 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    ([#34]), extended to the generated library's types in [#51]; the
    declarations that need UIP on types that are not h-sets (equalities between
    types, `cast`, `HEq`) are enumerated and studied in [#55].  The corpus
-   expects `nat-gcd-succ` to exercise this entry; see the
-   [`literals`](#literals) entry for what the pin's definition of `Nat.gcd`
-   changes about that expectation.
+   entry `nat-gcd-succ` exercises this entry only through `eq_of_heq`, not
+   through `gcd`'s equation, and `lists-subset-refl` through Mathlib's
+   `Lists'.of_toList` (LF-5 to LF-7 of [`lean-findings.md`][lean-findings];
+   the [`literals`](#literals) entry has the `Nat.gcd` story).
 +  **Predecessors**.  lyphyser's shipped example uses `Eq.rec`, `And.rec` and
    `False.rec` only at `Prop` motives and postulates the `Set`-valued
    `Acc.rec`; Lean4Less eliminates the rule, and cannot eliminate proof
@@ -720,10 +721,12 @@ literals**.
    kernel primitive in Lean⁻ and constants computing large gcds are aborted;
    Vaishnav attributes it to the well-founded definition "invoking a use of
    K-like reduction at some point during reduction" (section 7.1.3, page
-   163).[^17]  That README predates the fuel-based `WellFounded.Nat.fix`;
-   whether Lean⁻ at this pin still needs K-like reduction to compute a closed
-   `Nat.gcd` by unfolding is for the corpus entry `nat-gcd-succ` ([#7]) to
-   settle by running Lean4Less.
+   163).[^17]  That README predates the fuel-based `WellFounded.Nat.fix`.
+   The corpus entry `nat-gcd-succ` ([#7]) found that at the pin the equation
+   is not definitional, and that computing `Nat.gcd` by unfolding reduces no
+   recursor that admits K-like reduction (LF-6 of
+   [`lean-findings.md`][lean-findings]); whether Lean4Less still refuses
+   `Nat.gcd` at the pin needs a run of Lean4Less ([#26]).
 +  **Agda's status**.  `{-# BUILTIN NATURAL ℕ #-}` gives literals, and the
    builtin operations on closed naturals compute with the host's integers
    ([agda-builtins]): `18446744073709551616 + 1 ≡ 18446744073709551617` and
@@ -807,8 +810,9 @@ literals**.
       kernel checking").[^19]
    +  `partial` definitions (1,509 and 266): "treated as opaque constants by
       the kernel and are neither unfolded nor reduced";[^20] a `partial def f`
-      becomes an `opaque f` with an `unsafe` companion `f._unsafe_rec`, depends
-      on no axiom, and carries no `implemented_by` attribute, so it is
+      becomes an `opaque f` with a companion `f._unsafe_rec` whose safety is
+      `partial`, not `unsafe` (LF-3 of [`lean-findings.md`][lean-findings]),
+      depends on no axiom, and carries no `implemented_by` attribute, so it is
       invisible to `#print axioms` and detected by the companion.
    +  `implemented_by` (341 and 28) and `@[extern]` (as on `Nat.gcd`) replace a
       constant in compiled code; the kernel ignores them, so they matter
@@ -1086,6 +1090,8 @@ Mathlib's large-eliminating propositions excepted.
 +  `[kernel-type-checker]`, `[kernel-inductive]`, `[kernel-quot]`: Lean 4's
    kernel at tag `v4.33.1`, `src/kernel/type_checker.cpp`, `inductive.cpp` and
    `quot.cpp`, cited by line.
++  `[lean-findings]`: the project's register of findings about Lean's
+   internals, `docs/lean-findings.md`, cited by entry (LF-n).
 +  `[lean-gcd-source]`: `src/Init/Data/Nat/Gcd.lean` at tag `v4.33.1`.
 +  `[lean-manual]`: The Lean Language Reference, version 4.33.1, read
    2026-10-07; the pages cited are [lean-manual-type-system],
@@ -1146,6 +1152,7 @@ Mathlib's large-eliminating propositions excepted.
 [kernel-type-checker]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/type_checker.cpp
 [kernel-inductive]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/inductive.cpp
 [kernel-quot]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/quot.cpp
+[lean-findings]: ../lean-findings.md
 [lean-gcd-source]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Init/Data/Nat/Gcd.lean
 [lean-manual]: https://lean-lang.org/doc/reference/4.33.1/
 [lean-manual-type-system]: https://lean-lang.org/doc/reference/4.33.1/The-Type-System/

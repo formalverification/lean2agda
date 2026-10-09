@@ -221,8 +221,10 @@ Lean `v4.28.0-rc1`; its `claude-stable` branch is newer, reaching `79cadc7`
    equation `Nat.gcd (succ y) x = Nat.gcd (mod x (succ y)) (succ y)` holds
    definitionally in Lean only through K-like reduction, so `Nat.gcd` cannot be
    a kernel primitive in Lean⁻; the survey repeats that explanation without
-   re-deriving it.[^19]  The `.olean` output is "currently broken" since Lean's
-   module system changed.[^20]
+   re-deriving it.[^19]  At the pinned Lean the explanation no longer holds:
+   the equation is not definitional there, and no K-like reduction is
+   involved (LF-6 of [`lean-findings.md`][lean-findings]).  The `.olean`
+   output is "currently broken" since Lean's module system changed.[^20]
 +  **Why the normalizer exists**.  Where chapter 5 of the thesis opens (page
    113), it says that a direct Dedukti translation of Lean⁻ alone "will be
    limited to constructive logic, as Lean's proof of the excluded middle
@@ -822,6 +824,7 @@ number.
 
 [lyphyser-lean2agda]: https://github.com/lyphyser/lean2agda
 [lean4less]: https://github.com/Deducteam/Lean4Less
+[lean-findings]: lean-findings.md
 [lean4less-paper]: https://inria.hal.science/hal-05310102
 [lean4less-paper-pdf]: https://rish987.github.io/files/lean4less.pdf
 [vaishnav-thesis]: https://rish987.github.io/files/thesis.pdf

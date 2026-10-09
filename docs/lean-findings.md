@@ -34,12 +34,12 @@ entry adds its row here too.
 | Entry | Severity | Finding |
 | --- | --- | --- |
 | LF-1 | S1 | `#print axioms` omits axioms behind an inductive type, `sorryAx` included |
-| LF-2 | Checked | nothing safe rests on an unsafe axiom, and nothing on `sorryAx` |
-| LF-3 | Checked | the kernel's safety separation holds; `_unsafe_rec` is `partial` |
+| LF-2 | Checked | in `import Mathlib`, nothing safe rests on an unsafe axiom, and nothing on `sorryAx` |
+| LF-3 | Checked | the kernel's safety separation holds over `import Mathlib`; `_unsafe_rec` is `partial` |
 | LF-4 | S2 | `proofIrrelevance := false` leaves proofs in arguments identified |
-| LF-5 | S2 | constructor injectivity rests, unseen, on UIP on a universe |
+| LF-5 | S2 | injectivity of constructors of parameterized or indexed types rests, unseen, on UIP on a universe |
 | LF-6 | Checked | `Nat.gcd`'s equation needs no K-like reduction at the pin |
-| LF-7 | S2 | Mathlib proofs rely, unseen, on K-like reduction and structure eta |
+| LF-7 | S2 | two Mathlib lemmas rely, unseen, on K-like reduction and structure eta |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -124,7 +124,7 @@ entry adds its row here too.
    affected.  When the pin moves, compare the count of nonempty
    `lean_omits` with this one.
 
-## LF-2: nothing safe rests on an unsafe axiom, and nothing on `sorryAx`
+## LF-2: in `import Mathlib`, nothing safe rests on an unsafe axiom, and nothing on `sorryAx`
 
 +  **Severity**.  Checked.
 +  **Found**.  2026-10-08, from the atlas's exact axiom sets at Lean
@@ -148,7 +148,7 @@ entry adds its row here too.
 +  **To rerun**.  `make atlas`, then filter the records on `tier`,
    `unsafe` and `axioms`.
 
-## LF-3: the kernel's safety separation holds, and `_unsafe_rec` is `partial`
+## LF-3: the kernel's safety separation holds over `import Mathlib`, and `_unsafe_rec` is `partial`
 
 +  **Severity**.  Checked, with a correction to the project's documents.
 +  **Found**.  2026-10-08, by `atlas/probes/Safety.lean`
@@ -169,8 +169,8 @@ entry adds its row here too.
    does see edges between safeties.
 +  **The correction**.  All 3,649 `_unsafe_rec` companions have safety
    `partial`, not `unsafe`, so `ConstantInfo.isUnsafe` does not flag them.
-   The atlas's documents said `unsafe` and were corrected; the gap
-   catalog's `trust-escape-hatches` entry on `main` still says that a
+   The atlas's documents said `unsafe` and were corrected, and so was
+   the gap catalog's `trust-escape-hatches` entry, which said that a
    `partial def` gets "an `unsafe` companion".  The atlas's `partial`
    field is unaffected: it flags the `opaque` constant, by its companion.
 
@@ -213,7 +213,7 @@ entry adds its row here too.
    `proof-irrelevance` entry).
 +  **Upstream**.  Not reported; no Lean issue was searched for yet.
 
-## LF-5: constructor injectivity rests, unseen, on uniqueness of identity proofs on a universe
+## LF-5: injectivity of constructors of parameterized or indexed types rests, unseen, on uniqueness of identity proofs on a universe
 
 +  **Severity**.  S2.  It is Lean's design, not a defect: Lean's theory
    proves uniqueness of identity proofs for every type, by definitional
@@ -293,7 +293,7 @@ entry adds its row here too.
    the pin needs a run of Lean4Less, whose own toolchain (v4.28.0-rc1) is past
    v4.27.0; that is M3-1 ([#26]).
 
-## LF-7: Mathlib proofs rely, unseen, on K-like reduction and structure eta
+## LF-7: two Mathlib lemmas rely, unseen, on K-like reduction and structure eta
 
 +  **Severity**.  S2.  Both are rules of Lean's theory, not defects; LF-5 makes
    the same point for `eq_of_heq`, and this entry adds two uses written in
