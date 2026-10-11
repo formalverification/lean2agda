@@ -133,7 +133,8 @@ For example, a caller-supplied root `CC.Constructive` and source module
 
 The qualified module name joins those components with dots.  Its future
 Agda file joins them with filesystem separators and appends `.agda` to the
-last component.  `A.B.C` stays `A.B.C` under any supplied root.  Quoted or
+last component.  The source path `A.B.C` remains the final three components;
+root `CC.Constructive` produces `CC.Constructive.A.B.C`.  Quoted or
 numeric module components use the identifier component rules; a literal
 slash becomes `~x2f~`, so it cannot escape the output directory.  Two
 source modules under the same root have distinct paths.  A root's choice
@@ -142,11 +143,26 @@ requires the caller to choose disjoint trees.
 
 Namespace components inside constants stay flattened.  A namespace need
 not be reopened in different files; each declaration stays in its owning
-source module, and the printer can qualify `agdaIdent declaration.name`
-with that module's `agdaModule` path.  Local declarations must be assigned
-a source module before sidecar grouping.  Fresh printer binders and
-sharing auxiliaries must be allocated as distinct structured names before
-being passed through this API.
+source module.  The closure's `Declaration.sourceModule` supplies ownership.
+For a constant reference, look up its `Name` in the closure, compute its
+owner's path with `agdaModule`, and append `agdaIdent` as the final qualified
+name.  For example, `Nat.gcd_self` belongs to `Init.Data.Nat.Gcd`; root `U`
+gives `U.Init.Data.Nat.Gcd.Nat:gcd~uself`.  In another module, import
+`U.Init.Data.Nat.Gcd` and use that qualified reference.  Inside its owning
+module, use `Nat:gcd~uself`.  Lean namespaces require no Agda namespace
+declarations.
+
+Here a local declaration means a constant added to an environment whose
+`Declaration.sourceModule` is `none`, not a bound variable or a Lean free
+variable.  Assign those constants a source module before sidecar grouping.
+Allocation of names for binders and sharing auxiliaries belongs to the
+printer in [#17]; this API encodes names already allocated.  A binder name
+must avoid the other binders in its scope and any unqualified constant
+references it could shadow.  A sharing auxiliary is a new declaration:
+allocate a structured name distinct from every existing declaration and
+other auxiliary in the translation, then assign its owning module.  Keep
+those allocated names when references are printed; repeatedly encoding a
+name does not make it fresh.
 
 ## Reverse maps
 

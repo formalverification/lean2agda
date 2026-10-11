@@ -25,7 +25,7 @@ module instead, use `lake exe lean2agda Init.Data.Nat.Gcd`.
 Run from `translator/` inside the pinned Nix shell, as follows:
 
 ```sh
-lake exe lean2agda [--profile U] [--out DIR] [--stats] MODULE... [-- DECL...]
+lake exe lean2agda [--profile U] [--root NAME] [--out DIR] [--stats] MODULE... [-- DECL...]
 ```
 
 At least one module is required.  Modules before `--` are imported with
@@ -38,13 +38,17 @@ dependencies, rather than becoming additional roots.
 
 `--profile` defaults to `U`.  Other profiles are rejected until their
 translation passes exist.  `--out DIR` creates the directory and writes
-`closure.txt`.  Standard output always includes the same listing, followed
+`closure.txt` and module-specific `.names.ndjson` reverse maps.  `--root
+NAME` supplies the reverse maps' module-tree root, defaulting to `U`.
+[`naming.md`] specifies the identifier encoding and sidecar format.
+Standard output always includes the same listing, followed
 by statistics when `--stats` is given; the file contains only the listing.
 `--help` prints usage without loading an environment.  Invalid arguments
 exit with status 2; import, selection, and output failures exit with status
 1 and a diagnostic on standard error.  Explicit declarations may belong
 to a transitive import.  One missing declaration fails the entire
-selection.  An existing `closure.txt` is overwritten; writing happens
+selection.  Existing output files at the selected paths are overwritten;
+writing happens
 before the listing is sent to standard output, so a file-write failure
 produces no listing there.
 
@@ -178,3 +182,4 @@ Mathlib input outside this harness, fetch its prebuilt interfaces with
 [#17]: https://github.com/formalverification/lean2agda/issues/17
 [#22]: https://github.com/formalverification/lean2agda/issues/22
 [`pinning.md`]: ../pinning.md
+[`naming.md`]: naming.md

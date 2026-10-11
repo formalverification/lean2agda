@@ -2,6 +2,7 @@
 File: translator/Lean2Agda/Core/CommandLine.lean
 -/
 import Lean2Agda.Core.Types
+import Lean2Agda.Core.Naming
 import Lean.Syntax
 
 namespace Lean2Agda
@@ -9,10 +10,11 @@ namespace Lean2Agda
 open Lean
 
 def usage : String :=
-  "usage: lean2agda [--profile U] [--out DIR] [--stats] MODULE... [-- DECL...]"
+  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--stats] MODULE... [-- DECL...]"
 
 structure Args where
   profile : String := "U"
+  root : Root := `U
   out : Option System.FilePath := none
   stats : Bool := false
   help : Bool := false
@@ -35,12 +37,17 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--profile" :: profile :: rest => do
     unless profile == "U" do throw s!"unsupported profile {profile}; only U is available"
     parseArgsAux { args with profile } rest
+  | "--root" :: root :: rest => do
+    if root.isEmpty || root.startsWith "--" then throw "--root needs a Lean name"
+    let root ← parseName root
+    parseArgsAux { args with root } rest
   | "--out" :: dir :: rest => do
     if dir.isEmpty || dir.startsWith "--" then throw "--out needs a directory"
     parseArgsAux { args with out := some dir } rest
   | "--stats" :: rest => parseArgsAux { args with stats := true } rest
   | "--help" :: rest => parseArgsAux { args with help := true } rest
   | "--profile" :: [] => throw "--profile needs a value"
+  | "--root" :: [] => throw "--root needs a Lean name"
   | "--out" :: [] => throw "--out needs a directory"
   | arg :: rest => do
     if arg.startsWith "-" then throw s!"unknown option {arg}"

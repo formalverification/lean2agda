@@ -44,6 +44,13 @@ diff -u "$scratch/expected-gcd.txt" "$scratch/gcd.txt"
 tail -n +2 tests/expected/selected.txt > "$scratch/expected-selected.txt"
 diff -u "$scratch/expected-selected.txt" "$scratch/selected.txt"
 diff -u "$scratch/selected.txt" "$scratch/out with spaces/closure.txt"
+NAMING_OUTPUT_DIR="$scratch/out with spaces" "$lake_cmd" env "$lean_cmd" tests/NamingSidecars.lean
+
+"$lake_cmd" exe lean2agda --root CC.Constructive --out "$scratch/custom-root" \
+  TranslatorTests.Input.Consumer -- Fixtures.selected > "$scratch/custom-root.txt"
+diff -u "$scratch/selected.txt" "$scratch/custom-root.txt"
+NAMING_ROOT=CC.Constructive NAMING_OUTPUT_DIR="$scratch/custom-root" \
+  "$lake_cmd" env "$lean_cmd" tests/NamingSidecars.lean
 
 "$lake_cmd" exe lean2agda --stats --out "$scratch/stats" \
   Init.Data.Nat.Gcd -- Nat.gcd_self > "$scratch/gcd-out.txt"
@@ -73,6 +80,8 @@ expect_failure 2 'at least one module is required'
 expect_failure 2 'unsupported profile' --profile K Init
 expect_failure 2 'unknown option' --wat Init
 expect_failure 2 '--out needs a directory' --out
+expect_failure 2 '--root needs a Lean name' --root
+expect_failure 2 '--root needs a Lean name' --root --stats Init
 expect_failure 1 'unknown declaration' Init.Data.Nat.Gcd -- DoesNotExist
 expect_failure 1 'DoesNotExist' DoesNotExist
 

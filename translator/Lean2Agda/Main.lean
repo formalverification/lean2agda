@@ -21,8 +21,13 @@ def run (args : Args) : IO Unit := do
   let closure ← IO.ofExcept (dependencyClosure env roots)
   let listing := renderClosure args.profile closure
   if let some dir := args.out then
+    let maps ← IO.ofExcept <| moduleNameMaps args.root closure
     IO.FS.createDirAll dir
     IO.FS.writeFile (dir / "closure.txt") listing
+    for map in maps do
+      let filename := map.sidecarPath dir
+      IO.FS.createDirAll filename.parent.get!
+      IO.FS.writeFile filename map.render
   (← IO.getStdout).putStr listing
   if args.stats then (← IO.getStdout).putStr closure.stats.render
 

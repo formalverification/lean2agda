@@ -65,6 +65,70 @@ def checkExamples : IO Unit := do
   require (!needsNameEscape `A.b && needsNameEscape `A.b_c &&
     needsNameEscape (.num `A 2) && needsNameEscape .anonymous) "escape statistics"
 
+def checkReverseMap (names : Array Name) : IO Unit := do
+  let reverse ← IO.ofExcept <| ReverseMap.build names
+  for name in names do
+    require (reverse.lookup (agdaIdent name) == some name) "reverse lookup"
+    require ((nameFromJson (nameToJson name)).toOption == some name) "tagged-name round trip"
+  require ((reverse.lookup "missing:~a").isNone) "unknown reverse lookup"
+  let map : ModuleNames := { root := `CC.Constructive, source := `Init, reverse }
+  let text := map.render
+  let parsed ← IO.ofExcept <| ModuleNames.parse text
+  require (parsed.render == text && parsed.root == map.root && parsed.source == map.source)
+    "serialized reverse-map round trip"
+  require (parsed.reverse.entries == reverse.entries) "parsed structured names changed"
+  let reordered ← IO.ofExcept <| ReverseMap.build (names.reverse ++ names)
+  require (({ map with reverse := reordered }).render == text) "order-dependent reverse map"
+
+def checkMalformedReverseMaps : IO Unit := do
+  for json in [Json.null, toJson "name", toJson #[Json.mkObj [("str", toJson "x"),
+      ("num", toJson "0")]], toJson #[Json.mkObj [("num", toJson "01")]],
+      toJson #[Json.mkObj [("num", toJson "-1")]],
+      toJson #[Json.mkObj [("num", toJson (3 : Nat))]],
+      toJson #[Json.mkObj [("other", toJson "x")]]] do
+    require ((nameFromJson json).toOption.isNone) "invalid tagged name accepted"
+  let reverse ← IO.ofExcept <| ReverseMap.build #[`Nat, `Bool]
+  let map : ModuleNames := { root := `U, source := `Init.Prelude, reverse }
+  let text := map.render
+  for bad in ["", "{}\n", text.replace "\"version\":1" "\"version\":2",
+    text.replace "\"records\":2" "\"records\":1",
+    text.replace "\"agda\":\"Nat\"" "\"agda\":\"Wrong\"",
+    text.replace "\"target\":[\"U\",\"Init\",\"Prelude\"]" "\"target\":[\"Elsewhere\"]",
+    text ++ "{}\n", text ++ "\n", "\n".intercalate ((text.splitOn "\n").take 3) ++ "\n"] do
+    require ((ModuleNames.parse bad).toOption.isNone) "invalid reverse map accepted"
+  let rows := text.splitOn "\n" |>.toArray
+  require ((ModuleNames.parse ("\n".intercalate
+    [rows[0]!, rows[2]!, rows[1]!, rows[3]!] ++ "\n")).toOption.isNone)
+    "unsorted reverse map accepted"
+  require ((ModuleNames.parse ("\n".intercalate
+    [rows[0]!, rows[1]!, rows[1]!, rows[3]!] ++ "\n")).toOption.isNone)
+    "duplicate reverse-map record accepted"
+  let empty : ModuleNames := { map with reverse := ← IO.ofExcept (ReverseMap.build #[]) }
+  require ((ModuleNames.parse empty.render).toOption.isSome) "empty reverse map rejected"
+
+def checkModuleGrouping : IO Unit := do
+  let env ← importEnvironment #[`Init.Data.Nat.Gcd]
+  let closure ← IO.ofExcept <| dependencyClosure env #[``Nat.gcd_self]
+  let maps ← IO.ofExcept <| moduleNameMaps `U closure
+  let mut count : Nat := 0
+  for map in maps do
+    for entry in map.reverse.entries do
+      let some declaration := closure.declarations.find? (·.name == entry.leanName)
+      | throw (IO.userError "sidecar contains a name outside closure")
+      require (declaration.sourceModule == some map.source) "wrong sidecar ownership"
+      count := count + 1
+  require (count == closure.size) "sidecars omit closure declarations"
+  let reversed : Closure := { closure with groups := closure.groups.reverse.map Array.reverse }
+  let again ← IO.ofExcept <| moduleNameMaps `U reversed
+  require (maps.map ModuleNames.render == again.map ModuleNames.render) "group-order-dependent sidecars"
+  let localDecl : Lean2Agda.Declaration := {
+    name := `localDecl
+    info := default
+    sourceModule := none
+    dependencies := #[] }
+  require ((moduleNameMaps `U { roots := #[`localDecl], groups := #[#[localDecl]] }).toOption.isNone)
+    "unowned declaration accepted for emission"
+
 /-- Agda declares and uses every sample identifier, including every byte value.
 The test harness supplies a temporary directory and checks the generated file. -/
 def writeLexicalFixture (dir : System.FilePath) : IO Unit := do
@@ -94,11 +158,15 @@ def writeLexicalFixture (dir : System.FilePath) : IO Unit := do
 
 def run : IO Unit := do
   checkExamples
+  checkReverseMap samples
+  checkMalformedReverseMaps
+  checkModuleGrouping
   let count ← checkInjectivity samples
   let env ← importEnvironment #[`Init]
   let names := env.constants.toList.toArray.filterMap fun (n, _) =>
     if (env.getModuleIdxFor? n).isSome then some n else none
   let initCount ← checkInjectivity names
+  checkReverseMap names
   let moduleNames := env.header.moduleNames
   let mut paths : Std.HashMap (List String) Name := {}
   for n in moduleNames do
