@@ -6,6 +6,7 @@ import Lean2Agda.Core.Closure
 import Lean2Agda.Core.CommandLine
 import Lean2Agda.Core.Render
 import Lean2Agda.Core.Stats
+import Lean2Agda.Core.Naming
 
 /-!
 # Lean2Agda

@@ -14,6 +14,12 @@ lean_cmd="${LEAN:-lean}"
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 
+NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Naming.lean
+"$lake_cmd" env "$lean_cmd" tests/NamingGolden.lean > "$scratch/naming-init.txt"
+tail -n +2 tests/expected/naming-init.txt > "$scratch/expected-naming-init.txt"
+diff -u "$scratch/expected-naming-init.txt" "$scratch/naming-init.txt"
+(cd "$scratch" && "${AGDA:-agda}" NamingLexical.agda && "${AGDA:-agda}" NamingImport.agda)
+
 timeout 60 "$lake_cmd" exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self > "$scratch/gcd.txt"
 tail -n +2 tests/expected/gcd-self.txt > "$scratch/expected-gcd.txt"
 diff -u "$scratch/expected-gcd.txt" "$scratch/gcd.txt"
