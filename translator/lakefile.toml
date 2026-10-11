@@ -49,6 +49,11 @@ name = "lean2agda"
 root = "Lean2Agda.Main"
 supportInterpreter = true
 
+# Small compiled inputs for translator tests; these import core Lean only.
+[[lean_lib]]
+name = "TranslatorTests"
+srcDir = "tests"
+
 # The axiom atlas (issue M1-11): `lake exe atlas` writes one NDJSON record
 # per constant of the pinned Mathlib to ../atlas/.  Its code imports Lean
 # only and loads Mathlib's .olean files when it runs, so building it never

@@ -1,0 +1,9 @@
+{
+  "File": "translator/tests/atlas-gcd-self.json",
+  "source": {
+    "atlas_version": 0,
+    "lean": "4.33.1",
+    "mathlib_commit": "0df444a360eaa60ab8c11dca51a86af692955474"
+  },
+  "record": {"name":"Nat.gcd_self","module":"Init.Data.Nat.Gcd","kind":"theorem","axioms":["Quot.sound","propext"],"tier":"T1","lean_omits":[],"noncomputable":false,"unsafe":false,"partial":false,"private":false,"internal":false,"auto":false}
+}

@@ -56,7 +56,7 @@ else
 endif
 
 .PHONY: help populate-dry populate update update-check lint \
-        doctor check test corpus-check atlas \
+        doctor check test test-python test-translator corpus-check atlas \
         lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
 .DEFAULT_GOAL := help
@@ -135,11 +135,13 @@ doctor: ## Print tool versions; fail, naming each missing tool or Agda library o
 # joins corpus-check here.
 check: corpus-check ## Type-check the corpus (corpus-check); the emitted Agda joins with M2-8
 
-# Python-only until issue M2-1 adds the translator's golden tests.  The
-# suite runs no Agda (the Agda call is injected), so it needs no shell
-# beyond Python 3, but CI runs it in the default shell with the rest.
-test: ## Run the Python test suite (Python-only until M2-1 adds the golden tests)
+test: test-python test-translator ## Run the Python suite and translator tests
+
+test-python: ## Run the Python test suite without Lean or Agda
 	$(PYTHON) -m unittest discover -s scripts/python/tests -t scripts/python
+
+test-translator: ## Check translator semantics, golden outputs, and command-line failures
+	LAKE="$(LAKE)" LEAN="$(LEAN)" bash translator/tests/run.sh
 
 # Run inside the Nix shell: the checker runs `agda` from each translated
 # entry's agda/ directory with no flags of its own, so each file checks

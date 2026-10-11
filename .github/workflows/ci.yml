@@ -42,7 +42,7 @@ jobs:
 
       - name: Engine test suite (local engine present)
         if: hashFiles('scripts/gh_project_populate.py') != ''
-        run: make test
+        run: make test-python
 
       # Pinned, never floating `main`: a consumer's CI must not change
       # behavior underneath an unchanged commit.  Resolution order:
@@ -79,7 +79,7 @@ jobs:
           python-version: "3.12"
 
       - name: Shellcheck
-        run: shellcheck scripts/ci/*.sh
+        run: shellcheck scripts/ci/*.sh translator/tests/run.sh
 
       - name: Python lint (errors and pyflakes only)
         if: hashFiles('scripts/**/*.py') != ''
@@ -99,7 +99,9 @@ jobs:
   # It runs `make doctor`, whose two Agda probes check that the shell's
   # agda resolves both libraries; `make corpus-check`, which type-checks
   # every translated corpus entry under the flags its files declare; and
-  # `make test`, the Python suite.  Make stops at the first target that
+  # `make test`, the Python suite and translator semantic and golden tests.
+  # The translator tests load core Lean and small fixture modules; they
+  # need no Mathlib cache.  Make stops at the first target that
   # fails.  Later checks join the same `nix develop --command` rather
   # than a second job, so each run evaluates the flake once.  `make
   # doctor` runs the engine's lint CLI with --help, which reads no
