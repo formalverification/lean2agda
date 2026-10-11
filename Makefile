@@ -33,6 +33,7 @@ AGDA   ?= agda
 LEAN   ?= lean
 LAKE   ?= lake
 CORPUS_TIMEOUT ?= 300
+ATLAS ?=
 
 FLAGS := $(if $(REPO),--repo $(REPO)) $(if $(NO_ENV_PREFIX),--no-env-prefix)
 
@@ -57,6 +58,7 @@ endif
 
 .PHONY: help populate-dry populate update update-check lint \
         doctor check test test-python test-translator corpus-check atlas \
+	test-naming-atlas \
         lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
 .DEFAULT_GOAL := help
@@ -141,7 +143,11 @@ test-python: ## Run the Python test suite without Lean or Agda
 	$(PYTHON) -m unittest discover -s scripts/python/tests -t scripts/python
 
 test-translator: ## Check translator semantics, golden outputs, and command-line failures
-	LAKE="$(LAKE)" LEAN="$(LEAN)" bash translator/tests/run.sh
+	LAKE="$(LAKE)" LEAN="$(LEAN)" AGDA="$(AGDA)" bash translator/tests/run.sh
+
+test-naming-atlas: ## Check injectivity on a pinned atlas (set ATLAS=path/to/file.ndjson)
+	@test -n "$(ATLAS)" || { echo 'error: set ATLAS to the pinned atlas NDJSON file'; exit 2; }
+	cd translator && $(LAKE) exe naming-check-atlas "$(abspath $(ATLAS))"
 
 # Run inside the Nix shell: the checker runs `agda` from each translated
 # entry's agda/ directory with no flags of its own, so each file checks

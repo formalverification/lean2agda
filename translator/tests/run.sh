@@ -8,11 +8,26 @@ lean_cmd="${LEAN:-lean}"
 
 # These targets compile against Lean only.  Lake may clone its pinned
 # dependencies on a fresh checkout, but no Mathlib cache is needed.
-"$lake_cmd" build lean2agda TranslatorTests Atlas.Graph
+"$lake_cmd" build lean2agda TranslatorTests Atlas.Graph naming-check-atlas
 "$lake_cmd" env "$lean_cmd" tests/Check.lean
 
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
+
+NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/NamingAtlasFixture.lean
+"$lake_cmd" exe naming-check-atlas "$scratch/atlas-valid.ndjson" > "$scratch/atlas-check.json"
+grep -F '"constants":5' "$scratch/atlas-check.json" > /dev/null
+for defect in truncated count duplicate trailing pin malformed; do
+  if "$lake_cmd" exe naming-check-atlas "$scratch/atlas-$defect.ndjson" \
+      > "$scratch/stdout" 2> "$scratch/stderr"; then
+    echo "atlas checker accepted $defect input" >&2
+    exit 1
+  else
+    [[ "$?" == 1 ]]
+  fi
+  grep -F 'naming-check-atlas:' "$scratch/stderr" > /dev/null
+  [[ ! -s "$scratch/stdout" ]]
+done
 
 NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Naming.lean
 "$lake_cmd" env "$lean_cmd" tests/NamingGolden.lean > "$scratch/naming-init.txt"

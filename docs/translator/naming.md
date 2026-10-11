@@ -168,7 +168,7 @@ For source module `Init.Prelude`, root `U`, and declaration `Nat`, the
 complete one-record sidecar is as follows:
 
 ```json
-{"naming":{"version":1,"root":[{"str":"U"}],"source":[{"str":"Init"},{"str":"Prelude"}],"target":["U","Init","Prelude"]}}
+{"naming":{"root":[{"str":"U"}],"source":[{"str":"Init"},{"str":"Prelude"}],"target":["U","Init","Prelude"],"version":1}}
 {"agda":"Nat","lean":[{"str":"Nat"}]}
 {"end":{"records":1}}
 ```
@@ -198,7 +198,8 @@ make test-naming-atlas ATLAS=atlas/mathlib-v4.33.1-0df444a.ndjson
 
 Produce the input with `make atlas`, or use a previously verified file from
 the same pins.  The test checks the atlas header against Lean and the Lake
-manifest, validates every printed name with Lean's name-literal decoder,
+manifest, decodes printed names with Lean's name-literal decoder and a
+checked structural fallback for unquoted macro scopes,
 and checks completeness and unique names.  It then times `agdaIdent` over
 all names and checks for collisions, reporting the number of names that
 needed escaping and the collision-index count (always zero).  The atlas's
