@@ -40,6 +40,7 @@ entry adds its row here too.
 | LF-5 | S2 | injectivity of constructors of parameterized or indexed types rests, unseen, on UIP on a universe |
 | LF-6 | Checked | `Nat.gcd`'s equation needs no K-like reduction at the pin |
 | LF-7 | S2 | two Mathlib lemmas rely, unseen, on K-like reduction and structure eta |
+| LF-8 | Checked | flattening closure groups with `Array.append` does not copy every prefix |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -326,6 +327,69 @@ entry adds its row here too.
    printed in `nat-gcd-succ`'s notes.
 +  **Upstream**.  Known design; nothing to report.
 
+## LF-8: flattening closure groups does not copy every prefix
+
++  **Severity**.  Checked.
++  **Found**.  2026-10-11, while evaluating Copilot's performance comment
+   on pull request [#73], at Lean v4.33.1.
++  **What was asked**.  Does
+   `closure.groups.foldl (· ++ ·) #[]` copy the accumulated array for
+   every group, making `Closure.declarations` quadratic?
++  **The answer**.  No.  The pinned [`Array.append` implementation][array-basic]
+   folds `push` over its second argument.  Lean's `Array.flatten` uses
+   the same outer fold as this API.  The native code for
+   `Closure.declarations` passes its accumulator to `Array.append`
+   without retaining a reference to the old prefix, allowing the
+   runtime to update the buffer in place.  The pinned
+   [`lean_array_push` implementation][array-runtime] checks exclusive
+   ownership (a single reference) and reuses the buffer when capacity
+   remains.  On expansion, `lean_copy_expand_array` grows capacity to
+   `(capacity + 1) * 2`.  This geometric growth gives amortized linear
+   work in the group and declaration counts; the measurements below
+   check the practical behavior rather than establish that bound.
++  **Evidence**.  The native [`FlattenBenchmark.lean`][flatten-benchmark]
+   calls the actual API from the compiled `Core/Types` object, using
+   one declaration per group and checking its names and order against
+   an explicit nested `push` loop.  Thirty-two flattenings per size
+   gave the following averages in milliseconds in run `flatten-r1`:
+
+   | Groups | Current API | Explicit pushes |
+   | --- | --- | --- |
+   | 25,000 | 0.266 | 0.300 |
+   | 50,000 | 0.714 | 0.801 |
+   | 100,000 | 1.105 | 1.267 |
+   | 200,000 | 2.140 | 2.972 |
+   | 400,000 | 4.768 | 5.723 |
+
+   Runs `flatten-r2` and `flatten-r3` repeated the same sizes.  Increasing
+   the group count from 100,000 to 400,000 multiplied the API's time by
+   4.31, 4.66, and 5.36 in the three runs.  These are scaling checks,
+   rather than a performance guarantee for the whole translator.
+   A positive control retains every prefix and therefore forces
+   copy-on-write: at 2,000, 4,000, and 8,000 groups, run `flatten-r1`
+   took 7.55, 60.32, and 1,799.15 ms.  Retaining those prefixes also
+   increases memory pressure, so these timings are a copying control,
+   rather than a measurement of a quadratic exponent.  Timing varies
+   with machine load; the first run's one-, five-, and fifteen-minute
+   system load averages were 4.02, 7.16, and 5.94.
++  **To rerun**.  From the repository root inside `nix develop`, use the
+   following commands.  Compilation and execution write only to `/tmp`;
+   the probe is a manual benchmark, outside the CI timing gates.
+
+   ```sh
+   make lean-build
+   cd translator
+   lake env lean scripts/FlattenBenchmark.lean -c /tmp/FlattenBenchmark.c
+   lake env leanc -O3 -o /tmp/FlattenBenchmark /tmp/FlattenBenchmark.c \
+     .lake/build/ir/Lean2Agda/Core/Types.c.o.export
+   /tmp/FlattenBenchmark
+   ```
+
++  **Upstream**.  Documented behavior; no defect to report.  The review
+   comment was answered with the pinned source and measurements.
++  **What the project does**.  Keep the current flattening implementation.
+   Recheck the source and scaling when the Lean pin changes.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -341,3 +405,7 @@ entry adds its row here too.
 [atlas-readme]: ../atlas/README.md
 [gcd-succ-notes]: ../corpus/nat-gcd-succ/notes.md
 [lists-notes]: ../corpus/lists-subset-refl/notes.md
+[#73]: https://github.com/formalverification/lean2agda/pull/73
+[array-basic]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Init/Data/Array/Basic.lean#L1475-L1490
+[array-runtime]: https://github.com/leanprover/lean4/blob/v4.33.1/src/runtime/object.cpp#L2719-L2764
+[flatten-benchmark]: ../translator/scripts/FlattenBenchmark.lean

@@ -37,7 +37,9 @@ section before changing anything structural.
    translated corpus entry under the flags its files declare
    (`corpus/README.md`); `make check` runs it, and the emitted-Agda check
    joins with M2-8.  `make test` runs the Python suite under
-   `scripts/python/tests/`, Python-only until M2-1 adds the golden tests.
+   `scripts/python/tests/` and the translator's semantic and golden tests
+   under `translator/tests/`; `make test-python` and
+   `make test-translator` run them separately.
    `make atlas` writes the axiom atlas of the pinned Mathlib and its
    report (`atlas/README.md`); it needs Mathlib's cache and about
    7.5 GiB of memory, and no CI job runs it.
@@ -50,7 +52,9 @@ section before changing anything structural.
    `lean-toolchain` through the `translator/lean-toolchain` symlink,
    and a Lean that lean4-nix lacks breaks every shell.  `make lean-build`
    and `make lean-smoke` build the package and check that Mathlib loads;
-   no CI job runs them, since the cache is several gigabytes.
+   no CI job runs the cache or Mathlib smoke check, since the cache is
+   several gigabytes.  The translator harness builds its own targets in
+   CI using core Lean only.
 +  Do not commit generated artifacts: `*.agdai`, `.agda/`, `.lake/`,
    `result`, and anything the translator emits.  Generated libraries
    live in their own repositories (see the roadmap's Description).
