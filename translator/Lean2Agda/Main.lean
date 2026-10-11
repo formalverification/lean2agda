@@ -24,6 +24,7 @@ def run (args : Args) : IO Unit := do
     IO.FS.createDirAll dir
     IO.FS.writeFile (dir / "closure.txt") listing
   (← IO.getStdout).putStr listing
+  if args.stats then (← IO.getStdout).putStr closure.stats.render
 
 end Lean2Agda
 
