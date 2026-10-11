@@ -40,6 +40,7 @@ structure Declaration where
   info : ConstantInfo
   sourceModule : Option Name
   dependencies : Array Name
+  deriving Inhabited
 
 def Declaration.kind (decl : Declaration) : Kind := Kind.ofConstantInfo decl.info
 
