@@ -32,12 +32,13 @@ record Subtype {A : Set a} (P : A → Prop p) : Set (a ⊔ p) where
 open Subtype
 
 -- Lean's Subtype.ext.  Lean proves it by matching both subtypes and the
--- equation of their values.  The same match is accepted here, but with the
--- warning UnsupportedIndexedMatch: under --cubical-compatible its clause
--- would have to transport the Prop field, which Agda cannot generate
--- (../notes.md, The Agda version).  So the proof is a substitution along
--- the equation instead; its final refl identifies the two proofs by
--- definition, as Lean's rfl does.
+-- equation of their values.  That match, written in a separate control
+-- file under this file's flags, is accepted only with the warning
+-- UnsupportedIndexedMatch: under --cubical-compatible its clause would have
+-- to transport the Prop field, which Agda cannot generate (../notes.md, The
+-- Agda version).  So this file does not use it: the proof is a substitution
+-- along the equation, which draws no warning, and its final refl
+-- identifies the two proofs by definition, as Lean's rfl does.
 
 ext : {A : Set a} {P : A → Prop p} {a₁ a₂ : Subtype P} → val a₁ ≡ val a₂ → a₁ ≡ a₂
 ext {P = P} {a₁ = mk v h₁} {a₂ = mk w h₂} e =

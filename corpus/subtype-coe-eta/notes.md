@@ -186,7 +186,7 @@ is refused or, as here, warned about.
 | Export, records | 963 |
 | Export, expression records | 797 |
 | Export, declarations | 14: 3 inductive, 7 def, 4 thm |
-| Agda, lines per file | `SubtypeCoeEta.agda` 76, of which 25 are code; `SubtypeCoeEtaProp.agda` 77, of which 31 are code |
+| Agda, lines per file | `SubtypeCoeEta.agda` 76, of which 25 are code; `SubtypeCoeEtaProp.agda` 78, of which 31 are code |
 | Agda, check time | 0.4 seconds for the two files (Agda 2.8.0, no `.agdai` files of the corpus) |
 
 ## Remarks
