@@ -185,8 +185,9 @@ the following:
    same through a constant `f._auto_<n>`, such as `Rat.normalize._auto_1`,
    which the type `Real` reaches.  `autoParam` is a reducible definition
    equal to `T`, so a translator can erase it, and with it `Lean.Syntax`.
-   Cutting both forms from the closure (the probe of part 1's
-   `order-hom-map-lfp` notes, on [#75], extended to `_auto_<n>`) removes
+   Cutting both forms from the closure (the probe of
+   [`../order-hom-map-lfp/notes.md`][lfp-notes], extended to
+   `_auto_<n>`) removes
    `Lean.Syntax` and leaves 10,628 of the 10,721 constants, with
    `eq_of_heq`, `cast`, `String`, `Decidable`, `Quot.lift` and `funext`
    still in it: for this entry the machinery of tactics is not what
@@ -332,7 +333,6 @@ three entries of this part took 65 seconds, the kernel re-checks 33.
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#9]: https://github.com/formalverification/lean2agda/issues/9
 [#26]: https://github.com/formalverification/lean2agda/issues/26
-[#75]: https://github.com/formalverification/lean2agda/pull/75
 [catalog]: ../../docs/foundations/gap-catalog.md
 [cat-axioms]: ../../docs/foundations/gap-catalog.md#axioms
 [cat-decidable-and-noncomputable]: ../../docs/foundations/gap-catalog.md#decidable-and-noncomputable
@@ -347,4 +347,5 @@ three entries of this part took 65 seconds, the kernel re-checks 33.
 [cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
 [lean-findings]: ../../docs/lean-findings.md
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
+[lfp-notes]: ../order-hom-map-lfp/notes.md
 [multiset-notes]: ../multiset-map-map/notes.md

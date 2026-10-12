@@ -63,7 +63,8 @@ at a time, cutting each before searching again, until no path to
    `t ∈ s` with `by_cases`, which takes its `Decidable` instance from
    `Classical.propDecidable`.  The data of the infimum, its carrier
    `⋂ t ∈ s, ↑t`, is constructive; the case split is in a proof.  It is
-   a second instance of LF-10, which part 1 of [#9] proposes on [#75]:
+   a second instance of LF-10 of [`lean-findings.md`][lean-findings],
+   recorded by part 1 of [#9]:
    `by_cases` on a proposition with no `Decidable` instance in scope
    makes a proof classical without saying so.
 +  The type of `closure`, `LowerAdjoint ((↑) : L.Substructure M → Set M)`,
@@ -158,8 +159,9 @@ the following:
    the tactic `by exact fun {n} => isEmptyElim`, so the constructor's type
    holds `autoParam T stx` with the tactic's syntax tree `stx`.
    `autoParam` is a reducible definition equal to `T`, which a translator
-   can erase: cutting it (the probe of part 1's `order-hom-map-lfp`
-   notes, on [#75]) removes `Lean.Syntax` and leaves 1,725 of the 1,767
+   can erase: cutting it (the probe of
+   [`../order-hom-map-lfp/notes.md`][lfp-notes]) removes `Lean.Syntax`
+   and leaves 1,725 of the 1,767
    constants, with `eq_of_heq`, `Quot.lift` and `funext` still there,
    since they come through the Boolean algebra of sets.
 
@@ -222,7 +224,8 @@ forms, both in the file, as follows:
 
 The infimum cannot take part 1's shape for the lattice of
 `order-hom-map-lfp`, a complete lattice whose infimum takes the subsets
-of the carrier at the level of its order ([#75]).  That lattice is a
+of the carrier at the level of its order
+([`../order-hom-map-lfp/notes.md`][lfp-notes]).  That lattice is a
 record parameter, so the existence of its infima is assumed; here the
 infimum of substructures is constructed, and the construction quantifies
 over substructures, which lands it a universe up.  A predicative
@@ -319,8 +322,8 @@ Under encoding A of [#27], generated substructures are where Lean's
 ## Remarks
 
 **Mathlib's first-order structures and agda-algebras**.  The issue asks
-how the two relate; agda-algebras was read at
-`~/git/ualib/agda-algebras/master` (commit `f067d57d`), and not
+how the two relate; agda-algebras was read in its repository,
+[ualib/agda-algebras at commit `f067d57d`][agda-algebras], and not
 imported, since the corpus is checked with agda-stdlib and cubical only.
 
 +  **Signatures**.  A Mathlib `Language` is two families indexed by
@@ -375,7 +378,7 @@ as an algebra over it.
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28
 [#29]: https://github.com/formalverification/lean2agda/issues/29
-[#75]: https://github.com/formalverification/lean2agda/pull/75
+[agda-algebras]: https://github.com/ualib/agda-algebras/tree/f067d57d367a4830834ce1fd80937820754f9a28
 [catalog]: ../../docs/foundations/gap-catalog.md
 [cat-axioms]: ../../docs/foundations/gap-catalog.md#axioms
 [cat-decidable-and-noncomputable]: ../../docs/foundations/gap-catalog.md#decidable-and-noncomputable
@@ -389,4 +392,5 @@ as an algebra over it.
 [cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
 [lean-findings]: ../../docs/lean-findings.md
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
+[lfp-notes]: ../order-hom-map-lfp/notes.md
 [sqrt-notes]: ../real-sqrt-nonneg/notes.md
