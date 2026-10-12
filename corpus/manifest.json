@@ -92,11 +92,11 @@
     "lean_module": "Mathlib.Data.Finset.Card",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["decidable-and-noncomputable", "quotients", "proof-irrelevance", "axioms"],
+    "features": ["impredicative-prop", "proof-irrelevance", "k-and-uip", "large-elimination", "quotients", "axioms", "universe-levels", "structure-eta", "literals", "decidable-and-noncomputable", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "FinsetCardImage.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
