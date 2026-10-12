@@ -89,7 +89,7 @@ Each object in `agda_files` has exactly the following fields:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `path` | string | The file's name in the entry's `agda/` directory: it ends in `.agda` and has no directory part.  Agda requires the module to be named after the file; the corpus names both after the id in UpperCamelCase (`ListReverseReverse`), with a `Cubical` suffix for a cubical variant. |
+| `path` | string | The file's name in the entry's `agda/` directory: it ends in `.agda` and has no directory part.  Agda requires the module to be named after the file; the corpus names both after the id in UpperCamelCase (`ListReverseReverse`), with a suffix that names what a variant changes: `Cubical` for a cubical file, `Prop` for one under `--prop`, `Finite` for a statement restricted to finite types. |
 | `flags` | array of strings | The file's `OPTIONS` pragma, token for token and in the same order. |
 | `profile` | string | `K`, `CC` or `CU` (the roadmap's Target profiles), agreeing with `flags` as the next table says. |
 

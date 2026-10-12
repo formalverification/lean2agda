@@ -1,0 +1,5 @@
+{
+  "bytes": 4267999,
+  "sha256": "10109eefd19c26459b8b2a80834ed8be6f3930198588df00fa4f63e322a7aa21",
+  "command": "lake exe lean4export Mathlib.ModelTheory.Substructures -- FirstOrder.Language.Substructure.closure_le"
+}

@@ -761,7 +761,7 @@ Translate by hand the entries whose Lean form is classical or leans on Mathlib's
 - [ ] Run `#print axioms` on each entry and record the tier.
 - [x] For the `Finset` entry, write the statement with the `Decidable` instance as a hypothesis and check whether the proof goes through constructively; this is the seed of M4-4.
 - [ ] For the typeclass-heavy entries, record how Lean's instance arguments map to Agda (explicit records, instance arguments `⦃ ⦄`, or module parameters) and how many instance arguments the kernel term carries.
-- [ ] For the `ModelTheory` entry, relate Mathlib's first-order structures to agda-algebras's signatures and algebras in `notes.md`.
+- [x] For the `ModelTheory` entry, relate Mathlib's first-order structures to agda-algebras's signatures and algebras in `notes.md`.
 
 ## Acceptance criteria
 

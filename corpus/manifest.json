@@ -106,11 +106,11 @@
     "lean_module": "Mathlib.Analysis.Real.Sqrt",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["quotients", "decidable-and-noncomputable", "axioms"],
+    "features": ["quotients", "decidable-and-noncomputable", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "universe-levels", "structure-eta", "literals", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "RealSqrtNonneg.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
@@ -120,11 +120,12 @@
     "lean_module": "Mathlib.GroupTheory.Coset.Card",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms"],
+    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "structure-eta", "literals", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
-      {"path": "SubgroupCardDvd.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+      {"path": "SubgroupCardDvd.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
+      {"path": "SubgroupCardDvdFinite.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
@@ -163,11 +164,11 @@
     "lean_module": "Mathlib.ModelTheory.Substructures",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["impredicative-prop", "universe-levels", "projections-and-let", "axioms"],
+    "features": ["impredicative-prop", "universe-levels", "projections-and-let", "axioms", "k-and-uip", "large-elimination", "quotients", "literals", "decidable-and-noncomputable", "nested-and-mutual-inductives"],
     "agda_files": [
       {"path": "SubstructureClosureLe.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   }
 ]
