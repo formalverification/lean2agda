@@ -759,9 +759,9 @@ Translate by hand the entries whose Lean form is classical or leans on Mathlib's
 ## Tasks
 
 - [ ] Run `#print axioms` on each entry and record the tier.
-- [ ] For the `Finset` entry, write the statement with the `Decidable` instance as a hypothesis and check whether the proof goes through constructively; this is the seed of M4-4.
+- [x] For the `Finset` entry, write the statement with the `Decidable` instance as a hypothesis and check whether the proof goes through constructively; this is the seed of M4-4.
 - [ ] For the typeclass-heavy entries, record how Lean's instance arguments map to Agda (explicit records, instance arguments `⦃ ⦄`, or module parameters) and how many instance arguments the kernel term carries.
-- [ ] For the `ModelTheory` entry, relate Mathlib's first-order structures to agda-algebras's signatures and algebras in `notes.md`.
+- [x] For the `ModelTheory` entry, relate Mathlib's first-order structures to agda-algebras's signatures and algebras in `notes.md`.
 
 ## Acceptance criteria
 
@@ -791,7 +791,7 @@ Collect the `notes.md` files of M1-7, M1-8 and M1-9 into `docs/foundations/gap-r
 
 ---
 
-### Issue M1-11: Axiom atlas v0 over Mathlib (#11)
+### Issue M1-11: Axiom atlas v0 over Mathlib (#11, closed)
 
 **Labels:** `milestone-1-foundations`, `classification`
 
@@ -880,7 +880,7 @@ Three groups have built parts of what this project needs: Deducteam (Lean4Less, 
 
 <!-- BEGIN GENERATED: milestone-2 -->
 
-### Issue M2-1: Lake package, command line, and environment loading (#15)
+### Issue M2-1: Lake package, command line, and environment loading (#15, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -902,7 +902,7 @@ Create the translator as a Lean 4 package in `translator/` with the command line
 
 ---
 
-### Issue M2-2: Names and module mapping (#16)
+### Issue M2-2: Names and module mapping (#16, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`, `agda-output`
 
