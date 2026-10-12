@@ -167,10 +167,12 @@ name does not make it fresh.
 ## Reverse maps
 
 Use UTF-8 NDJSON sidecars, one beside each future generated `.agda` file,
-with the same stem and suffix `.names.ndjson`.  The current `--out DIR`
-command emits these sidecars for the dependency closure alongside its
-existing `closure.txt`; it does not emit expressions.  `--root NAME`
-supplies the tree root.  The diagnostic default is `U`, without a layer
+with the same stem and suffix `.names.ndjson`.  The `--out DIR` command
+emits these sidecars for the dependency closure after the sharing pass of
+[#17], so that they cover its auxiliary definitions, beside `closure.txt`
+and the profile U scaffold, one Agda module for the whole closure at the
+stem of its first root's sidecar ([`printing.md`][printing]).  `--root
+NAME` supplies the tree root.  The diagnostic default is `U`, without a layer
 assignment; the future emitter will pass the root selected by [#37].
 
 Each file contains a versioned header, records sorted by Agda identifier,
@@ -234,3 +236,4 @@ samples and the direct `Init` scan cover cases absent from that format.
 [lean-printer]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Init/Data/ToString/Name.lean
 [agda-lex]: https://agda.readthedocs.io/en/v2.8.0/language/lexical-structure.html
 [agda-lexer]: https://github.com/agda/agda/blob/v2.8.0/src/full/Agda/Syntax/Parser/Lexer.x#L159-L207
+[printing]: printing.md

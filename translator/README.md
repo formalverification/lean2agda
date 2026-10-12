@@ -6,8 +6,10 @@ The Lean 4 package that reads the elaborated Lean environment and emits
 Agda.  Issue M1-3 created it as a Lake package, `lean2agda`, that
 requires Mathlib and lean4export at pinned tags; issue M1-11 added the
 axiom atlas; issue M2-1 added the translator's command line, the
-environment loader and the golden-test harness; issue M2-2 adds structured
-name encoding, module paths, and reverse-map sidecars.  The
+environment loader and the golden-test harness; issue M2-2 added structured
+name encoding, module paths, and reverse-map sidecars; issue M2-3 adds the
+expression printer, the sharing pass, and the profile U scaffold
+(`../docs/translator/printing.md`).  The
 architecture it implements is described in the Description section of
 `../docs/GITHUB_PROJECT.md` and, once written, in `../docs/architecture.md`.
 
@@ -24,11 +26,14 @@ architecture it implements is described in the Description section of
 +  `Lean2Agda.lean`: the translator library's root module.
 +  `Lean2Agda/Core/`: pure declaration types, command-line parsing,
    dependency closure and ordering, diagnostic rendering, statistics,
-   name encoding, module paths, and reverse maps.
+   name encoding, module paths, reverse maps, the expression printer
+   (`Print.lean`), the sharing pass (`Share.lean`), and the scaffold
+   (`Scaffold.lean`).
 +  `Lean2Agda/Main.lean`: the IO shell, which loads compiled modules and
-   writes the closure listing and reverse-map sidecars.
+   writes the closure listing, the reverse-map sidecars, and the scaffold.
 +  `tests/`: compiled Lean inputs, semantic checks, atlas and golden
-   fixtures, and the shell harness.
+   fixtures, the printer's checks (`Printing.lean`) and golden scaffolds
+   (`expected/scaffolds/`), and the shell harness.
 +  `Atlas/`: the axiom atlas (`../atlas/README.md`).  `Record.lean`
    and `Graph.lean` are the pure core (the record and its line, the
    dependency graph and the exact axiom sets), `AutoDecl.lean` is
@@ -86,14 +91,17 @@ lake exe lean2agda --profile U --out out Init.Data.Nat.Gcd -- Nat.gcd_self
 lake exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self
 ```
 
-It currently prints an ordered closure of Lean declarations.  `--out DIR`
-also writes the listing to `DIR/closure.txt` and a `.names.ndjson` sidecar
-per source module under the supplied `--root NAME` (default `U`).
-The naming API and sidecar schema are in [`naming.md`].  `--stats` appends
+It prints an ordered closure of Lean declarations.  `--out DIR` also
+writes the listing to `DIR/closure.txt`, a `.names.ndjson` sidecar per
+source module under the supplied `--root NAME` (default `U`), and the
+profile U scaffold, an Agda module declaring the closure's constants with
+their printed types; `--share N` sets the sharing pass's threshold.  The
+naming API and sidecar schema are in [`naming.md`], and the printer, the
+sharing pass and the scaffold in [`printing.md`].  `--stats` appends
 counts to standard output.  Omit declarations after `--` to select all
-declarations owned by the named modules.  Only profile U is available.  The Agda
-expression printer follows in issue M2-3.  The closure API, dependencies,
-cycle handling, and output format are in [`loading.md`].
+declarations owned by the named modules.  Only profile U is available.
+The closure API, dependencies, cycle handling, and output format are in
+[`loading.md`].
 
 Run `make test-translator` from the repository root, or
 `bash tests/run.sh` here.  It builds core Lean fixtures, checks the pure
@@ -125,3 +133,4 @@ Conventions for everything that lands here are as follows:
 
 [`loading.md`]: ../docs/translator/loading.md
 [`naming.md`]: ../docs/translator/naming.md
+[`printing.md`]: ../docs/translator/printing.md

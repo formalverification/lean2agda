@@ -43,6 +43,7 @@ entry adds its row here too.
 | LF-8 | Checked | flattening closure groups with `Array.append` does not copy every prefix |
 | LF-9 | S2 | hygienic names printed without escapes fail the name-literal decoder |
 | LF-10 | S2 | `by_cases` makes a proof classical without saying so, `Finset.image` among them |
+| LF-11 | S2 | lean4export gives terms that differ only in binder information one record |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -482,6 +483,53 @@ entry adds its row here too.
    equality.
 +  **Upstream**.  Documented behavior; nothing to report.
 
+## LF-11: lean4export gives terms that differ only in binder information one record
+
++  **Severity**.  S2.  The kernel ignores binder information, so nothing
+   an export is checked against changes; what goes wrong is the binder
+   information a reader of the export sees.
++  **Found**.  2026-10-12, by issue [#17]'s session, reading lean4export
+   at tag v4.33.0 for the meaning of its record count, at Lean v4.33.1.
++  **What**.  lean4export keys the expressions it has written by a
+   `HashMap Expr Nat` ([`Export.lean`, line 38][export-visited]).  Its
+   equality is Lean's `BEq Expr`, which is `Expr.eqv`, alpha-equivalence;
+   the documentation of `Expr.eqv` says "Binder annotations are ignored"
+   ([`Expr.lean`, lines 804 to 812][expr-eqv]).  Two subterms that differ
+   only in binder names or binder information therefore get one record,
+   and that record carries the names and the information of the one met
+   first.  The format
+   records binder information on every `lam` and `forallE` record
+   ([`format_ndjson.md`][export-format]), so a consumer has no sign that
+   it is not the term's own.
++  **Evidence**.  A module declaring
+   `def implicitFirst : {α : Type} → α → α := fun {α} a => a` and then
+   `def explicitFirst : (α : Type) → α → α := fun α a => a`, exported with
+   both names, gives `explicitFirst` a `def` record whose type and value
+   are records 4 and 6, the same as `implicitFirst`'s, and those records
+   say `"binderInfo":"implicit"`: the export states
+   `explicitFirst : {α : Type} → α → α`.
++  **To rerun**.  Put the two definitions, in a `namespace BinderProbe`,
+   in `translator/tests/TranslatorTests/Input/BinderProbe.lean`, then run
+   the following in the Nix shell from `translator/`, and delete the file:
+
+   ```sh
+   lake build TranslatorTests.Input.BinderProbe
+   lake exe lean4export TranslatorTests.Input.BinderProbe -- \
+     BinderProbe.implicitFirst BinderProbe.explicitFirst
+   ```
+
++  **Upstream**.  Not reported.  The dedup is a deliberate use of
+   `Expr.eqv`; whether the format should say so, or key by `Expr.equal`,
+   is lean4export's call.
++  **What the project does**.  The printer reads binder information from
+   the environment, never from an export, and the sharing pass keys
+   subterms by `ExprStructEq` (`Expr.equal`), which keeps binder names and
+   information.  The corpus's `term.ndjson` files are references for the
+   hand translations, whose binder information is not read from them.  An
+   export's record count, which `docs/reports/printing-blowup-2026-10-12.md`
+   uses as the measure of a term's size, counts subterms up to binder names
+   and information.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -507,3 +555,7 @@ entry adds its row here too.
 [#9]: https://github.com/formalverification/lean2agda/issues/9
 [#39]: https://github.com/formalverification/lean2agda/issues/39
 [finset-notes]: ../corpus/finset-card-image/notes.md
+[#17]: https://github.com/formalverification/lean2agda/issues/17
+[export-visited]: https://github.com/leanprover/lean4export/blob/v4.33.0/Export.lean#L38
+[export-format]: https://github.com/leanprover/lean4export/blob/v4.33.0/format_ndjson.md
+[expr-eqv]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Lean/Expr.lean#L804-L812
