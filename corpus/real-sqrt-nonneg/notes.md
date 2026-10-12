@@ -86,12 +86,20 @@ The statement survives de-classicalization.  The Agda file states it
 over a record whose fields are all constructive notions (constructive
 reals have an order, a maximum and a square root of a nonnegative
 number), the proof uses no field but `nnsqrt`, and the proof is Lean's,
-so a constructive proof is known: it is this one, once any constructive
-reals instantiate the record.  None of the three classical uses above is
-essential to the statement: the first is a proof about `ℚ`, the second
-a proof of a fact that holds constructively for `max`, and the third,
-the one in data, the construction of a function that constructive
-analysis builds without choice.  The record has an instance in the file
+so a constructive proof is known: it is this one, once constructive
+reals instantiate the record.  Since the record's equations are Agda's
+`≡`, those reals must be presented as a set whose `≡` is equality of
+reals: a set quotient of Cauchy sequences (under profile CC, through a
+quotient parameter such as the `Quotients` record of `multiset-map-map`)
+or the HoTT book's Cauchy reals.  Bishop's reals, a setoid, satisfy
+`nnsqrt-mul-self` only up to the setoid's equality, and their `≤` is a
+proposition only with function extensionality.
+
+None of the three classical uses above is essential to the statement:
+the first is a proof about `ℚ`, the second a proof of a fact that holds
+constructively for `max`, and the third, the one in data, the
+construction of a function that constructive analysis builds without
+choice.  The record has an instance in the file
 with no classical principle (`one-point`), which shows that the
 parameter adds no logical strength, though not that it describes ℝ; the
 libraries the corpus may import have no real numbers.
@@ -256,7 +264,9 @@ is what the parameter assumes that Lean proves, as follows:
 +  `nnsqrt` and `nnsqrt-mul-self`: `NNReal.sqrt` as a function on `ℝ≥0`,
    and `NNReal.mul_self_sqrt`, which says it is a square root; Lean
    proves that the function exists by real analysis and picks it by
-   choice.  The proof uses only that `nnsqrt` lands in `ℝ≥0`.
+   choice.  The proof uses only that `nnsqrt` lands in `ℝ≥0`.  The law
+   documents what the field stands for; with no ring or order axioms
+   beside it, it does not determine `nnsqrt`.
 
 The design follows the kickoff's suggestion with one change: the record
 is not an ordered field.  The statement's definitions reach only `0`,

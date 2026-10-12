@@ -40,9 +40,17 @@ open import Relation.Binary.PropositionalEquality.Core using (_≡_; refl)
 --    that Mathlib obtains as the inverse of x ↦ x ^ 2 (NNReal.powOrderIso,
 --    with the inverse picked by choice from a proof that squaring is
 --    surjective, by continuity), and NNReal.mul_self_sqrt.  The proof below
---    uses only that nnsqrt lands in ℝ≥0.
+--    uses only that nnsqrt lands in ℝ≥0.  The law says what nnsqrt stands
+--    for; with no ring or order axioms beside it, it does not determine
+--    nnsqrt.
 --
--- No field is a classical principle: constructive reals have all of them.
+-- No field is a classical principle.  The equations are Agda's _≡_, so a
+-- constructive instance needs reals presented as a set whose _≡_ is
+-- equality of reals: a set quotient of Cauchy sequences (under profile CC,
+-- through a quotient parameter) or the HoTT book's Cauchy reals.  Bishop's
+-- reals, a setoid, satisfy nnsqrt-mul-self only up to the setoid's
+-- equality, and their ≤ is a proposition only with function
+-- extensionality.
 
 record Reals (r ℓ : Level) : Set (suc (r ⊔ ℓ)) where
   infix  4 _≤_
@@ -107,8 +115,9 @@ module _ {r ℓ : Level} (R : Reals r ℓ) where
 
 -- The record has an instance with no classical principle and no postulate:
 -- the one-point ring.  It shows that the parameter adds no logical strength,
--- not that it describes ℝ; Bishop's constructive reals are an instance with
--- content, which the libraries the corpus may import do not provide.
+-- not that it describes ℝ; constructive reals presented as a set (above)
+-- are an instance with content, which the libraries the corpus may import
+-- do not provide.
 
 one-point : Reals 0ℓ 0ℓ
 one-point = record
