@@ -92,11 +92,11 @@
     "lean_module": "Mathlib.Data.Finset.Card",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["decidable-and-noncomputable", "quotients", "proof-irrelevance", "axioms"],
+    "features": ["impredicative-prop", "proof-irrelevance", "k-and-uip", "large-elimination", "quotients", "axioms", "universe-levels", "structure-eta", "literals", "decidable-and-noncomputable", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "FinsetCardImage.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
@@ -134,11 +134,11 @@
     "lean_module": "Mathlib.Order.FixedPoints",
     "axioms": ["propext", "Quot.sound"],
     "tier": "T1",
-    "features": ["impredicative-prop", "projections-and-let", "axioms"],
+    "features": ["impredicative-prop", "k-and-uip", "large-elimination", "quotients", "axioms", "universe-levels", "literals", "decidable-and-noncomputable", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "OrderHomMapLfp.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
@@ -148,11 +148,12 @@
     "lean_module": "Mathlib.Data.Subtype",
     "axioms": [],
     "tier": "T0",
-    "features": ["structure-eta", "proof-irrelevance", "universe-levels", "projections-and-let"],
+    "features": ["proof-irrelevance", "k-and-uip", "large-elimination", "universe-levels", "projections-and-let"],
     "agda_files": [
-      {"path": "SubtypeCoeEta.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+      {"path": "SubtypeCoeEta.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
+      {"path": "SubtypeCoeEtaProp.agda", "flags": ["--safe", "--cubical-compatible", "--prop"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {

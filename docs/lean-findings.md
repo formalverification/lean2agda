@@ -42,6 +42,7 @@ entry adds its row here too.
 | LF-7 | S2 | two Mathlib lemmas rely, unseen, on K-like reduction and structure eta |
 | LF-8 | Checked | flattening closure groups with `Array.append` does not copy every prefix |
 | LF-9 | S2 | hygienic names printed without escapes fail the name-literal decoder |
+| LF-10 | S2 | `by_cases` makes a proof classical without saying so, `Finset.image` among them |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -427,6 +428,60 @@ entry adds its row here too.
    naming core and store tagged components in reverse maps.  Rerun the
    original-name probe when the atlas pin changes.
 
+## LF-10: `by_cases` makes a proof classical without saying so
+
++  **Severity**.  S2.  `#print axioms` reports the dependency correctly;
+   what goes unseen is where it comes from, since nothing in the source
+   names classical logic.
++  **Found**.  2026-10-11, by the first part of issue [#9]'s session, at
+   Lean v4.33.1 and Mathlib v4.33.1, tracing where `Classical.choice`
+   enters `Finset.card_image_of_injective`
+   ([`corpus/finset-card-image/notes.md`][finset-notes]).
++  **What**.  Lean core's `by_cases h : e` expands to
+   `open Classical in refine if h : e then ?pos else ?neg`
+   (`src/Init/ByCases.lean` at v4.33.1).  When a `Decidable e` instance
+   is in scope, the `if` uses it; when none is, it takes
+   `Classical.propDecidable` and the proof becomes T2.  The same two
+   proofs differ only in the instance in scope, as follows:
+
+   ```lean
+   import Init.Data.List.Perm
+
+   theorem withInstance (n m : Nat) : n = m ∨ n ≠ m := by
+     by_cases h : n = m
+     · exact Or.inl h
+     · exact Or.inr h
+
+   theorem withoutInstance {α : Type} (a b : α) : a = b ∨ a ≠ b := by
+     by_cases h : a = b
+     · exact Or.inl h
+     · exact Or.inr h
+
+   #print axioms withInstance       -- does not depend on any axioms
+   #print axioms withoutInstance    -- [propext, Classical.choice, Quot.sound]
+   #print axioms List.perm_iff_count
+   ```
+
+   The last prints `[propext, Classical.choice, Quot.sound]`: core's
+   `List.perm_iff_count` (`Init.Data.List.Perm`), stated under
+   `[BEq α] [LawfulBEq α]`, splits with `by_cases h : b = a`, and no
+   `Decidable (b = a)` instance is in scope there.
++  **How far it reaches**.  `List.Perm.dedup` proves its permutation
+   through `List.perm_iff_count`, and `Multiset.dedup` is a lift whose
+   respect proof is `List.Perm.dedup`.  So `#print axioms Finset.image`
+   prints `Classical.choice`, though the function `image` computes uses
+   only its `DecidableEq` argument, and every Mathlib statement that
+   mentions `Finset.image` mentions a T2 constant.  A classification of
+   statements by the axioms of the constants they mention would call all
+   of them classical.
++  **What it means here**.  Issue [#39]'s detection has to look for
+   classical instance terms in statements, not at axiom sets, and the
+   atlas could record, for a T2 definition, whether `Classical.choice`
+   reaches its value only through proofs.  The corpus entry proves the
+   lemmas involved constructively, splitting on the given decidable
+   equality.
++  **Upstream**.  Documented behavior; nothing to report.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -449,3 +504,6 @@ entry adds its row here too.
 [#16]: https://github.com/formalverification/lean2agda/issues/16
 [name-printer]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Init/Data/ToString/Name.lean
 [name-probe]: ../translator/scripts/NamingAtlasProbe.lean
+[#9]: https://github.com/formalverification/lean2agda/issues/9
+[#39]: https://github.com/formalverification/lean2agda/issues/39
+[finset-notes]: ../corpus/finset-card-image/notes.md

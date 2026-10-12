@@ -1,0 +1,5 @@
+{
+  "bytes": 13406809,
+  "sha256": "e2a93ed1322aaabc767abc3125a9ebe9857cf82efcc4b79d3df3cd120437c285",
+  "command": "lake exe lean4export Mathlib.Data.Finset.Card -- Finset.card_image_of_injective"
+}
