@@ -1,0 +1,3 @@
+# File: translator/tests/expected/scaffolds/list-reverse-reverse.refusals.txt
+checked 41 of 41 declarations
+refused value UnequalTerms List:reverse~ureverse | List:reverseAux (List:reverseAux as₁ List:nil) List:nil !=

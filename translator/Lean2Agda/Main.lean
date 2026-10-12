@@ -15,19 +15,36 @@ def importEnvironment (modules : Array Name) : IO Environment := do
   unsafe enableInitializersExecution
   importModules (modules.map ({ module := · })) {} (loadExts := true)
 
+/-- The scaffold's comment names the roots, up to five. -/
+def scaffoldComment (closure : Closure) : String :=
+  let shown := closure.roots.toList.take 5 |>.map agdaIdent
+  let more := if closure.roots.size > 5 then s!" and {closure.roots.size - 5} more" else ""
+  s!"lean2agda, profile U: the scaffold of the closure of {" ".intercalate shown}{more}"
+
+/-- With `--out DIR`, write the listing, the names sidecars of the shared
+closure (so that they cover its auxiliary definitions), and the scaffold
+at the path of its root's sidecar. -/
+def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (closure : Closure)
+    (listing : String) : IO Unit := do
+  let shared ← IO.ofExcept (shareClosure env args.share closure)
+  let maps ← IO.ofExcept <| moduleNameMaps args.root shared
+  let s ← IO.ofExcept (scaffold env args.root shared)
+  IO.FS.createDirAll dir
+  IO.FS.writeFile (dir / "closure.txt") listing
+  for map in maps do
+    let filename := map.sidecarPath dir
+    IO.FS.createDirAll filename.parent.get!
+    IO.FS.writeFile filename map.render
+  let file := s.filePath dir
+  IO.FS.createDirAll file.parent.get!
+  IO.FS.writeFile file (s.render (scaffoldComment closure))
+
 def run (args : Args) : IO Unit := do
   let env ← importEnvironment args.modules
   let roots ← IO.ofExcept (selectRoots env args.modules args.declarations)
   let closure ← IO.ofExcept (dependencyClosure env roots)
   let listing := renderClosure args.profile closure
-  if let some dir := args.out then
-    let maps ← IO.ofExcept <| moduleNameMaps args.root closure
-    IO.FS.createDirAll dir
-    IO.FS.writeFile (dir / "closure.txt") listing
-    for map in maps do
-      let filename := map.sidecarPath dir
-      IO.FS.createDirAll filename.parent.get!
-      IO.FS.writeFile filename map.render
+  if let some dir := args.out then writeOutputs env args dir closure listing
   (← IO.getStdout).putStr listing
   if args.stats then (← IO.getStdout).putStr closure.stats.render
 

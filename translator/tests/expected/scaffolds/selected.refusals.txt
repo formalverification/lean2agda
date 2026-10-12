@@ -1,0 +1,2 @@
+# File: translator/tests/expected/scaffolds/selected.refusals.txt
+checked 34 of 34 declarations

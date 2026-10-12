@@ -13,6 +13,9 @@ resolve every identifier back to its original name and source module. -/
   let root ← IO.ofExcept <| parseName ((← IO.getEnv "NAMING_ROOT").getD "U")
   let env ← importEnvironment #[`TranslatorTests.Input.Consumer]
   let closure ← IO.ofExcept <| dependencyClosure env #[`Fixtures.selected]
+  -- The executable writes the sidecars of the shared closure, which
+  -- include any auxiliary definitions the sharing pass made.
+  let closure ← IO.ofExcept <| shareClosure env defaultShareThreshold closure
   let maps ← IO.ofExcept <| moduleNameMaps root closure
   for expected in maps do
     let text ← IO.FS.readFile (expected.sidecarPath dir)

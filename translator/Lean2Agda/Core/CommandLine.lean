@@ -3,6 +3,7 @@ File: translator/Lean2Agda/Core/CommandLine.lean
 -/
 import Lean2Agda.Core.Types
 import Lean2Agda.Core.Naming
+import Lean2Agda.Core.Share
 import Lean.Syntax
 
 namespace Lean2Agda
@@ -10,12 +11,14 @@ namespace Lean2Agda
 open Lean
 
 def usage : String :=
-  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--stats] MODULE... [-- DECL...]"
+  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--stats] MODULE... [-- DECL...]"
 
 structure Args where
   profile : String := "U"
   root : Root := `U
   out : Option System.FilePath := none
+  /-- The sharing pass's threshold; zero turns the pass off. -/
+  share : Nat := defaultShareThreshold
   stats : Bool := false
   help : Bool := false
   modules : Array Name := #[]
@@ -44,11 +47,15 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--out" :: dir :: rest => do
     if dir.isEmpty || dir.startsWith "--" then throw "--out needs a directory"
     parseArgsAux { args with out := some dir } rest
+  | "--share" :: n :: rest => do
+    let some share := n.toNat? | throw "--share needs a natural number"
+    parseArgsAux { args with share } rest
   | "--stats" :: rest => parseArgsAux { args with stats := true } rest
   | "--help" :: rest => parseArgsAux { args with help := true } rest
   | "--profile" :: [] => throw "--profile needs a value"
   | "--root" :: [] => throw "--root needs a Lean name"
   | "--out" :: [] => throw "--out needs a directory"
+  | "--share" :: [] => throw "--share needs a natural number"
   | arg :: rest => do
     if arg.startsWith "-" then throw s!"unknown option {arg}"
     let name ← parseName arg
