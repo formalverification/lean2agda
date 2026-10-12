@@ -120,11 +120,12 @@
     "lean_module": "Mathlib.GroupTheory.Coset.Card",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms"],
+    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "literals", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
-      {"path": "SubgroupCardDvd.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+      {"path": "SubgroupCardDvd.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
+      {"path": "SubgroupCardDvdFinite.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {

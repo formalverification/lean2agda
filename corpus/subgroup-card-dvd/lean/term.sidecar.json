@@ -1,0 +1,5 @@
+{
+  "bytes": 24928106,
+  "sha256": "7c3ca41742e129d5a797f0fc6d061a09b738d5df799fdf6f047b0fdfcb246a8f",
+  "command": "lake exe lean4export Mathlib.GroupTheory.Coset.Card -- Subgroup.card_subgroup_dvd_card"
+}
