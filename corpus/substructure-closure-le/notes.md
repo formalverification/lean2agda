@@ -271,7 +271,12 @@ substructures (`Substructure.instPartialOrder`, `PartialOrder.toPreorder`,
 and `Substructure.instSetLike` for the coercion.  The proof carries 19,
 the same chains for `closure_le_closed_iff_le`, and the closure 44,193.
 The count is of arguments at instance-implicit positions of applications
-with a constant head.
+with a constant head.  The other count, used for the entries of part 1
+of [#9] (instance-implicit binders, and occurrences of instance
+constants: the probe of [`../order-hom-map-lfp/notes.md`][lfp-notes]),
+gives 1 binder and 14 occurrences in the type, and 1 binder and 9
+occurrences in the value.  The two methods differ, and [#10] should
+tabulate one.
 
 In Agda one instance argument remains: `L.Structure M` becomes the
 record `Structure L ρ M`, which the module takes as
@@ -374,6 +379,7 @@ section: a language's function signature, and a structure's operations
 as an algebra over it.
 
 [#9]: https://github.com/formalverification/lean2agda/issues/9
+[#10]: https://github.com/formalverification/lean2agda/issues/10
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28

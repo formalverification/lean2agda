@@ -277,8 +277,8 @@ module _ (pe : PropExt) (fe : FunExt) where
   -- that equivalence are determined up to funext by the irrelevance of P
   -- and Q.  The quotient record's lift into Ω needs it.
 
-  Ω-is-set : {p : Level} → UIP (Ω p)
-  Ω-is-set {p} = Constant⇒UIP.≡-irrelevant f f-constant
+  Ω-uip : {p : Level} → UIP (Ω p)
+  Ω-uip {p} = Constant⇒UIP.≡-irrelevant f f-constant
     where
     f : {P Q : Ω p} → P ≡ Q → P ≡ Q
     f {P} {Q} e = propext {P = P} {Q} (mk⇔ (subst proj₁ e) (subst proj₁ (sym e)))
@@ -315,10 +315,10 @@ module _ (pe : PropExt) (fe : FunExt) where
 
       Rx-x≡Rx-y : R x x ≡ R x y
       Rx-x≡Rx-y = begin
-        R x x                              ≡⟨ sym (lift-β Ω-is-set (R x) R-resp x) ⟩
-        lift Ω-is-set (R x) R-resp (mk R′ x) ≡⟨ cong (lift Ω-is-set (R x) R-resp) e ⟩
-        lift Ω-is-set (R x) R-resp (mk R′ y) ≡⟨ lift-β Ω-is-set (R x) R-resp y ⟩
-        R x y                              ∎
+        R x x                             ≡⟨ sym (lift-β Ω-uip (R x) R-resp x) ⟩
+        lift Ω-uip (R x) R-resp (mk R′ x) ≡⟨ cong (lift Ω-uip (R x) R-resp) e ⟩
+        lift Ω-uip (R x) R-resp (mk R′ y) ≡⟨ lift-β Ω-uip (R x) R-resp y ⟩
+        R x y                             ∎
 
 ------------------------------------------------------------------------
 -- Lagrange's theorem, with the parameters

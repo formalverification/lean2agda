@@ -239,6 +239,11 @@ carries 16: the 3 again, in the type of `id`, and 13 more in
 `Preorder.toLE`, several times over).  The whole closure carries
 1,357,155.  The count is of arguments at instance-implicit positions of
 applications with a constant head, in the declaration's type and value.
+The other count, used for the entries of part 1 of [#9]
+(instance-implicit binders, and occurrences of instance constants: the
+probe of [`../order-hom-map-lfp/notes.md`][lfp-notes]), gives no binder
+and 3 occurrences in the type, and no binder and 16 occurrences in the
+value.  The two methods differ, and [#10] should tabulate one.
 
 In Agda there is no instance argument.  The instances of `ℝ` become
 fields of the module parameter `R : Reals r ℓ`, opened in the module, so
@@ -298,7 +303,7 @@ and a projection on the Agda side, against the export's 42 megabytes.
 | Export, records | 788,405 |
 | Export, expression records | 718,206 |
 | Export, declarations | 10,169: 399 inductive, 4 quot, 3,061 def, 6,689 thm, 13 opaque, 3 axiom |
-| Agda, lines per file | 124, of which 49 are code |
+| Agda, lines per file | 133, of which 49 are code |
 | Agda, check time | 0.2 seconds (Agda 2.8.0, no `.agdai` files of the corpus) |
 
 ## Remarks
@@ -332,6 +337,7 @@ three entries of this part took 65 seconds, the kernel re-checks 33.
 
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#9]: https://github.com/formalverification/lean2agda/issues/9
+[#10]: https://github.com/formalverification/lean2agda/issues/10
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [catalog]: ../../docs/foundations/gap-catalog.md
 [cat-axioms]: ../../docs/foundations/gap-catalog.md#axioms

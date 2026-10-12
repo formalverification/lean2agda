@@ -229,7 +229,12 @@ types of `of_eq_true` and `Eq.trans`, `instHMul` and `instMulNat` for
 `CommSemigroup.toSemigroup`, `CommMagma.toMul`, ...), which the proof
 names explicitly as `@dvd_mul_left ℕ`.  The closure carries 451,949.
 The count is of arguments at instance-implicit positions of applications
-with a constant head.
+with a constant head.  The other count, used for the entries of part 1
+of [#9] (instance-implicit binders, and occurrences of instance
+constants: the probe of [`../order-hom-map-lfp/notes.md`][lfp-notes]),
+gives 1 binder and 3 occurrences in the type, and 2 binders and 31
+occurrences in the value.  The two methods differ, and [#10] should
+tabulate one.
 
 In Agda, `[Group α]` is an instance argument, `⦃ G : Group A ⦄`, in both
 files: `Subgroup` takes it from its module, and the Klein example
@@ -257,15 +262,16 @@ The classical principles are module parameters, never instances.
    `multiset-map-map` (`Quot` and `Quot.sound`); `Truncation`, Lean's
    inductive proposition `Nonempty`, which also serves `∃`; `Choice T`,
    Lean's `Classical.choice : Nonempty α → α`; and `Card`, `Nat.card`.
-+  What `PropExt` and `FunExt` give: `Ω-is-set`, uniqueness of identity
++  What `PropExt` and `FunExt` give: `Ω-uip`, uniqueness of identity
    proofs for `Ω`, by Hedberg's argument as agda-stdlib packages it
    (`Constant⇒UIP`), and `exact`, Lean's `Quotient.exact`, proved as Lean
    proves it, by lifting the proposition `R x _` to the quotient.  The
    entry `multiset-map-map` left the first open ("`UIP (Ω p)` should
    follow from `PropExt` and `FunExt` by Hedberg's argument, which this
    entry neither needs nor proves"); this entry needs it, for the lift
-   into `Ω`, and proves it, as `finset-card-image` does (`Ω-uip`, in part
-   1 of [#9], [#75]), the two written in parallel.
+   into `Ω`, and proves it, as [`finset-card-image`][finset-notes] does,
+   the two written in parallel; this file takes that entry's name for the
+   lemma, `Ω-uip`.
 +  The module `Lagrange`: `Quot.exists_rep` by `ind` (its motive is a
    proposition because the truncation is one), `Quot.out` and its
    specification from `choice`, the quotient `A⧸H`, the equivalence
@@ -291,7 +297,7 @@ Three decisions shape it, as follows:
    so the classical file does too, with the corpus's `Quotients` record
    and `out` from `Choice`.  Lean identifies each fiber with a coset by
    an equation of sets (`propext`, `funext`); the Agda proof uses
-   exactness, whose lift into `Ω` needs `Ω-is-set`, hence `FunExt`.  The
+   exactness, whose lift into `Ω` needs `Ω-uip`, hence `FunExt`.  The
    principles match Lean's, though the steps differ.
 +  **A truncation for `Nonempty`**.  `Classical.choice` takes a
    `Nonempty α`, a proposition.  Read in `Set` without truncation,
@@ -356,8 +362,8 @@ enumerations the proof should still go through, by eliminating into
 record, a parameter.
 
 [#9]: https://github.com/formalverification/lean2agda/issues/9
+[#10]: https://github.com/formalverification/lean2agda/issues/10
 [#26]: https://github.com/formalverification/lean2agda/issues/26
-[#75]: https://github.com/formalverification/lean2agda/pull/75
 [catalog]: ../../docs/foundations/gap-catalog.md
 [cat-axioms]: ../../docs/foundations/gap-catalog.md#axioms
 [cat-decidable-and-noncomputable]: ../../docs/foundations/gap-catalog.md#decidable-and-noncomputable
@@ -371,5 +377,7 @@ record, a parameter.
 [cat-structure-eta]: ../../docs/foundations/gap-catalog.md#structure-eta
 [cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
 [lean-findings]: ../../docs/lean-findings.md
+[finset-notes]: ../finset-card-image/notes.md
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
+[lfp-notes]: ../order-hom-map-lfp/notes.md
 [sqrt-notes]: ../real-sqrt-nonneg/notes.md
