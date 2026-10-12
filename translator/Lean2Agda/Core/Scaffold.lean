@@ -43,11 +43,13 @@ where
     | _, acc => acc
 
 /-- One declaration of a module: the identifiers it declares, those its
-text refers to, and its text. -/
+text refers to, and its text.  A definition also carries its fallback, the
+references and text of a postulate of its type. -/
 structure ScaffoldItem where
   provides : Array String
   references : Array String
   text : String
+  fallback : Option (Array String × String) := none
   deriving Inhabited
 
 structure Scaffold where
@@ -126,6 +128,25 @@ partial def orderItems (items : Array ScaffoldItem) : Except String (Array Scaff
   for i in [:items.size] do state ← visit i state
   return state.2.1.map (items[·]!)
 
+/-- Postulate every definition whose printed value refers to itself or to
+a definition that refers back to it.  Lean's kernel accepts such a cycle
+only among unsafe definitions, such as the `_unsafe_rec` companions of
+mutual `partial` definitions, and Agda could check none of them. -/
+def breakCycles (items : Array ScaffoldItem) : Array ScaffoldItem := Id.run do
+  let provider : Std.HashMap String Nat := (List.range items.size).foldl (fun m i =>
+    items[i]!.provides.foldl (fun m n => m.insert n i) m) {}
+  let successors (i : Nat) : List Nat := items[i]!.references.toList.filterMap (provider[·]?)
+  let mut result := items
+  for group in SCC.scc (List.range items.size) successors do
+    let cyclic := match group with
+      | [i] => (successors i).contains i
+      | _ => true
+    if cyclic then
+      for i in group do
+        if let some (references, text) := items[i]!.fallback then
+          result := result.set! i { items[i]! with references, text, fallback := none }
+  return result
+
 def postulateItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type decl.info.type
   let name := agdaIdent decl.name
@@ -140,7 +161,8 @@ def definitionItem (p : Printer) (decl : Declaration) : Except String (ScaffoldI
   let references := clause.body.constants.foldl (fun acc n => if acc.contains n then acc else acc.push n)
     t.constants
   return ({ provides := #[name], references,
-            text := s!"{name} : {t.render}\n{clause.render name}\n" }, c₁.add c₂)
+            text := s!"{name} : {t.render}\n{clause.render name}\n",
+            fallback := some (t.constants, s!"postulate {name} : {t.render}\n") }, c₁.add c₂)
 
 /-- `Nat` as the data type `BUILTIN NATURAL` asks for, with Lean's
 constructors under their own identifiers. -/
@@ -160,18 +182,19 @@ def naturalItem (p : Printer) (nat : Declaration) : Except String (ScaffoldItem 
             text := "\n".intercalate lines.toList ++ "\n" }, counts)
 
 /-- The scaffold's item for one declaration, or none for a constructor
-of `Nat`, which the `data` item declares. -/
+of `Nat`, which the `data` item declares.  `Nat` and `String` are bound to
+their builtins whether or not they are roots. -/
 def scaffoldItem (p : Printer) (closure : Closure) (hasNat : Bool) (decl : Declaration) :
     Except String (Option (ScaffoldItem × PrintCounts)) := do
   if hasNat && decl.name == ``Nat then return some (← naturalItem p decl)
   if hasNat && (decl.name == ``Nat.zero || decl.name == ``Nat.succ) then return none
-  if decl.auxiliary || isTypeAbbreviation decl.info || closure.roots.contains decl.name then
-    return some (← definitionItem p decl)
-  let (item, counts) ← postulateItem p decl
   if decl.name == ``String && decl.kind == .inductive then
+    let (item, counts) ← postulateItem p decl
     return some ({ item with
       text := item.text ++ s!"\{-# BUILTIN STRING {agdaIdent ``String} #-}\n" }, counts)
-  return some (item, counts)
+  if decl.auxiliary || isTypeAbbreviation decl.info || closure.roots.contains decl.name then
+    return some (← definitionItem p decl)
+  return some (← postulateItem p decl)
 
 /-- The scaffold of a closure that the sharing pass has already rewritten.
 Its path is the one its names sidecar has, from the source module of the
@@ -198,6 +221,6 @@ def scaffold (env : Environment) (root : Root) (closure : Closure) : Except Stri
       if let some (item, c) ← scaffoldItem p closure hasNat decl then
         items := items.push item
         counts := counts.add c
-  return { path := agdaModule root module, items := ← orderItems items, counts }
+  return { path := agdaModule root module, items := ← orderItems (breakCycles items), counts }
 
 end Lean2Agda

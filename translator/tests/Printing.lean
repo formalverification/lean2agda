@@ -204,6 +204,18 @@ def checkScaffoldRules (env : Environment) : IO Unit := do
       (``DecidablePred, true), (``Nat.add, false), (``id, false), (``Nat.le, false)] do
     let some info := env.find? n | throw (IO.userError s!"missing {n}")
     require (isTypeAbbreviation info == expected) s!"type abbreviation {n}"
+  -- Mutually recursive unsafe roots fall back to postulates, and a String
+  -- root keeps its builtin.
+  let roots := #[``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec, ``String]
+  let closure ← IO.ofExcept (dependencyClosure env roots)
+  let s ← IO.ofExcept (scaffold env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
+  for n in [``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec] do
+    let some item := s.items.find? (·.provides.contains (agdaIdent n))
+      | throw (IO.userError s!"missing item {n}")
+    require (item.text.startsWith "postulate ") s!"cyclic {n} was not postulated"
+  let some string := s.items.find? (·.provides.contains (agdaIdent ``String))
+    | throw (IO.userError "missing item String")
+  require ((string.text.splitOn "BUILTIN STRING").length == 2) "a String root lost its builtin"
 
 #eval show IO Unit from do
   checkLayout

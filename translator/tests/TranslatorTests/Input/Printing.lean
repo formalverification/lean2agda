@@ -10,7 +10,9 @@ constructor, every binder visibility, both kinds of binder repair, and a
 term the sharing pass shrinks from exponential to linear size.
 `PrintFixtures.Dependent.value` is the exception, a projection whose
 field type depends on an earlier field, which Agda refuses until records
-compute (`docs/translator/printing.md`).
+compute (`docs/translator/printing.md`).  `evenP` and `oddP` give the
+scaffold the one kind of cycle Lean's kernel accepts, between the unsafe
+`_unsafe_rec` companions of mutual `partial` definitions.
 -/
 
 namespace PrintFixtures
@@ -65,5 +67,14 @@ macro_rules
       `(Nat.add (doubled! $m) (doubled! $m))
 
 def doubling : Nat := doubled! 10
+
+mutual
+  partial def evenP : Nat → Bool
+    | 0 => true
+    | n + 1 => oddP n
+  partial def oddP : Nat → Bool
+    | 0 => false
+    | n + 1 => evenP n
+end
 
 end PrintFixtures

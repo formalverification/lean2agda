@@ -57,6 +57,12 @@ check_scaffold printing TranslatorTests.Input.Printing -- PrintFixtures.alignedT
   PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value
 check_scaffold selected TranslatorTests.Input.Consumer -- Fixtures.selected
 
+# Every declaration of a module, mutual partial definitions included,
+# makes a scaffold that scope-checks.
+"$lake_cmd" exe lean2agda --out "$scratch/module-selection" TranslatorTests.Input.Printing > /dev/null
+(cd "$scratch/module-selection" && "${AGDA:-agda}" --only-scope-checking \
+  U/TranslatorTests/Input/Printing.agda > /dev/null)
+
 NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Naming.lean
 "$lake_cmd" env "$lean_cmd" tests/NamingGolden.lean > "$scratch/naming-init.txt"
 tail -n +2 tests/expected/naming-init.txt > "$scratch/expected-naming-init.txt"

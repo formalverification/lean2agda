@@ -241,7 +241,15 @@ printed type, each as a postulate, except the following:
    Agda cannot check `HAdd.hAdd`'s type unless `outParam Set` unfolds to a
    sort;
 +  the closure's roots that have values, and the auxiliary definitions
-   that anything printed uses, as definitions with their printed values.
+   that anything printed uses, as definitions with their printed values,
+   except that a definition whose printed value refers to itself, or to a
+   definition that refers back to it, stays a postulate: Lean's kernel
+   accepts such a cycle only among unsafe definitions, such as the
+   `_unsafe_rec` companions of mutual `partial` definitions, and Agda
+   could check none of them.
+
+`Nat` and `String` are bound to their builtins whether or not they are
+roots.
 
 Declarations follow the closure's groups, and inside a group (an inductive
 type with its constructors and recursor) the printed references decide.
