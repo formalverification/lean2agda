@@ -386,6 +386,21 @@ partial def printApp (s : Scope) (e : Expr) : PrintM AgdaTerm := do
 
 end
 
+/-- The first `n` binders of a type as a telescope, and the rest of the
+type in their scope, as a `data` type's parameters and its sort. -/
+partial def printTelescope (s : Scope) (type : Expr) :
+    Nat → PrintM (Array (Visibility × String × AgdaTerm) × AgdaTerm)
+  | 0 => return (#[], ← printExpr s type)
+  | k + 1 => do
+    let some (.forallE n t b bi) ← asPi s type | throw "a telescope longer than its type"
+    let dom ← printExpr s t
+    let (s', x, fv) := s.enter n t bi
+    let (rest, body) ← printTelescope s' (b.instantiate1 fv) k
+    return (#[(Visibility.ofBinderInfo bi, x, dom)] ++ rest, body)
+
+def renderTelescope (binders : Array (Visibility × String × AgdaTerm)) : String :=
+  " ".intercalate (binders.toList.map fun (v, x, t) => v.opening ++ x ++ " : " ++ t.render ++ v.closing)
+
 /-- A definition's clause: the leading lambdas of its value become
 left-hand-side patterns, because Agda inserts a definition's leading
 implicit and instance patterns itself and would then refuse an implicit
@@ -416,6 +431,12 @@ def Printer.type (p : Printer) (type : Expr) : Except String (AgdaTerm × PrintC
 def Printer.clause (p : Printer) (type value : Expr) : Except String (Clause × PrintCounts) := do
   let (t, counts) ← runPrint p (printAgainst {} value type true)
   return (Clause.ofTerm t, counts)
+
+/-- Print the first `n` binders of a closed type as a telescope, and the
+rest of the type. -/
+def Printer.telescope (p : Printer) (type : Expr) (n : Nat) :
+    Except String ((Array (Visibility × String × AgdaTerm) × AgdaTerm) × PrintCounts) :=
+  runPrint p (printTelescope {} type n)
 
 /-- Print a closed term with no expected type. -/
 def Printer.term (p : Printer) (e : Expr) : Except String (AgdaTerm × PrintCounts) :=

@@ -121,6 +121,12 @@ def checkConstructors (env : Environment) : IO Unit := do
       (.proj ``Prod 0 (.bvar 0)) .default)
     ("λ (p₀ : Prod Nat Nat) → Prod:rec {Nat} {Nat} {λ (self₁ : Prod Nat Nat) → Nat} " ++
      "(λ (fst₁ : Nat) → λ (snd₂ : Nat) → fst₁) p₀") "projection"
+  -- A telescope: the first binders, and the rest in their scope.
+  let some cons := env.find? ``List.cons | throw (IO.userError "missing List.cons")
+  let ((binders, rest), _) ← IO.ofExcept (p.telescope cons.type 1)
+  expectText (renderTelescope binders ++ " : " ++ rest.render) "{α₀ : Set} : α₀ → List α₀ → List α₀"
+    "telescope"
+  require ((p.telescope (mkConst ``Nat) 1).toOption.isNone) "a telescope longer than its type"
   fails (.bvar 0) "a loose bound variable"
   fails (.fvar ⟨`x⟩) "a free variable"
   fails (.mvar ⟨`m⟩) "a metavariable"
@@ -209,4 +215,4 @@ def checkScaffoldRules (env : Environment) : IO Unit := do
   checkScaffoldRules env
   if let some dir ← IO.getEnv "PRINTING_AGDA_TEST_DIR" then
     IO.FS.writeFile (System.FilePath.mk dir / "PrintingLexical.agda") lexicalFile
-  IO.println s!"printer checks: {precedenceCases.length} layout cases, binder names, constructors, repairs, sharing, and scaffold rules passed"
+  IO.println s!"printer checks: {precedenceCases.length} layout cases, binder names, constructors, telescopes, repairs, sharing, and scaffold rules passed"
