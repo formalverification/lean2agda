@@ -106,11 +106,11 @@
     "lean_module": "Mathlib.Analysis.Real.Sqrt",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["quotients", "decidable-and-noncomputable", "axioms"],
+    "features": ["quotients", "decidable-and-noncomputable", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "universe-levels", "literals", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "RealSqrtNonneg.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {

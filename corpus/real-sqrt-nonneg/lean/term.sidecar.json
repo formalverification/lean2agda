@@ -1,0 +1,5 @@
+{
+  "bytes": 41933263,
+  "sha256": "477f55ede856e381903e5652a8e8a7d77e5201cc42be6c5aa9804c4118e309a1",
+  "command": "lake exe lean4export Mathlib.Analysis.Real.Sqrt -- Real.sqrt_nonneg"
+}
