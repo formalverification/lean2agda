@@ -43,6 +43,8 @@ def checkArgs : IO Unit := do
     ["--out", "--stats", "Init"], ["Init", "--", "--stats"], ["A..B"]] do
     require ((parseArgs argv).toOption.isNone) s!"accepted malformed command {argv}"
   require ((← IO.ofExcept <| parseArgs ["--help"]).help) "help requires a module"
+  require ((← IO.ofExcept <| parseArgs ["--root", "CC.Constructive", "Init"]).root ==
+    `CC.Constructive) "caller-supplied module root"
 
 def checkFixtures : IO Unit := do
   let moduleName := `TranslatorTests.Input.Consumer

@@ -6,7 +6,8 @@ The Lean 4 package that reads the elaborated Lean environment and emits
 Agda.  Issue M1-3 created it as a Lake package, `lean2agda`, that
 requires Mathlib and lean4export at pinned tags; issue M1-11 added the
 axiom atlas; issue M2-1 added the translator's command line, the
-environment loader and the golden-test harness.  The
+environment loader and the golden-test harness; issue M2-2 adds structured
+name encoding, module paths, and reverse-map sidecars.  The
 architecture it implements is described in the Description section of
 `../docs/GITHUB_PROJECT.md` and, once written, in `../docs/architecture.md`.
 
@@ -22,9 +23,10 @@ architecture it implements is described in the Description section of
    `elan` and Mathlib's cache tool read one pin.
 +  `Lean2Agda.lean`: the translator library's root module.
 +  `Lean2Agda/Core/`: pure declaration types, command-line parsing,
-   dependency closure and ordering, diagnostic rendering, and statistics.
+   dependency closure and ordering, diagnostic rendering, statistics,
+   name encoding, module paths, and reverse maps.
 +  `Lean2Agda/Main.lean`: the IO shell, which loads compiled modules and
-   writes the closure listing.
+   writes the closure listing and reverse-map sidecars.
 +  `tests/`: compiled Lean inputs, semantic checks, atlas and golden
    fixtures, and the shell harness.
 +  `Atlas/`: the axiom atlas (`../atlas/README.md`).  `Record.lean`
@@ -85,15 +87,19 @@ lake exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self
 ```
 
 It currently prints an ordered closure of Lean declarations.  `--out DIR`
-also writes the listing to `DIR/closure.txt`; `--stats` appends counts to
-standard output.  Omit declarations after `--` to select all declarations
-owned by the named modules.  Only profile U is available.  The Agda
+also writes the listing to `DIR/closure.txt` and a `.names.ndjson` sidecar
+per source module under the supplied `--root NAME` (default `U`).
+The naming API and sidecar schema are in [`naming.md`].  `--stats` appends
+counts to standard output.  Omit declarations after `--` to select all
+declarations owned by the named modules.  Only profile U is available.  The Agda
 expression printer follows in issue M2-3.  The closure API, dependencies,
 cycle handling, and output format are in [`loading.md`].
 
 Run `make test-translator` from the repository root, or
 `bash tests/run.sh` here.  It builds core Lean fixtures, checks the pure
-core, and diffs two golden outputs, including `Nat.gcd_self`.  It needs
+core, and diffs three golden outputs, including `Nat.gcd_self` and the
+names owned by `Init.Data.Nat.Gcd`.  It also checks reverse maps and
+generated lexical fixtures with Agda.  It needs
 no Mathlib cache; Lake still clones the source dependencies named in the
 manifest on a fresh checkout.  `make test` includes both this harness and
 the Python suite; `make test-python` runs the Python suite alone.
@@ -101,6 +107,12 @@ the Python suite; `make test-python` runs the Python suite alone.
 The atlas runs as `lake exe atlas` (or `make atlas` from the root,
 which also writes its report); `lake exe atlas --import MODULE --out
 FILE` writes the records of a smaller environment.
+
+`make test-naming-atlas ATLAS=atlas/mathlib-v4.33.1-0df444a.ndjson`, from
+the repository root, checks injectivity over the atlas without loading
+Mathlib.  The optional `lake exe naming-atlas-probe` compares the atlas
+decoder with the original structured names in the pinned environment;
+it needs the prebuilt Mathlib cache.
 
 ## Conventions
 
@@ -112,3 +124,4 @@ Conventions for everything that lands here are as follows:
 +  a golden test for every translation feature, under `tests/`.
 
 [`loading.md`]: ../docs/translator/loading.md
+[`naming.md`]: ../docs/translator/naming.md

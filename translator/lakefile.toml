@@ -54,6 +54,19 @@ supportInterpreter = true
 name = "TranslatorTests"
 srcDir = "tests"
 
+# Optional full-population naming check; it reads atlas records, never Mathlib.
+[[lean_exe]]
+name = "naming-check-atlas"
+root = "TranslatorTests.NamingAtlas"
+srcDir = "tests"
+
+# Optional original-name cross-check; requires Mathlib's prebuilt cache.
+[[lean_exe]]
+name = "naming-atlas-probe"
+root = "NamingAtlasProbe"
+srcDir = "scripts"
+supportInterpreter = true
+
 # The axiom atlas (issue M1-11): `lake exe atlas` writes one NDJSON record
 # per constant of the pinned Mathlib to ../atlas/.  Its code imports Lean
 # only and loads Mathlib's .olean files when it runs, so building it never

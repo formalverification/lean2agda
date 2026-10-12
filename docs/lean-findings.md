@@ -41,6 +41,7 @@ entry adds its row here too.
 | LF-6 | Checked | `Nat.gcd`'s equation needs no K-like reduction at the pin |
 | LF-7 | S2 | two Mathlib lemmas rely, unseen, on K-like reduction and structure eta |
 | LF-8 | Checked | flattening closure groups with `Array.append` does not copy every prefix |
+| LF-9 | S2 | hygienic names printed without escapes fail the name-literal decoder |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -390,6 +391,42 @@ entry adds its row here too.
 +  **What the project does**.  Keep the current flattening implementation.
    Recheck the source and scaling when the Lean pin changes.
 
+## LF-9: hygienic printed names fail the name-literal decoder
+
++  **Severity**.  S2.  The printer documents that not every name round-trips.
++  **Found**.  2026-10-11, while checking the atlas population for [#16],
+   at Lean v4.33.1 and Mathlib v4.33.1 (`0df444a`).
++  **What**.  `Name.toString` disables string-component escaping for names
+   with macro scopes.  The atlas therefore prints names such as
+   `Aesop.option._@.Aesop.Check.1191392668._hygCtx._hyg.3` without quoting
+   `_@`.  `Syntax.decodeNameLit` rejects that printed form.  Even when
+   decoding succeeds, arbitrary names need not retain their component
+   structure: a macro-scoped string component containing a dot prints as
+   multiple components.  Inaccessible names such as `x✝` can fail decoding
+   as well.  These behaviors are in the pinned [name printer][name-printer].
++  **Evidence**.  The first atlas injectivity run stopped at the Aesop name
+   above.  The atlas test now uses a structural fallback only for names
+   satisfying `Name.hasMacroScopes`, followed by an exact printed-string
+   check.  Run `naming-atlas-probe-2026-10-11` compared that decoder with
+   every original structured name in `import Mathlib`: all 771,129
+   imported constants round-tripped at this pin.  This is a population
+   result, not a general guarantee about the printed representation.
++  **To rerun**.  After `make lean-cache`, run the following in the Nix shell:
+
+   ```sh
+   cd translator
+   lake exe naming-atlas-probe
+   ```
+
+   [`NamingAtlasProbe.lean`][name-probe] loads the environment as native
+   code with imported initializers enabled.  An earlier `#eval` attempt
+   printed the count but then encountered an invalid-environment-extension
+   panic during elaboration; that attempt is not the successful run.
++  **Upstream**.  Documented behavior; no defect is alleged or reported.
++  **What the project does**.  Encode constructors directly in the pure
+   naming core and store tagged components in reverse maps.  Rerun the
+   original-name probe when the atlas pin changes.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -409,3 +446,6 @@ entry adds its row here too.
 [array-basic]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Init/Data/Array/Basic.lean#L1475-L1490
 [array-runtime]: https://github.com/leanprover/lean4/blob/v4.33.1/src/runtime/object.cpp#L2719-L2764
 [flatten-benchmark]: ../translator/scripts/FlattenBenchmark.lean
+[#16]: https://github.com/formalverification/lean2agda/issues/16
+[name-printer]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Init/Data/ToString/Name.lean
+[name-probe]: ../translator/scripts/NamingAtlasProbe.lean
