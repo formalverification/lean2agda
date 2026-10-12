@@ -148,11 +148,12 @@
     "lean_module": "Mathlib.Data.Subtype",
     "axioms": [],
     "tier": "T0",
-    "features": ["structure-eta", "proof-irrelevance", "universe-levels", "projections-and-let"],
+    "features": ["proof-irrelevance", "k-and-uip", "large-elimination", "universe-levels", "projections-and-let"],
     "agda_files": [
-      {"path": "SubtypeCoeEta.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
+      {"path": "SubtypeCoeEta.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
+      {"path": "SubtypeCoeEtaProp.agda", "flags": ["--safe", "--cubical-compatible", "--prop"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
