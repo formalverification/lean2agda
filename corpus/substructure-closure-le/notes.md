@@ -165,12 +165,17 @@ the following:
 
 The closure has no `partial` and no `unsafe` constant, and four with
 `implemented_by` (`Nat.repr` and three constructors of `Lean.Name`),
-which only compiled code sees.  Structure eta and definitional proof
-irrelevance are not counted by the kernel's diagnostics; Lean4Less (M3-1,
-[#26]) will settle them.  Of the features the manifest listed,
-`impredicative-prop`, `universe-levels`, `projections-and-let` and
-`axioms`, the term uses all four; the other six are added under the
-schema's closure rule.
+which only compiled code sees.  Structure eta is measured absent: with
+`etaStruct := .none`, the elaborator rejects none of the closure's 1,448
+theorems and definitions that it accepts with eta on (the method of
+[`../real-sqrt-nonneg/notes.md`][sqrt-notes], Remarks), and three
+equation lemmas of `Lean.Data.AC` are rejected either way, so the test
+cannot judge them.  Definitional proof irrelevance is not counted by the
+kernel's diagnostics; Lean4Less (M3-1, [#26]) will settle it.  Of the
+features the manifest listed, `impredicative-prop`, `universe-levels`,
+`projections-and-let` and `axioms`, the term uses all four; the other
+six are added under the schema's closure rule, and `structure-eta`,
+measured absent, is not.
 
 ### Impredicativity and levels
 

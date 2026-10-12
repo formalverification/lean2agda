@@ -152,6 +152,18 @@ the following:
    constants; the statement has no universe parameter.  The Agda record
    is polymorphic in the levels `r` of `ℝ` and `ℓ` of `≤`, and `ℝ≥0`
    lives in `Set (r ⊔ ℓ)`, where Lean's subtype stays in `Type`.
++  [`structure-eta`][cat-structure-eta]: 29 of the closure's 9,750
+   theorems and definitions need it by the elaborator's test (accepted
+   when re-checked with the default configuration, rejected with
+   `etaStruct := .none`; method under Remarks): lemmas about Cauchy
+   sequences (`CauSeq.sup_lt`, `CauSeq.inf_eq_right` and six more),
+   `abs_mul`, `OrderIso.symm_symm`, `continuous_fst`, `continuous_snd`,
+   and the two `Nat.Internal.Linear` lemmas that `finset-card-image`
+   found (`ExprCnstr.denote_toNormPoly`, `Poly.denote_reverse`).  Another
+   40, equation lemmas of the matchers of `Lean.Grind` and
+   `Lean.Data.AC`, are rejected with eta on as well, so the test cannot
+   judge them.  Agda's records have eta, so the Agda version needs
+   nothing for it.
 +  [`literals`][cat-literals]: 5,988 `Nat` literals and 616 `String`
    literals, in 2,951 constants.  The `String` literals are mostly tactic
    syntax (next item).
@@ -199,13 +211,13 @@ Three facts outside the catalog's features matter here, as follows:
    `unfold sqrt`; a control with the clause removed fails with
    `[UnequalTerms] proj₁ (nnsqrt (toNNReal x)) != sqrt x`.
 
-Reading the closure finds no structure eta and no definitional proof
-irrelevance that a mechanical count can see; neither rule is counted by
-the kernel's diagnostics, and Lean4Less ([#26]) will settle both.  Of
-the features the manifest listed, `quotients`,
+Definitional proof irrelevance is the one rule left unmeasured: the
+kernel's diagnostics do not count it, and the elaborator cannot switch
+it off (LF-4 of [`lean-findings.md`][lean-findings]); Lean4Less ([#26])
+will settle it.  Of the features the manifest listed, `quotients`,
 `decidable-and-noncomputable` and `axioms`, the term uses all three; the
-other seven are added under the schema's closure rule, as entries of M1-7
-([#7]) did.
+other eight are added under the schema's closure rule, as entries of
+M1-7 ([#7]) did.
 
 ## Instance arguments
 
@@ -296,7 +308,13 @@ once (with `Expr.forEach`, so shared subterms count once), counting
 projections, `let` expressions and literals, recursors of propositions
 applied at a non-zero motive level, constant uses that make an `imax`
 zero, `noncomputable` constants and citations of classical `Decidable`
-instances.  The paths to `Classical.choice` are shortest paths by
+instances.  The structure-eta counts re-check every theorem and
+definition of the closure in the elaborator (`Meta.check`, then
+`isDefEq` of the inferred and the stored type, at transparency `all`),
+once as configured and once with `etaStruct := .none`, the test the
+entries of M1-7 and part 1 of [#9] used; it took 16, 6.4 and 0.8
+seconds for the three closures of this part.  The paths to
+`Classical.choice` are shortest paths by
 breadth-first search over the same edges; the search from the type alone
 starts from the constants the statement mentions.  The scan of the
 three entries of this part took 65 seconds, the kernel re-checks 33.
@@ -315,6 +333,7 @@ three entries of this part took 65 seconds, the kernel re-checks 33.
 [cat-nested-and-mutual-inductives]: ../../docs/foundations/gap-catalog.md#nested-and-mutual-inductives
 [cat-projections-and-let]: ../../docs/foundations/gap-catalog.md#projections-and-let
 [cat-quotients]: ../../docs/foundations/gap-catalog.md#quotients
+[cat-structure-eta]: ../../docs/foundations/gap-catalog.md#structure-eta
 [cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
 [lean-findings]: ../../docs/lean-findings.md
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226

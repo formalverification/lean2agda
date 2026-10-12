@@ -106,7 +106,7 @@
     "lean_module": "Mathlib.Analysis.Real.Sqrt",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["quotients", "decidable-and-noncomputable", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "universe-levels", "literals", "nested-and-mutual-inductives", "projections-and-let"],
+    "features": ["quotients", "decidable-and-noncomputable", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "universe-levels", "structure-eta", "literals", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "RealSqrtNonneg.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
@@ -120,7 +120,7 @@
     "lean_module": "Mathlib.GroupTheory.Coset.Card",
     "axioms": ["propext", "Classical.choice", "Quot.sound"],
     "tier": "T2",
-    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "literals", "nested-and-mutual-inductives", "projections-and-let"],
+    "features": ["quotients", "decidable-and-noncomputable", "universe-levels", "axioms", "impredicative-prop", "k-and-uip", "large-elimination", "structure-eta", "literals", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "SubgroupCardDvd.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"},
       {"path": "SubgroupCardDvdFinite.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}

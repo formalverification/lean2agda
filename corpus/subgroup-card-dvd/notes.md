@@ -172,6 +172,17 @@ rejected none.  By feature, each named by its entry in the gap catalog
    an equivalence, so its term casts an `Equiv.refl` along an equation
    between types.  The Agda proof uses the exactness of the quotient
    instead, and casts no type.
++  [`structure-eta`][cat-structure-eta]: 19 of the closure's 5,933
+   theorems and definitions need it by the elaborator's test (the method
+   of [`../real-sqrt-nonneg/notes.md`][sqrt-notes], Remarks), among them
+   the proofs of `Equiv.sigmaEquivProd` and two of
+   `Equiv.sigmaCongrRight`, both of which
+   `groupEquivQuotientProdSubgroup` composes, the proofs of
+   `Equiv.prodComm`, `ULift.up_down`, `MulOpposite.op_unop`, and the two
+   `Nat.Internal.Linear` lemmas that `finset-card-image` found.  Another
+   31 are rejected with eta on as well and cannot be judged.  Agda's `Σ`
+   and `_×_` are records with eta, so neither Agda file needs anything
+   for it.
 +  [`literals`][cat-literals]: 2,668 `Nat` literals and 354 `String`
    literals in 1,379 constants.
 +  [`nested-and-mutual-inductives`][cat-nested-and-mutual-inductives]:
@@ -188,11 +199,11 @@ rejected none.  By feature, each named by its entry in the gap catalog
    the carrier through `SetLike.instMembership`.
 
 The closure has no `partial` and no `unsafe` constant, and five with
-`implemented_by`.  Structure eta and definitional proof irrelevance are
-not counted by the kernel's diagnostics ([#26] will settle them).  Of
-the features the manifest listed, `quotients`,
-`decidable-and-noncomputable`, `universe-levels` and `axioms`, the term
-uses all four; the other six are added under the schema's closure rule.
+`implemented_by`.  Definitional proof irrelevance is not counted by the
+kernel's diagnostics ([#26] will settle it).  Of the features the
+manifest listed, `quotients`, `decidable-and-noncomputable`,
+`universe-levels` and `axioms`, the term uses all four; the other seven
+are added under the schema's closure rule.
 
 ### Levels
 
@@ -357,6 +368,7 @@ record, a parameter.
 [cat-nested-and-mutual-inductives]: ../../docs/foundations/gap-catalog.md#nested-and-mutual-inductives
 [cat-projections-and-let]: ../../docs/foundations/gap-catalog.md#projections-and-let
 [cat-quotients]: ../../docs/foundations/gap-catalog.md#quotients
+[cat-structure-eta]: ../../docs/foundations/gap-catalog.md#structure-eta
 [cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
 [lean-findings]: ../../docs/lean-findings.md
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
