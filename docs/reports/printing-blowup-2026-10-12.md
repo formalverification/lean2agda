@@ -143,6 +143,37 @@ scaffold postulates.  An earlier run of the same rules at thresholds off,
 32, 16 and 8 refused the same declarations at each, with the last
 successful run between 0.45 and 0.81 seconds.
 
+## Every corpus entry
+
+`make scaffold-corpus` (`translator/scripts/scaffold-corpus.sh`, added
+after Copilot's review of the pull request) prints each entry of
+`corpus/manifest.json` at the default threshold and has Agda scope-check
+the scaffold.  The run below took 32 minutes 23 seconds, at load averages
+3.82, 3.54, 3.27 before and 4.68, 7.43, 6.74 after, with other sessions
+running.  Its first run, before commit `82964b5`, found
+`real-sqrt-nonneg`'s scaffold unparsable: an implicit argument that was an
+implicit Pi type printed as `{{…`, Agda's ASCII instance brace.
+
+| Entry | Constants | Bytes | Print, s | Scope check, s |
+| --- | --- | --- | --- | --- |
+| `list-reverse-reverse` | 41 | 6,123 | 1.6 | 0.1 |
+| `nat-gcd-self` | 334 | 84,449 | 1.6 | 0.9 |
+| `nat-gcd-succ` | 271 | 63,073 | 1.6 | 0.9 |
+| `lists-subset-refl` | 219 | 44,773 | 2.9 | 0.5 |
+| `multiset-map-map` | 110 | 19,935 | 3.8 | 0.2 |
+| `set-ext` | 26 | 3,978 | 2.4 | 0.1 |
+| `finset-card-image` | 3,367 | 1,147,851 | 4.9 | 49.8 |
+| `real-sqrt-nonneg` | 11,036 | 7,529,204 | 11.7 | 1,652.4 |
+| `subgroup-card-dvd` | 6,918 | 3,040,759 | 3.1 | 186.5 |
+| `order-hom-map-lfp` | 570 | 185,528 | 1.3 | 0.6 |
+| `subtype-coe-eta` | 20 | 4,957 | 1.1 | 0.0 |
+| `substructure-closure-le` | 1,879 | 692,061 | 1.8 | 6.0 |
+
+Every entry passes.  Printing stays under 12 seconds, most of it loading
+Mathlib's environment; the scope check grows faster than the module's
+size, from 6 seconds for 0.7 MB to 28 minutes for 7.5 MB, in one module
+each.
+
 ## The sort of `Prop`
 
 With every sort whose level normalizes to zero printed as `Prop`, under
@@ -165,6 +196,9 @@ lake exe lean2agda Init.Data.Nat.Gcd -- Nat.gcd_self \
 lake exe lean2agda --out every Init.Data.Nat.Gcd -- $(cat roots.txt)
 python3 ../scripts/python/scaffold_check.py every/U/Init/Data/Nat/Gcd.agda
 ```
+
+From the repository root, after `make lean-cache`, `make scaffold-corpus`
+gives the table of every corpus entry.
 
 [#17]: https://github.com/formalverification/lean2agda/issues/17
 [#44]: https://github.com/formalverification/lean2agda/issues/44

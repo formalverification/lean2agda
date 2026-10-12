@@ -129,7 +129,12 @@ for a minimum, and a term below it is parenthesized, as follows:
 | a binder's type, inside its delimiters | anything |
 | the right of an arrow, a `λ` body, a `let` body | anything |
 
-`tests/Printing.lean` checks the table on 25 cases.
+One lexical rule overrides the table: `{{` is Agda's ASCII instance brace,
+so an implicit argument that is itself an implicit Pi type, the one term
+that renders starting with `{`, is spaced inside its braces,
+`f { {x : A} → B }`.  `real-sqrt-nonneg`'s scaffold had such an argument
+and failed to parse until the rule was added.  `tests/Printing.lean`
+checks the table on 28 cases.
 
 ### Sorts under profile U
 
@@ -260,7 +265,13 @@ it may need any sidecar of the output directory.
 ### What Agda checks
 
 Agda parses and scope-checks every scaffold, which is the first acceptance
-criterion of [#17] ("prints and re-parses").  Scope-checking does not see
+criterion of [#17] ("prints and re-parses").  `make test-translator` does
+so for the three core-Lean corpus entries; `make scaffold-corpus`, which
+needs Mathlib's cache, does so for all twelve entries of
+`corpus/manifest.json`, and all twelve pass (the report gives the table).
+Agda's time grows faster than the module: 6 s for 0.7 MB, 187 s for
+3.0 MB, and 28 minutes for `real-sqrt-nonneg`'s 7.5 MB, which is one
+reason for [#22]'s one module per Lean module.  Scope-checking does not see
 visibility or precedence errors, which still parse, so the scaffold is also
 type-checked.  Not every declaration can check: the postulates withhold the
 definitional unfolding (delta, iota, projections of instances) that Lean's
@@ -323,7 +334,12 @@ broke each rule in turn and showed which checks fail:
    listings: the three core-Lean corpus entries, the printing fixture
    (`tests/TranslatorTests/Input/Printing.lean`, which prints every
    constructor, every visibility and both repairs in values that check
-   against postulates) and `Fixtures.selected`.
+   against postulates) and `Fixtures.selected`;
++  the scaffold of the printing fixture's whole module, mutual `partial`
+   definitions included, scope-checked.
+
+`make scaffold-corpus` is the check over all twelve corpus entries; it
+needs Mathlib's cache, takes about half an hour, and no CI job runs it.
 
 ## Hand-off to the emitters
 
