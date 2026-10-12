@@ -8,6 +8,7 @@ import Lean2Agda.Core.Render
 import Lean2Agda.Core.Stats
 import Lean2Agda.Core.Naming
 import Lean2Agda.Core.ReverseMap
+import Lean2Agda.Core.Print
 
 /-!
 # Lean2Agda
