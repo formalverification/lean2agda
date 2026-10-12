@@ -134,11 +134,11 @@
     "lean_module": "Mathlib.Order.FixedPoints",
     "axioms": ["propext", "Quot.sound"],
     "tier": "T1",
-    "features": ["impredicative-prop", "projections-and-let", "axioms"],
+    "features": ["impredicative-prop", "k-and-uip", "large-elimination", "quotients", "axioms", "universe-levels", "literals", "decidable-and-noncomputable", "nested-and-mutual-inductives", "projections-and-let"],
     "agda_files": [
       {"path": "OrderHomMapLfp.agda", "flags": ["--safe", "--cubical-compatible"], "profile": "CC"}
     ],
-    "status": "planned",
+    "status": "translated",
     "issue": 9
   },
   {
