@@ -101,7 +101,12 @@ def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
       let out := f.renderTo out 1 ++ " "
       match v with
       | .explicit => a.renderTo out 2
-      | .implicit => a.renderTo (out ++ "{") 0 ++ "}"
+      -- `{{` is Agda's ASCII instance brace, so an implicit argument that
+      -- is itself an implicit Pi type, the one term that renders starting
+      -- with `{`, is spaced away from the brace around it.
+      | .implicit => match a with
+        | .pi .implicit .. => a.renderTo (out ++ "{ ") 0 ++ " }"
+        | _ => a.renderTo (out ++ "{") 0 ++ "}"
       | .instance => a.renderTo (out ++ "⦃ ") 0 ++ " ⦄"
     | .lam v x ty b =>
       b.renderTo (ty.renderTo (out ++ "λ " ++ v.opening ++ x ++ " : ") 0 ++ v.closing ++ " → ") 0
