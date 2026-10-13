@@ -10,8 +10,8 @@
 #               checkout  GHPROJECT_DIR points at a checkout of the engine
 #             (A `local` mode exists for template copies that have not run
 #             `make init`; this project has.)
-#   project   doctor / check / test / corpus-check / atlas are the project's
-#             own targets.
+#   project   doctor / check / test / corpus-check / corpus-tables / atlas are
+#             the project's own targets.
 #   lean      lean-cache / lean-build / lean-smoke run Lake in translator/,
 #             the Lake package that carries Mathlib (docs/pinning.md).
 #
@@ -57,7 +57,8 @@ else
 endif
 
 .PHONY: help populate-dry populate update update-check lint \
-        doctor check test test-python test-translator corpus-check atlas scaffold-corpus \
+        doctor check test test-python test-translator corpus-check corpus-tables atlas \
+	scaffold-corpus \
 	test-naming-atlas \
         lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
@@ -154,6 +155,14 @@ test-naming-atlas: ## Check injectivity on a pinned atlas (set ATLAS=path/to/fil
 # under its OPTIONS pragma against the libraries the shell registers.
 corpus-check: ## Type-check every translated corpus entry under the flags its files declare
 	$(PYTHON) scripts/python/corpus_check.py --agda $(AGDA) --timeout $(CORPUS_TIMEOUT)
+
+# The tables corpus/README.md and the gap report of issue M1-10
+# (docs/foundations/gap-report-corpus.md) carry, printed from the manifest
+# and the entries' files: features by entry, and the sizes of each export
+# and Agda file.  Each table is headed by a comment naming the command that
+# prints it alone; a test keeps the README's coverage table current.
+corpus-tables: ## Print the corpus's coverage, matrix and size tables from the manifest
+	$(PYTHON) scripts/python/corpus_tables.py
 
 # The axiom atlas (issue M1-11; atlas/README.md): `lake exe atlas` writes a
 # record per constant of the pinned Mathlib to atlas/, then the report goes

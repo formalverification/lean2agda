@@ -748,7 +748,7 @@ Translate by hand a `Multiset` lemma (Lean's `Quot` over list permutation) and a
 
 ---
 
-### Issue M1-9: Hand translations: classical and typeclass-heavy entries (#9)
+### Issue M1-9: Hand translations: classical and typeclass-heavy entries (#9, closed)
 
 **Labels:** `milestone-1-foundations`, `classification`, `hand-translation`
 
@@ -780,9 +780,9 @@ Collect the `notes.md` files of M1-7, M1-8 and M1-9 into `docs/foundations/gap-r
 
 ## Tasks
 
-- [ ] A table of corpus entries against gap-catalog entries.
-- [ ] For each gap: the smallest corpus example, the kernel-term size ratio between Lean and the mechanical Agda rendering where one was attempted, and the idiomatic Agda size.
-- [ ] A section on the two `Prop` encodings (Agda's `Prop` universe versus h-propositions in `Set`) with the corpus evidence for each.
+- [x] A table of corpus entries against gap-catalog entries.
+- [x] For each gap: the smallest corpus example, the kernel-term size ratio between Lean and the mechanical Agda rendering where one was attempted, and the idiomatic Agda size.
+- [x] A section on the two `Prop` encodings (Agda's `Prop` universe versus h-propositions in `Set`) with the corpus evidence for each.
 
 ## Acceptance criteria
 
@@ -924,7 +924,7 @@ Lean names are dotted paths with numeric and hygienic components; Agda's `.` is 
 
 ---
 
-### Issue M2-3: Expression printer and sharing (#17)
+### Issue M2-3: Expression printer and sharing (#17, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 

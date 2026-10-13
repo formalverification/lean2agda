@@ -11,8 +11,11 @@ planned, are as follows:
    under each target profile, the translation strategy, the
    predecessors' treatment, and references; the Agda and Lean probe
    files that settled its claims are under [`probes/`](probes/);
-+  `gap-report-corpus.md` (issue M1-10): what the hand translations
-   needed, feature by feature;
++  [`gap-report-corpus.md`](gap-report-corpus.md) (issue M1-10, written
+   2026-10-12): what the twelve hand translations of the corpus needed,
+   feature by feature of the catalog, what each gap cost, what the translator
+   will have to do about it, and the corpus's evidence on the two encodings
+   of `Prop`;
 +  `faithfulness-init-std.md` (issue M3-10): what fraction of `Init` and
    `Std` translates under each profile, and why the rest does not;
 +  the operation table for `Nat` and `String` literals (issue M3-6), the
