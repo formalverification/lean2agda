@@ -348,12 +348,15 @@ of three things, as follows:
 The listing opens with two counts, the declarations that checked (and the
 data types and records among them) and the theorems unfolded, and says of
 an unfolding that it was `in vain` when the declaration it was made for
-was refused all the same.  The fallback re-emits the theorem transparently
-rather than putting the dependent in an `opaque unfolding T` block,
-because the dependent is usually a definition, which must stay transparent
-for its own dependents, and a definition inside an `unfolding` block is
-opaque; the count is the same either way.  The harness compares the
-listing with a golden one.
+was refused or dropped all the same, which the first later event at or
+beyond that declaration decides.  A closure whose every declaration is
+refused (`lcProof` as the root) gives a module with a header and nothing
+else, which Agda and the checker both accept.  The fallback re-emits the
+theorem transparently rather than putting the dependent in an
+`opaque unfolding T` block, because the dependent is usually a definition,
+which must stay transparent for its own dependents, and a definition inside
+an `unfolding` block is opaque; the count is the same either way.  The
+harness compares the listing with a golden one.
 
 With every value printed, the golden scaffolds stand as follows
 (`values` counts the definitions, theorems and opaque constants printed

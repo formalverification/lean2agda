@@ -22,8 +22,9 @@ Description:
   one line per event, in the order Agda met them, after two lines
   counting what checked (the declarations, and the data types and
   records the inductive types became) and what unfolded.  An unfolding
-  is in vain when the declaration it was made for is refused all the
-  same, and the listing says so.
+  is in vain when the declaration it was made for is refused or dropped
+  all the same, which the first later event at or beyond that
+  declaration decides, and the listing says so.
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
         [--timeout SECONDS] [--messages] [--types-only] MODULE.agda
@@ -205,10 +206,12 @@ def parse_item(text: str) -> Item:
 
 
 def parse_module(text: str) -> Result[Module, PipelineError]:
-    """Split a scaffold at its blank lines: the first block is the header."""
+    """Split a scaffold at its blank lines: the first block is the header,
+    and a scaffold whose every declaration was refused has nothing after
+    it."""
     blocks = text.rstrip("\n").split("\n\n")
     match = _MODULE.search(blocks[0])
-    if match is None or len(blocks) < 2:
+    if match is None:
         return Result.err(PipelineError(ErrorType.PARSING_ERROR, "not a scaffold module"))
     return Result.ok(Module(match.group(1), blocks[0], tuple(parse_item(b) for b in blocks[1:])))
 
@@ -346,14 +349,18 @@ def theorems(items: tuple[Item, ...]) -> int:
     return sum(1 for item in items if item.label.startswith("theorem"))
 
 
-def in_vain(events: tuple[Event, ...], index: int) -> bool:
+def in_vain(events: tuple[Event, ...], index: int, position: dict[str, int]) -> bool:
     """Whether the unfolding at `index` was made for a declaration that
-    was refused all the same: the first later event that is not another
-    unfolding for it refuses it."""
+    was refused or dropped all the same.  The first later event at or
+    beyond that declaration in module order decides, since an event at an
+    earlier declaration says nothing about it; further unfoldings for it
+    are passed over too."""
     dependent = events[index].dependent
-    later = (e for e in events[index + 1:] if not (e.action == "unfolded" and e.dependent == dependent))
+    later = (e for e in events[index + 1:]
+             if not (e.action == "unfolded" and e.dependent == dependent)
+             and position[e.name] >= position[dependent])
     following = next(later, None)
-    return following is not None and following.name == dependent and following.action.startswith("refused")
+    return following is not None and following.name == dependent
 
 
 def listing(state: State, messages: bool) -> str:
@@ -363,7 +370,8 @@ def listing(state: State, messages: bool) -> str:
     total = len(state.items)
     types = sum(len(item.types) for item in state.items)
     checked_types = sum(len(item.types) for item, alive in zip(state.items, state.alive) if alive)
-    vain = tuple(e.action == "unfolded" and in_vain(state.events, i) for i, e in enumerate(state.events))
+    position = {name: i for i, item in enumerate(state.items) for name in item.names}
+    vain = tuple(e.action == "unfolded" and in_vain(state.events, i, position) for i, e in enumerate(state.events))
     unfolded = sum(1 for e in state.events if e.action == "unfolded")
     lines = (f"checked {sum(state.alive)} of {total} declarations, "
              f"{checked_types} of {types} data types and records",

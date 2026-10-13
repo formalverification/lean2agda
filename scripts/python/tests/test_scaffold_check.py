@@ -111,8 +111,15 @@ class TestParse(unittest.TestCase):
         self.assertEqual(theorems(module.items), 1)
 
     def test_not_a_scaffold(self) -> None:
-        self.assertTrue(parse_module("module X where").is_err)
         self.assertTrue(parse_module("postulate A : Set\n\npostulate B : Set").is_err)
+
+    def test_a_header_only_module_has_no_declarations(self) -> None:
+        module = parse_module("{-# OPTIONS --type-in-type #-}\n-- refused 1 declarations\nmodule U.X where\n").unwrap()
+        self.assertEqual((module.name, module.items), ("U.X", ()))
+        state = State((), (), ())
+        self.assertEqual(render(module, state), (module.header + "\n", ()))
+        self.assertEqual(listing(state, False),
+                         "checked 0 of 0 declarations, 0 of 0 data types and records\nunfolded 0 of 0 theorems, 0 in vain\n")
 
 
 class TestReferences(unittest.TestCase):
@@ -256,14 +263,20 @@ class TestFallback(unittest.TestCase):
         self.assertEqual(again.events[-1], Event("refused value", "root", "UnequalTerms", "two~uok != x"))
 
     def test_in_vain(self) -> None:
+        position = {"t": 0, "u": 0, "c": 1, "d": 2, "e": 3}
         unfold = Event("unfolded", "t", "UnequalTerms", "m", "d")
         refused = Event("refused value", "d", "UnequalTerms", "m")
-        other = Event("refused value", "e", "UnequalTerms", "m")
-        self.assertTrue(in_vain((unfold, refused), 0))
-        self.assertTrue(in_vain((unfold, Event("unfolded", "u", "UnequalTerms", "m", "d"), refused), 0))
-        self.assertFalse(in_vain((unfold, other, refused), 0))
-        self.assertFalse(in_vain((unfold,), 0))
-        self.assertFalse(in_vain((unfold, Event("dropped", "d", "", "")), 0))
+        earlier = Event("refused value", "c", "UnequalTerms", "m")
+        later = Event("refused value", "e", "UnequalTerms", "m")
+        self.assertTrue(in_vain((unfold, refused), 0, position))
+        self.assertTrue(in_vain((unfold, Event("unfolded", "u", "UnequalTerms", "m", "d"), refused), 0, position))
+        self.assertTrue(in_vain((unfold, Event("dropped", "d", "", "")), 0, position))
+        # An event at an earlier declaration says nothing about the dependent.
+        self.assertTrue(in_vain((unfold, earlier, refused), 0, position))
+        # One at a later declaration means the dependent checked.
+        self.assertFalse(in_vain((unfold, later, refused), 0, position))
+        self.assertFalse(in_vain((unfold,), 0, position))
+        self.assertFalse(in_vain((unfold, earlier), 0, position))
 
 
 class TestStep(unittest.TestCase):
