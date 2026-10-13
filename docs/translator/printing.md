@@ -8,15 +8,19 @@ repeated closed subterms into auxiliary definitions, so that the text
 stays near the size of the shared term.  Issue [#17] implements both, in
 `translator/Lean2Agda/Core/Print.lean` and `Core/Share.lean`, and a
 scaffold, `Core/Scaffold.lean`, that tests them with Agda until the
-emitters of [#19] to [#21] exist; [#18] added the inductive types
-([`inductives.md`][inductives]).  The measurements behind the choices
-below are in the dated report [`printing-blowup`][report].
+emitters of [#19] and [#21] exist; [#18] added the inductive types
+([`inductives.md`][inductives]), and [#20] gave the scaffold its rules for
+definitions, theorems, opaque constants and axioms, and the fallback that
+unfolds a theorem when a dependent needs it.  The measurements behind the
+choices below are in the dated reports [`printing-blowup`][report] and
+[`opaque-theorems`][report-opaque].
 
 ## Command line
 
 `--out DIR` now also writes the scaffold, an Agda module holding the whole
 closure, at the path of its first root's names sidecar
-([`naming.md`][naming]).  For example, the following writes
+([`naming.md`][naming]), and `refusals.txt`, one line per declaration the
+scaffold refuses (below).  For example, the following writes
 `out/U/Init/Data/Nat/Gcd.agda` beside `out/U/Init/Data/Nat/Gcd.names.ndjson`:
 
 ```sh
@@ -109,10 +113,11 @@ leading lambdas as patterns, `And:left {a₀} {b₁} self₂ = …`, because Agd
 inserts a definition's leading implicit patterns itself and would then
 refuse an implicit lambda on the right.  The counts are in the report: in
 every type and value of `nat-gcd-self`'s closure, 29 repairs at the top and
-198 below it; the scaffold, which prints types and the root's value, makes
-16, all below the top.  With the repair turned off, Agda refuses four of
-that scaffold's types with `WrongHidingInLambda`, one of which otherwise
-checks, and both repaired definitions of the printing fixture.
+198 below it, which is what the scaffold now prints; when it printed the
+types and the root's value only, it made 16, all below the top.  With the
+repair turned off, Agda refuses four of that scaffold's types with
+`WrongHidingInLambda`, one of which otherwise checks, and both repaired
+definitions of the printing fixture.
 
 ### The precedence table
 
@@ -240,8 +245,8 @@ declarations are [#44]'s.
 ## The scaffold
 
 The scaffold is one Agda module per closure under
-`{-# OPTIONS --type-in-type #-}`.  It declares every constant with its
-printed type, each as a postulate, except the following:
+`{-# OPTIONS --type-in-type #-}`.  Issues [#18] and [#20] settled how each
+kind of declaration is emitted, as follows:
 
 +  the inductive types, each block of them one declaration: a record for
    each type with one constructor and no indices, a data type for each
@@ -249,31 +254,69 @@ printed type, each as a postulate, except the following:
    ([`inductives.md`][inductives]);
 +  `String`, a postulate bound to `BUILTIN STRING`, with its constructor
    and recursor;
-+  the projection functions of records, definitions whose values print as
-   the records' field projections;
-+  the type abbreviations: a definition whose type ends in a sort and whose
-   value, under its leading lambdas, is a Pi type, a sort or one of its
-   parameters (`outParam`, `optParam`, `DecidableEq`, `DecidablePred`);
-   Agda cannot check `HAdd.hAdd`'s type unless `outParam Set` unfolds to a
-   sort;
-+  the closure's roots that have values, and the auxiliary definitions
-   that anything printed uses, as definitions with their printed values,
-   except that a definition whose printed value refers to itself, or to a
-   definition that refers back to it, stays a postulate: Lean's kernel
-   accepts such a cycle only among unsafe definitions, such as the
-   `_unsafe_rec` companions of mutual `partial` definitions, and Agda
-   could check none of them.
++  a definition (`defnInfo`) is a transparent definition, its signature
+   and its printed clause, since Lean's terms rely on unfolding it; the
+   projection functions of records, whose values print as the records'
+   field projections, `partial` definitions' `_unsafe_rec` companions and
+   the sharing pass's auxiliary definitions are definitions too;
++  a theorem (`thmInfo`) is a definition inside an `opaque` block of its
+   own, under the comment `-- theorem`, so that Agda's conversion checking
+   never unfolds a proof: Lean's kernel compares proofs by proof
+   irrelevance before it unfolds anything ([gap catalog][catalog-irrel]),
+   and under profile U, where every sort is `Set`, nothing stops Agda from
+   unfolding a proof term while comparing two of them except the block;
++  one of Lean's opaque constants (`opaqueInfo`, which a `partial def`
+   also makes, with an inhabitant of its type as the value) is a
+   definition inside an `opaque` block, under `-- opaque constant`: the
+   value Lean's kernel never unfolds, kept but never unfolded;
++  an axiom is a postulate, and so are the recursors and the quotient
+   primitives until [#19] and [#21] emit them.
 
-`Nat` and `String` are bound to their builtins whether or not they are
-roots.
+Three refinements, as follows:
+
++  **Instances** are definitions like any other, with no `instance`
+   keyword on the Agda side.  The printer passes every instance argument
+   explicitly, in instance braces, so Agda never searches for one; an
+   `instance` declaration would add a second resolution, Agda's, that
+   could pick a different instance from the one Lean's elaborator
+   recorded; and Agda never considers an instance whose type has explicit
+   arguments, warning `InstanceWithExplicitArg` (a probe on 2026-10-13),
+   which many of Lean's have once their classes unfold
+   (`instDecidableEqNat : DecidableEq Nat` is `(a b : Nat) → Decidable
+   (a = b)`).
++  **Cycles**.  A definition whose printed value refers to itself, or to a
+   definition that refers back to it, is postulated under the comment
+   `-- cyclic definition, postulated`.  Lean's kernel accepts such a cycle
+   only among the `_unsafe_rec` companions of `partial` definitions, whose
+   safety is `partial` (`lean-findings.md`, LF-3), and Agda could check
+   none of them.
++  **Refusals**.  `sorryAx`, every `unsafe` declaration, and whatever
+   depends on one of those are left out of the module, and `refusals.txt`
+   names each with its kind and the reason: `sorryAx: a proof left to
+   sorry`, `unsafe: exempt from Lean's kernel`, or `depends on X, and
+   through it on Y` naming the direct dependency and the root.  The
+   module's header counts them.  An `unsafe` inductive type is refused
+   with its constructors and recursor before `Inductive.lean` sees it, so
+   the `NO_POSITIVITY_CHECK` block of [`inductives.md`][inductives]
+   reaches a module only through a caller that declares one itself; the
+   sharing pass leaves an `unsafe` declaration unshared, since the kernel
+   would refuse a safe auxiliary definition made from a subterm of its
+   value.  Nothing in the eight committed exports is refused.
+   `Init.Prelude`'s closure (2,314 constants) refuses 22: `sorryAx`,
+   eleven unsafe definitions, two unsafe opaque constants and the eight
+   unsafe compiler axioms, with no dependents, since nothing safe rests on
+   them (`lean-findings.md`, LF-2 and LF-3); its 32 `_unsafe_rec`
+   companions are postulated as cycles.  The fixture
+   `tests/TranslatorTests/Input/Kinds.lean` has one of each kind, and the
+   inductive types' fixture has the unsafe type `Bad`.
 
 Declarations follow the closure's groups, and inside a group (an inductive
-type with its recursor) the printed references decide.
-The module sits at the path of its first root's sidecar until [#22] splits
-it into one module per Lean module, so a reverse lookup of an identifier in
-it may need any sidecar of the output directory.
+type with its recursor) the printed references decide.  The module sits at
+the path of its first root's sidecar until [#22] splits it into one module
+per Lean module, so a reverse lookup of an identifier in it may need any
+sidecar of the output directory.
 
-### What Agda checks
+### What Agda checks, and the fallback
 
 Agda parses and scope-checks every scaffold, which is the first acceptance
 criterion of [#17] ("prints and re-parses").  `make test-translator` does
@@ -284,54 +327,91 @@ Agda's time grows faster than the module: 6 s for 0.7 MB, 187 s for
 3.0 MB, and 28 minutes for `real-sqrt-nonneg`'s 7.5 MB, which is one
 reason for [#22]'s one module per Lean module.  Scope-checking does not see
 visibility or precedence errors, which still parse, so the scaffold is also
-type-checked.  Not every declaration can check: the postulates withhold the
-definitional unfolding (delta, iota, projections of instances) that Lean's
-kernel used.  `scripts/python/scaffold_check.py` type-checks a scaffold
-anyway.  When Agda refuses a definition's clause, the definition becomes a
-postulate of its type; when it refuses a type, the declaration and
-everything that refers to it are dropped; and it repeats until the rest
-checks, listing each refusal in the order Agda met it.  The harness
-compares that listing with a golden one.
+type-checked.  Not every declaration can check: the postulated recursors
+withhold the iota reductions that Lean's kernel used.
+`scripts/python/scaffold_check.py` type-checks a scaffold anyway, running
+Agda on a scratch copy until the rest checks, and at each error does one
+of three things, as follows:
 
-| Scaffold | Declarations | Data types and records | Refused | Types checked |
-| --- | --- | --- | --- | --- |
-| `list-reverse-reverse` | 34 | 6 | the root's value | 34 |
-| `nat-gcd-succ` | 246 | 23 | the root's value, 5 types | 241 |
-| `nat-gcd-self` | 310 | 24 | the root's value, 6 types | 304 |
-| printing fixture | 332 | 41 | 4 types | 328 |
-| `Fixtures.selected` | 29 | 6 | nothing | 29 |
++  when the error's message, before the lines saying what Agda was
+   checking, names a theorem that is still in its `opaque` block, the
+   theorem is re-emitted as a transparent definition, under the comment
+   `-- theorem, unfolded for D` naming the declaration that needed it,
+   and the listing records `unfolded T for D`: this is [#20]'s fallback,
+   driven by Agda's own complaint rather than by hand;
++  otherwise, when Agda refuses a declaration's clause, the declaration
+   becomes a postulate of its type, so that what uses it still checks
+   (`refused value`);
++  when Agda refuses a declaration's type, the declaration and everything
+   that refers to it are dropped (`refused type`, `dropped`).
 
-A declaration is a declaration of the Agda module: a data type or a record
-with its constructors is one, so the counts fell from 41, 272, 337, 377 and
-34 when [#18] declared the inductive types.  Every value not listed
-checks: the type abbreviations', the auxiliary definitions', the records'
-projection functions', `Fixtures.selected`'s, and the printing fixture's
-thirteen roots, `Dependent.value` among them since [#18].
+The listing opens with two counts, the declarations that checked (and the
+data types and records among them) and the theorems unfolded, and says of
+an unfolding that it was `in vain` when the declaration it was made for
+was refused all the same.  The fallback re-emits the theorem transparently
+rather than putting the dependent in an `opaque unfolding T` block,
+because the dependent is usually a definition, which must stay transparent
+for its own dependents, and a definition inside an `unfolding` block is
+opaque; the count is the same either way.  The harness compares the
+listing with a golden one.
 
-Every refusal is an `UnequalTerms` that needs unfolding, as follows:
+With every value printed, the golden scaffolds stand as follows
+(`values` counts the definitions, theorems and opaque constants printed
+with their values; a value is `behind a refused type` when its declaration
+was dropped with one; a declaration is a declaration of the Agda module,
+a data type or a record with its constructors being one):
 
-+  `List.reverse_reverse` ends in `rfl`, which needs `List.reverse` to
-   unfold;
-+  `Nat.gcd_self` and `Nat.gcd_succ` need `n + 1` to be `Nat.succ n`
-   (instances, `Nat.add`, and its recursor), the identification the corpus
-   notes describe;
-+  four compiled matchers' types annotate a motive's binder with
-   `n ≤ m` where `Nat.le n m` is expected; the projection `LE.le` unfolds
-   to the field projection `LE.le₁ instLENat n m` since [#18], and the
-   instance `instLENat` must unfold too, which is [#20]'s;
-+  a fifth matcher's type, and `Nat.modCore.go.eq_1`'s in
-   `nat-gcd-self`, need `a + 1` to be `Nat.succ a`.
+| Scaffold | Declarations | Data types and records | Values | Checked | Refused | Behind a refused type | Theorems | Unfolded |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `list-reverse-reverse` | 34 | 6 | 21 | 17 | 4 | 0 | 10 | 0 |
+| `nat-gcd-succ` | 252 | 23 | 201 | 141 | 49 | 11 | 65 | 0 |
+| `nat-gcd-self` | 320 | 24 | 266 | 182 | 62 | 22 | 103 | 0 |
+| printing fixture | 333 | 41 | 248 | 199 | 49 | 0 | 47 | 0 |
+| `Fixtures.selected` | 29 | 6 | 17 | 15 | 2 | 0 | 0 | 0 |
+| inductives fixture | 77 | 24 | 29 | 27 | 2 | 0 | 1 | 0 |
+| `kinds` | 334 | 41 | 247 | 196 | 51 | 0 | 52 | 1, in vain |
+| `Init.Core`'s inductive types | 539 | 144 | 246 | 197 | 49 | 0 | 48 | 0 |
 
-Printing every value of each closure, with every definition and theorem
-as a root, the scaffold of [#17] (before [#18]) had Agda check 139 of
-`nat-gcd-self`'s 266 values outright, refuse
-54, and leave 73 unchecked behind a refused type; every refusal is again
-an `UnequalTerms`, and their causes are the recursors (`Nat.rec`,
-`Decidable.rec`), instance projections, literals against `OfNat.ofNat`,
-`Quot.lift` in `funext` ([#21]'s case), and K-like reduction in
-`eq_of_heq`.  None is a wrong visibility, a scope error or a parse error.
-These are the emitters' work, and the golden listings record where each
-scaffold stands until then.
+Every type checks but three: the compiled matcher of
+`Nat.zero_lt_of_ne_zero` and, in `nat-gcd-self`, `Nat.modCore.go.eq_1`,
+both of which need `n + 1` to be `Nat.succ n`, that is `Nat.add` to
+compute through `Nat.rec`.  The four matchers of the `Nat.le` lemmas that
+[#18] and [#20] each left to the other check once both are in: `n ≤ m`
+unfolds through the record projection `LE.le₁` and the transparent
+`instLENat` to `Nat.le n m`.  Every refusal is an `UnequalTerms` in which
+a postulate must compute, as follows:
+
++  a recursor's iota: `Nat.rec` under `Nat.add`, `Nat.ble`, `Nat.beq` and
+   the `brecOn` definitions, `Bool.rec` under `decEq`, `Decidable.rec`
+   under `ite` and `dite`'s lemmas, `PProd.rec` and `List.rec` under the
+   structural-recursion helpers, and `Eq.rec` on `Eq.refl` ([#19]);
++  `Quot.lift` in `funext` ([#21]);
++  K-like reduction of `Eq.rec` on `h : α = α` in `eq_of_heq`, which
+   under `--type-in-type` does not reduce on a variable and which the
+   normalizer of [#26] is to make explicit.
+
+No refusal names a theorem: the fallback fired on none of the corpus and
+inductive scaffolds, and on `kinds` once, in vain, on a `CannotApply`
+error whose message mentioned `heq_of_eq` as an argument of the stuck
+term.  The pair the fixture wrote to make it fire, `useAlias`, whose
+argument has type `Q alias` where `Q base` is expected, is identified by
+Agda without any unfolding since [#18] declares `True` as a record, whose
+eta rule makes any two of its elements equal, as Lean's kernel does for a
+unit-like type; a pair on a proposition without eta is to replace it.
+Lean's kernel compares proofs by proof irrelevance before it unfolds a
+theorem, so a term that relies on a theorem's unfolding is rare by
+construction; the place to expect one is a recursor on a proof, `Acc.rec`
+under well-founded recursion or `Eq.rec` on a proof that must reduce to
+`rfl`, once [#19] makes recursors compute.  On `Init.Core`'s closure,
+measured before [#18] merged (2,145 declarations, 1,660 values), the
+checker ran Agda 321 times in 44 minutes: 1,229 values checked, 307 were
+refused and 124 stood behind nine refused types; the fallback fired four
+times, in vain each time, so no theorem of `Init.Core` needed to unfold
+either.  Ten of its refusals were two proof variables of one proposition
+compared (`property₇ != property₈`), which is [#27]'s encoding of `Prop`
+to settle, and one a structure eta, which [#18]'s records now give.  The
+dated report [`opaque-theorems`][report-opaque] has the tables and the
+classes.
 
 ## Verification
 
@@ -340,19 +420,36 @@ broke each rule in turn and showed which checks fail:
 
 +  `tests/Printing.lean`: the precedence table, string escapes, clause
    patterns, binder names, each `Expr` constructor, both repairs, a
-   telescope, qualified names, the sharing pass's counting on the doubling
-   of 2^20 leaves and its auxiliaries (kernel-checked, owned, printed in
-   linear size), and the type-abbreviation rule;
+   telescope, qualified names, and the sharing pass's counting on the
+   doubling of 2^20 leaves and its auxiliaries (kernel-checked, owned,
+   printed in linear size);
++  `tests/Scaffold.lean`: on the fixture
+   `tests/TranslatorTests/Input/Kinds.lean`, the emission of each kind (a
+   definition and an instance transparent, a theorem and an opaque
+   constant in `opaque` blocks, a `partial` definition and its postulated
+   companion, an axiom and a recursor as postulates, a class as a record),
+   the six refusals with their reasons and their absence from the module,
+   the header's count, a closure with nothing to refuse, and the sharing
+   pass leaving an `unsafe` declaration alone; also the mutual `partial`
+   companions of the printing fixture, and a `String` root's builtin;
 +  `PrintingLexical.agda`, which `tests/Printing.lean` writes: a binder
    built from every Agda keyword and sort name, which Agda checks;
-+  six scaffolds against golden files in `tests/expected/scaffolds/`,
++  seven scaffolds against golden files in `tests/expected/scaffolds/`,
    scope-checked, and type-checked with `scaffold_check.py` against golden
    listings: the three core-Lean corpus entries, the printing fixture
    (`tests/TranslatorTests/Input/Printing.lean`, which prints every
-   constructor, every visibility and both repairs in values that check),
-   `Fixtures.selected`, and the inductive types' fixture of
-   [`inductives.md`][inductives]; and the scaffold of `Init.Core`'s
-   inductive types, against its listing alone;
+   constructor, every visibility and both repairs), `Fixtures.selected`,
+   the inductive types' fixture of [`inductives.md`][inductives], and
+   `kinds`, whose golden `refused.txt` names the six refused declarations
+   and whose golden listing shows the fallback; the scaffold of
+   `Init.Core`'s inductive types, against its listing alone; and the
+   declarations each scaffold's translator refuses, against a golden
+   `refused.txt` where one exists and required to be none otherwise;
++  `scripts/python/tests/test_scaffold_check.py`: the checker's parsing
+   of every block shape, the fallback's trigger (only a theorem the message
+   proper names, never the refused declaration itself), the transparent
+   form, the postulate form, the `in vain` mark, and a run in which the
+   fake Agda names a theorem;
 +  the scaffold of the printing fixture's whole module, mutual `partial`
    definitions included, scope-checked.
 
@@ -393,14 +490,16 @@ It assumes the following of its callers:
    definition that changes a constant's visibilities breaks every
    application of it.
 +  [#18] printed projections from records as field projections and
-   declared every inductive type, `Nat` included; [#19] defines the
-   recursors, which `projectionAsRecursor` still uses for the types with
-   one constructor that are not records; [#20] makes definitions
-   transparent and theorems opaque, which turns most of the refusals
-   above into checks; [#21] gives `Quot.lift` its rewrite rule.
+   declared every inductive type, `Nat` included; [#20] made definitions
+   transparent and theorems opaque, and refuses `sorryAx` and `unsafe`;
+   [#19] defines the recursors, which `projectionAsRecursor` still uses
+   for the types with one constructor that are not records; [#21] gives
+   `Quot.lift` its rewrite rule.  Each replaces a `postulateItem` case of
+   `scaffoldItem` in `Core/Scaffold.lean`.
 +  The scaffold's golden listings measure that progress: a refusal that
    disappears is an emitter's success, and the listing should be
-   regenerated with it.
+   regenerated with it.  A refusal that names a theorem is the fallback's,
+   and its count is what [#20] asked to be reported.
 
 [#17]: https://github.com/formalverification/lean2agda/issues/17
 [#18]: https://github.com/formalverification/lean2agda/issues/18
@@ -408,11 +507,14 @@ It assumes the following of its callers:
 [#20]: https://github.com/formalverification/lean2agda/issues/20
 [#21]: https://github.com/formalverification/lean2agda/issues/21
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [report]: ../reports/printing-blowup-2026-10-12.md
+[report-opaque]: ../reports/opaque-theorems-2026-10-13.md
 [naming]: naming.md
+[catalog-irrel]: ../foundations/gap-catalog.md#proof-irrelevance
 [inductives]: inductives.md
 [inductives-projections]: inductives.md#projections
 [related]: ../related-work.md

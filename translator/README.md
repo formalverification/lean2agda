@@ -9,8 +9,11 @@ axiom atlas; issue M2-1 added the translator's command line, the
 environment loader and the golden-test harness; issue M2-2 added structured
 name encoding, module paths, and reverse-map sidecars; issue M2-3 added the
 expression printer, the sharing pass, and the profile U scaffold
-(`../docs/translator/printing.md`); and issue M2-4 adds the inductive
-types, as records and data types (`../docs/translator/inductives.md`).  The
+(`../docs/translator/printing.md`); issue M2-4 added the inductive types,
+as records and data types (`../docs/translator/inductives.md`); and issue
+M2-6 gave the scaffold its rules for definitions, theorems, opaque
+constants and axioms, its refusals, and the fallback that unfolds a
+theorem a dependent needs.  The
 architecture it implements is described in the Description section of
 `../docs/GITHUB_PROJECT.md` and in `../docs/architecture.md`, the companion
 note of ADR 0001 (`../docs/adr/0001-translation-architecture.md`).
@@ -102,7 +105,11 @@ It prints an ordered closure of Lean declarations.  `--out DIR` also
 writes the listing to `DIR/closure.txt`, a `.names.ndjson` sidecar per
 source module under the supplied `--root NAME` (default `U`), and the
 profile U scaffold, an Agda module declaring the closure's constants with
-their printed types; `--share N` sets the sharing pass's threshold.  The
+their printed types and values (definitions transparent, theorems and
+opaque constants in `opaque` blocks, the rest postulated), beside
+`DIR/refusals.txt`, which names the declarations the scaffold refuses
+(`sorryAx`, `unsafe`, and their dependents) with the reason; `--share N`
+sets the sharing pass's threshold.  The
 naming API and sidecar schema are in [`naming.md`], and the printer, the
 sharing pass and the scaffold in [`printing.md`].  `--stats` appends
 counts to standard output.  Omit declarations after `--` to select all

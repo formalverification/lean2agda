@@ -188,7 +188,12 @@ unsafe block is declared after `{-# NO_POSITIVITY_CHECK #-}`, which Agda
 allows outside `--safe` (probe `I07NotPositive`, rejected with
 `[NotStrictlyPositive]`, and probe `I07bNoPositivityCheck`).  `import Lean`
 has four unsafe inductive types, the `State` records of unsafe folds over
-expressions.
+expressions.  Since [#20] the scaffold refuses every `unsafe` declaration
+before `inductiveDecl` sees it, an unsafe type with its constructors and
+recursor among them, and names each in `refusals.txt`
+([`printing.md`][printing], The scaffold); the pragma therefore reaches a
+module only through a caller that declares an unsafe block itself, as
+`tests/Inductives.lean` does for the fixture's `Bad`.
 
 ## Sharing in constructor types
 
