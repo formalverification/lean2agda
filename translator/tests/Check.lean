@@ -45,6 +45,10 @@ def checkArgs : IO Unit := do
   require ((← IO.ofExcept <| parseArgs ["--help"]).help) "help requires a module"
   require ((← IO.ofExcept <| parseArgs ["--root", "CC.Constructive", "Init"]).root ==
     `CC.Constructive) "caller-supplied module root"
+  require ((← IO.ofExcept <| parseArgs ["Init"]).share == defaultShareThreshold) "default threshold"
+  require ((← IO.ofExcept <| parseArgs ["--share", "0", "Init"]).share == 0) "sharing turned off"
+  for argv in [["--share", "-1", "Init"], ["--share", "x", "Init"], ["Init", "--share"]] do
+    require ((parseArgs argv).toOption.isNone) s!"accepted malformed threshold {argv}"
 
 def checkFixtures : IO Unit := do
   let moduleName := `TranslatorTests.Input.Consumer

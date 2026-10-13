@@ -199,9 +199,13 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    it at `Prop₁`).  By profile, as follows.
    +  U: `--type-in-type` makes every `Set ℓ` equal to `Set`, so the universe
       side of impredicativity type-checks (this is why lyphyser's output needs
-      the flag); the `Prop` against `Set` distinction stays syntactic, so a
-      constant still has to be specialized by which of its level parameters are
-      zero.
+      the flag); with `--prop` as well, the `Prop` against `Set` distinction
+      stays syntactic, so a constant still has to be specialized by which of
+      its level parameters are zero.  The printer of [#17] therefore uses
+      `--type-in-type` alone and prints every sort as `Set`, `imax`
+      included; on two corpus scaffolds, `--prop` with `Prop` for every
+      sort at level zero more than doubled Agda's refusals
+      ([`printing.md`][printing]).
    +  K: no impredicativity; a constant translates only if its uses of
       impredicativity are inessential, that is, if its level constraints have a
       predicative solution.
@@ -259,7 +263,9 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    `f n p ≡ f n q` by `refl` (probe `P20Irrelevance`).  In `Set`, two proofs of
    a proposition are not definitionally equal, and an h-proposition carries an
    explicit `isProp` proof.  By profile, as follows.
-   +  U: `--prop` and `--type-in-type` combine, as lyphyser's output shows.
+   +  U: `--prop` and `--type-in-type` combine, as lyphyser's output shows;
+      the scaffold of [#17] uses `--type-in-type` alone, so its proofs
+      live in `Set`, without definitional proof irrelevance.
    +  K: `--prop` is compatible with `--safe` (probe `P01bPropAbsurd` runs
       under both); proofs that Lean identifies definitionally need a cast
       wherever they are compared in a `Set`.
@@ -989,7 +995,10 @@ literals**.
    introduce sharing"; a record pattern is allowed on the left ([agda-let]);
    `(let x = 1 in x + x) ≡ 2` and `(let (a , b) = p in a + b) ≡ 3` hold by
    `refl` (probe `P15ProjLet`).  By profile, as follows.
-   +  U: as K.
+   +  U: as K once [#18] emits records; until then the printer of [#17]
+      prints a projection through the structure's recursor, which checks
+      against postulates for a non-dependent field only, and `let` as
+      Agda's `let` ([`printing.md`][printing]).
    +  K: projections become applications of the record's projection functions;
       `let` becomes Agda's `let` or, where sharing matters for checking time,
       an auxiliary definition.
@@ -1263,3 +1272,4 @@ Mathlib's large-eliminating propositions excepted.
     first and simplest extension to this language is to add support for a let
     binder" and the sentence "Note that we don't have any congruence rules for
     let."
+[printing]: ../translator/printing.md

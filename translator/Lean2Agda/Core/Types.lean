@@ -34,12 +34,15 @@ def Kind.label : Kind → String
 
 /-- An original Lean declaration, its source module, and its direct
 dependencies.  Keeping `ConstantInfo` leaves expressions and structured
-names available to later translation passes. -/
+names available to later translation passes.  An auxiliary declaration is
+one the sharing pass made from a subterm of another; its source module is
+its owner's. -/
 structure Declaration where
   name : Name
   info : ConstantInfo
   sourceModule : Option Name
   dependencies : Array Name
+  auxiliary : Bool := false
   deriving Inhabited
 
 def Declaration.kind (decl : Declaration) : Kind := Kind.ofConstantInfo decl.info

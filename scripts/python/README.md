@@ -12,6 +12,11 @@ follows:
 +  `atlas_report.py` (issue M1-11): reads the records `lake exe atlas`
    writes and writes the atlas's report under `docs/reports/`, checking
    them against `corpus/manifest.json`; run by `make atlas`.
++  `scaffold_check.py` (issue M2-3): type-checks a profile U scaffold
+   that `lake exe lean2agda --out` writes, turning a refused definition
+   into a postulate and dropping a refused type with its dependents until
+   the rest checks, and lists the refusals; the translator's harness
+   compares the listings with golden ones.
 +  `agda_check.py` (issue M2-8) is planned.
 
 `_utils/` is the utilities package, copied from agda-algebras (each

@@ -57,7 +57,7 @@ else
 endif
 
 .PHONY: help populate-dry populate update update-check lint \
-        doctor check test test-python test-translator corpus-check atlas \
+        doctor check test test-python test-translator corpus-check atlas scaffold-corpus \
 	test-naming-atlas \
         lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
@@ -163,6 +163,15 @@ corpus-check: ## Type-check every translated corpus entry under the flags its fi
 atlas: ## Write the axiom atlas of the pinned Mathlib (atlas/) and its report (docs/reports/)
 	cd translator && $(LAKE) exe atlas
 	$(PYTHON) scripts/python/atlas_report.py
+
+# Issue M2-3's acceptance over the whole corpus (docs/translator/printing.md):
+# print every entry's profile U scaffold and scope-check it.  Most entries
+# import Mathlib, so it needs Mathlib's cache in translator/.lake (make
+# lean-cache), and it takes about half an hour, most of it Agda reading
+# real-sqrt-nonneg's scaffold.  No CI job runs it: the cache is several
+# gigabytes.  The three core-Lean entries run in make test-translator.
+scaffold-corpus: ## Print and scope-check every corpus entry's scaffold (needs make lean-cache)
+	LAKE="$(LAKE)" AGDA="$(AGDA)" bash translator/scripts/scaffold-corpus.sh
 
 # ---- lean ----------------------------------------------------------------
 

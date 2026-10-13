@@ -25,7 +25,7 @@ module instead, use `lake exe lean2agda Init.Data.Nat.Gcd`.
 Run from `translator/` inside the pinned Nix shell, as follows:
 
 ```sh
-lake exe lean2agda [--profile U] [--root NAME] [--out DIR] [--stats] MODULE... [-- DECL...]
+lake exe lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--stats] MODULE... [-- DECL...]
 ```
 
 At least one module is required.  Modules before `--` are imported with
@@ -38,9 +38,12 @@ dependencies, rather than becoming additional roots.
 
 `--profile` defaults to `U`.  Other profiles are rejected until their
 translation passes exist.  `--out DIR` creates the directory and writes
-`closure.txt` and module-specific `.names.ndjson` reverse maps.  `--root
-NAME` supplies the reverse maps' module-tree root, defaulting to `U`.
-[`naming.md`] specifies the identifier encoding and sidecar format.
+`closure.txt`, module-specific `.names.ndjson` reverse maps, and the
+profile U scaffold, an Agda module holding the closure.  `--root NAME`
+supplies the module-tree root, defaulting to `U`, and `--share N` the
+sharing pass's threshold, 32 by default and 0 to turn it off.
+[`naming.md`] specifies the identifier encoding and sidecar format, and
+[`printing.md`] the printer, the sharing pass and the scaffold.
 Standard output always includes the same listing, followed
 by statistics when `--stats` is given; the file contains only the listing.
 `--help` prints usage without loading an environment.  Invalid arguments
@@ -183,3 +186,4 @@ Mathlib input outside this harness, fetch its prebuilt interfaces with
 [#22]: https://github.com/formalverification/lean2agda/issues/22
 [`pinning.md`]: ../pinning.md
 [`naming.md`]: naming.md
+[`printing.md`]: printing.md
