@@ -1,7 +1,6 @@
 # File: translator/tests/expected/scaffolds/printing.refusals.txt
-checked 373 of 377 declarations
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:succ~ule~usucc:match~u1~u7 | Nat:le n₀ m₄ !=< LE:le n₀ m₄
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:ble~ueq~utrue~uof~ule:match~u1~u7 | Nat:le n₀ m₄ !=< LE:le n₀ m₄
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:le~utrans:match~u1~u10 | Nat:le m₁ k₅ !=< LE:le m₁ k₅
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 | Nat:le n₄ n₄ !=< LE:le n₄ n₄
-refused value UnequalTerms PrintFixtures:Dependent:value | size₁ !=
+checked 328 of 332 declarations, 41 of 41 data types and records
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:succ~ule~usucc:match~u1~u7 | Nat:le n₀ m₄ !=< LE.le₁ instLENat n₀ m₄
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:ble~ueq~utrue~uof~ule:match~u1~u7 | Nat:le n₀ m₄ !=< LE.le₁ instLENat n₀ m₄
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:le~utrans:match~u1~u10 | Nat:le m₁ k₅ !=< LE.le₁ instLENat m₁ k₅
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 | Nat:le n₄ n₄ !=< LE.le₁ instLENat n₄ n₄

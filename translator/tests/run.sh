@@ -32,20 +32,28 @@ done
 PRINTING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Printing.lean
 (cd "$scratch" && "${AGDA:-agda}" PrintingLexical.agda)
 
-# A scaffold (the profile U module --out writes) must match its golden
-# file, scope-check (the acceptance criterion of issue M2-3), and
-# type-check except for the refusals its golden listing names.
-check_scaffold() {
+"$lake_cmd" env "$lean_cmd" tests/Inductives.lean
+
+# A scaffold (the profile U module --out writes) must scope-check (the
+# acceptance criterion of issue M2-3) and type-check except for the
+# refusals its golden listing names; check_scaffold also compares the
+# module with its golden file.
+check_refusals() {
   local name=$1 file relative
   shift
   "$lake_cmd" exe lean2agda --out "$scratch/scaffold-$name" "$@" > /dev/null
   file=$(find "$scratch/scaffold-$name" -name '*.agda')
   relative=${file#"$scratch/scaffold-$name/"}
-  tail -n +2 "tests/expected/scaffolds/$name.agda" | diff -u - "$file"
   (cd "$scratch/scaffold-$name" && "${AGDA:-agda}" --only-scope-checking "$relative" > /dev/null)
   python3 ../scripts/python/scaffold_check.py --agda "${AGDA:-agda}" --messages "$file" \
     > "$scratch/refusals-$name.txt"
   tail -n +2 "tests/expected/scaffolds/$name.refusals.txt" | diff -u - "$scratch/refusals-$name.txt"
+}
+
+check_scaffold() {
+  local name=$1
+  check_refusals "$@"
+  tail -n +2 "tests/expected/scaffolds/$name.agda" | diff -u - "$(find "$scratch/scaffold-$name" -name '*.agda')"
 }
 
 check_scaffold list-reverse-reverse Init.Data.List.Lemmas -- List.reverse_reverse
@@ -56,6 +64,21 @@ check_scaffold printing TranslatorTests.Input.Printing -- PrintFixtures.alignedT
   PrintFixtures.strict PrintFixtures.pick PrintFixtures.greeting PrintFixtures.large \
   PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value
 check_scaffold selected TranslatorTests.Input.Consumer -- Fixtures.selected
+check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
+  InductiveFixtures.Same InductiveFixtures.Sized InductiveFixtures.Packed InductiveFixtures.Packed.width \
+  InductiveFixtures.Packed.measured InductiveFixtures.Packed.value InductiveFixtures.Packed.fits \
+  InductiveFixtures.Token InductiveFixtures.Rose InductiveFixtures.Rose.label InductiveFixtures.Rose.children \
+  "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
+  InductiveFixtures.Bad
+
+# The acceptance criterion of issue M2-4: every inductive type of the
+# closure of Init.Core's declarations is declared and checks.  They are
+# the roots, so the definitions and theorems their types need stay
+# postulates; the listing counts the data types and records.
+INDUCTIVE_CLOSURE=Init.Core "$lake_cmd" env "$lean_cmd" scripts/InductiveTypes.lean \
+  > "$scratch/init-core-inductives.txt"
+mapfile -t init_core_inductives < "$scratch/init-core-inductives.txt"
+check_refusals init-core-inductives Init.Core -- "${init_core_inductives[@]}"
 
 # Every declaration of a module, mutual partial definitions included,
 # makes a scaffold that scope-checks.

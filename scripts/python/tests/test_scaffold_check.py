@@ -3,7 +3,8 @@ File: scripts/python/tests/test_scaffold_check.py
 
 Description:
   Tests of scaffold_check.py.  The pure functions are tested on a small
-  scaffold written by hand in the shape Scaffold.render produces, and
+  scaffold written by hand in the shape Scaffold.render produces, on the
+  record, mutual and pragma blocks of the emitter of issue M2-4, and
   check_module with a fake runner that plays Agda's answers in turn
   (errors shaped as Agda 2.8.0 prints them) and a fake clock.
 """
@@ -18,7 +19,7 @@ from typing import Sequence
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from scaffold_check import (
     Event, Item, Refusal, State, check_module, dependents, listing, locate, parse_item,
-    parse_module, parse_refusal, references, render, step,
+    parse_module, parse_refusal, references, render, step, types_only,
 )
 
 SCAFFOLD = """{-# OPTIONS --type-in-type #-}
@@ -59,7 +60,27 @@ class TestParse(unittest.TestCase):
         self.assertEqual(parse_item("postulate Eq : Set").names, ("Eq",))
         self.assertEqual(parse_item("two : Nat\ntwo = 2").kind, "definition")
         data = parse_item("data Nat : Set where\n  Nat:zero : Nat\n  Nat:succ : Nat → Nat\n{-# BUILTIN NATURAL Nat #-}")
-        self.assertEqual((data.kind, data.names), ("data", ("Nat", "Nat:zero", "Nat:succ")))
+        self.assertEqual((data.kind, data.names, data.types), ("data", ("Nat", "Nat:zero", "Nat:succ"), ("Nat",)))
+
+    def test_records(self) -> None:
+        record = parse_item("record Prod (α₀ : Set) (β₁ : Set) : Set where\n  constructor Prod:mk\n  field\n"
+                            "    fst₂ : α₀\n    {snd₃} : β₁")
+        self.assertEqual((record.kind, record.names, record.types), ("record", ("Prod", "Prod:mk"), ("Prod",)))
+        unit = parse_item("record PUnit : Set where\n  constructor PUnit:unit")
+        self.assertEqual(unit.names, ("PUnit", "PUnit:unit"))
+        rose = parse_item("record Rose : Set where\n  inductive\n  no-eta-equality\n  pattern\n"
+                          "  constructor Rose:mk\n  field\n    children₀ : List Rose")
+        self.assertEqual(rose.names, ("Rose", "Rose:mk"))
+
+    def test_mutual_and_pragma_blocks(self) -> None:
+        block = parse_item("mutual\n  data Term : Set where\n    Term:lit : Nat → Term\n    Term:pair : Pair → Term\n"
+                           "  record Pair : Set where\n    inductive\n    no-eta-equality\n    pattern\n"
+                           "    constructor Pair:mk\n    field\n      left₀ : Term")
+        self.assertEqual((block.kind, block.names, block.types),
+                         ("mutual", ("Term", "Term:lit", "Term:pair", "Pair", "Pair:mk"), ("Term", "Pair")))
+        unchecked = parse_item("{-# NO_POSITIVITY_CHECK #-}\ndata Bad : Set where\n  Bad:mk : (Bad → Nat) → Bad")
+        self.assertEqual((unchecked.kind, unchecked.names), ("data", ("Bad", "Bad:mk")))
+        self.assertEqual(parse_item("{-# BUILTIN NATURAL Nat #-}"), Item("pragma", (), "{-# BUILTIN NATURAL Nat #-}"))
 
     def test_module(self) -> None:
         module, _ = module_and_state()
@@ -83,6 +104,24 @@ class TestReferences(unittest.TestCase):
                                      Item("postulate", ("b",), "postulate b : (x₀ : {A}) → ⦃ A ⦄"))),
                          (frozenset(), frozenset({0})))
 
+    def test_a_projection_mentions_its_record(self) -> None:
+        record = parse_item("record R : Set where\n  constructor R:mk\n  field\n    f₀ : Nat")
+        user = parse_item("g : R → Nat\ng r₀ = R.f₀ r₀")
+        self.assertEqual(references((record, Item("definition", ("h",), "h : Nat\nh = R.f₀"))),
+                         (frozenset(), frozenset({0})))
+        self.assertEqual(references((record, user))[1], frozenset({0}))
+
+
+class TestTypesOnly(unittest.TestCase):
+    def test_keeps_the_types_and_what_they_mention(self) -> None:
+        module = parse_module(SCAFFOLD.replace(
+            "postulate Eq : {α₀ : Set} → α₀ → α₀ → Set",
+            "record Box : Set where\n  constructor Box:mk\n  field\n    unbox₀ : Hidden\n\n"
+            "postulate Hidden : Set\n\npostulate Eq : {α₀ : Set} → α₀ → α₀ → Set")).unwrap()
+        kept = types_only(module)
+        self.assertEqual([i.names[0] for i in kept.items], ["Nat", "Box", "Hidden"])
+        self.assertEqual((kept.name, kept.header), (module.name, module.header))
+
 
 class TestRenderAndLocate(unittest.TestCase):
     def test_render_reproduces_the_module(self) -> None:
@@ -96,6 +135,14 @@ class TestRenderAndLocate(unittest.TestCase):
         self.assertEqual(locate(layout, 15), (3, 1))
         self.assertEqual(locate(layout, 19), (5, 0))
         self.assertIsNone(locate(layout, 2))
+
+    def test_a_long_module(self) -> None:
+        # Thousands of declarations: the layout is a running sum, not a
+        # recursion that would exhaust Python's stack.
+        items = tuple(Item("postulate", (f"a{i}",), f"postulate a{i} : Set") for i in range(5000))
+        module = parse_module("module U.A where\n\n" + "\n\n".join(i.text for i in items)).unwrap()
+        _, layout = render(module, State(module.items, tuple(True for _ in items), ()))
+        self.assertEqual(layout[-1], (4999, 3 + 2 * 4999))
 
     def test_layout_skips_dropped_items(self) -> None:
         module, state = module_and_state()
@@ -137,8 +184,11 @@ class TestStep(unittest.TestCase):
         after = step(step(state, 5, 1, Refusal(20, "UnequalTerms", "two != 2")), 4, 0,
                      Refusal(17, "UnequalTerms", "m"))
         self.assertEqual(listing(after, False),
-                         "checked 5 of 6 declarations\nrefused value UnequalTerms root\n"
-                         "refused type UnequalTerms two~uok\n")
+                         "checked 5 of 6 declarations, 1 of 1 data types and records\n"
+                         "refused value UnequalTerms root\nrefused type UnequalTerms two~uok\n")
+        dropped = step(state, 0, 0, Refusal(5, "UnequalTerms", "m"))
+        self.assertTrue(listing(dropped, False).startswith(
+            "checked 2 of 6 declarations, 0 of 1 data types and records\n"))
         self.assertIn("refused value UnequalTerms root | two != 2\n", listing(after, True))
 
 

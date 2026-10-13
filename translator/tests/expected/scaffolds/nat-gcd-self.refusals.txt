@@ -1,9 +1,9 @@
 # File: translator/tests/expected/scaffolds/nat-gcd-self.refusals.txt
-checked 331 of 337 declarations
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:ble~ueq~utrue~uof~ule:match~u1~u7 | Nat:le n₀ m₄ !=< LE:le n₀ m₄
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:succ~ule~usucc:match~u1~u7 | Nat:le n₀ m₄ !=< LE:le n₀ m₄
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:le~utrans:match~u1~u10 | Nat:le m₁ k₅ !=< LE:le m₁ k₅
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 | Nat:le n₄ n₄ !=< LE:le n₄ n₄
-refused type UnequalTerms ~uprivate:Init:Data:Nat:Basic:~n0:Nat:zero~ult~uof~une~uzero:match~u1~u1 | (HAdd:hAdd a₃ (OfNat:ofNat 1)) != (Nat:succ a₃) of type Nat
-refused type UnequalTerms Nat:modCore:go:eq~u1 | (Nat:succ fuel2₃) != (HAdd:hAdd fuel2₃ (OfNat:ofNat 1)) of type Nat
-refused value UnequalTerms Nat:gcd~uself | Nat:succ n₁ != HAdd:hAdd n₁ (OfNat:ofNat 1) of type Nat
+checked 304 of 310 declarations, 24 of 24 data types and records
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:ble~ueq~utrue~uof~ule:match~u1~u7 | Nat:le n₀ m₄ !=< LE.le₁ instLENat n₀ m₄
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:succ~ule~usucc:match~u1~u7 | Nat:le n₀ m₄ !=< LE.le₁ instLENat n₀ m₄
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:le~utrans:match~u1~u10 | Nat:le m₁ k₅ !=< LE.le₁ instLENat m₁ k₅
+refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 | Nat:le n₄ n₄ !=< LE.le₁ instLENat n₄ n₄
+refused type UnequalTerms ~uprivate:Init:Data:Nat:Basic:~n0:Nat:zero~ult~uof~une~uzero:match~u1~u1 | (HAdd.hAdd₃ instHAdd a₃ (OfNat:ofNat _)) != (Nat:succ a₃) of type
+refused type UnequalTerms Nat:modCore:go:eq~u1 | (Nat:succ fuel2₃) != (HAdd.hAdd₃ instHAdd fuel2₃ (OfNat:ofNat _))
+refused value UnequalTerms Nat:gcd~uself | Nat:succ n₁ != HAdd.hAdd₃ instHAdd n₁ (OfNat:ofNat _) of type Nat
