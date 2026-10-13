@@ -3,9 +3,8 @@
 -- lean2agda, profile U: the scaffold of the closure of List:reverse~ureverse
 module U.Init.Data.List.Lemmas where
 
-postulate Eq : {α₀ : Set} → α₀ → α₀ → Set
-
-postulate Eq:refl : {α₀ : Set} → (a₁ : α₀) → Eq {α₀} a₁ a₁
+data Eq {α₀ : Set} : α₀ → α₀ → Set where
+  Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
 
 postulate Eq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : (a₂ : α₀) → Eq {α₀} a₁ a₂ → Set} → motive₂ a₁ (Eq:refl {α₀} a₁) → {a₃ : α₀} → (t₄ : Eq {α₀} a₁ a₃) → motive₂ a₃ t₄
 
@@ -17,29 +16,30 @@ postulate Eq:mpr : {α₀ : Set} → {β₁ : Set} → Eq {Set} α₀ β₁ → 
 
 postulate Eq:trans : {α₀ : Set} → {a₁ : α₀} → {b₂ : α₀} → {c₃ : α₀} → Eq {α₀} a₁ b₂ → Eq {α₀} b₂ c₃ → Eq {α₀} a₁ c₃
 
-postulate Iff : Set → Set → Set
-
-postulate Iff:intro : {a₀ : Set} → {b₁ : Set} → (a₀ → b₁) → (b₁ → a₀) → Iff a₀ b₁
+record Iff (a₀ : Set) (b₁ : Set) : Set where
+  constructor Iff:intro
+  field
+    mp₂ : a₀ → b₁
+    mpr₃ : b₁ → a₀
 
 postulate Iff:rec : {a₀ : Set} → {b₁ : Set} → {motive₂ : Iff a₀ b₁ → Set} → ((mp₃ : a₀ → b₁) → (mpr₄ : b₁ → a₀) → motive₂ (Iff:intro {a₀} {b₁} mp₃ mpr₄)) → (t₃ : Iff a₀ b₁) → motive₂ t₃
 
-postulate List : Set → Set
-
-postulate List:cons : {α₀ : Set} → α₀ → List α₀ → List α₀
-
-postulate List:nil : {α₀ : Set} → List α₀
+data List (α₀ : Set) : Set where
+  List:nil : List α₀
+  List:cons : α₀ → List α₀ → List α₀
 
 postulate List:rec : {α₀ : Set} → {motive₁ : List α₀ → Set} → motive₁ (List:nil {α₀}) → ((head₂ : α₀) → (tail₃ : List α₀) → motive₁ tail₃ → motive₁ (List:cons {α₀} head₂ tail₃)) → (t₂ : List α₀) → motive₁ t₂
 
-postulate PProd : Set → Set → Set
-
-postulate PProd:mk : {α₀ : Set} → {β₁ : Set} → α₀ → β₁ → PProd α₀ β₁
+record PProd (α₀ : Set) (β₁ : Set) : Set where
+  constructor PProd:mk
+  field
+    fst₂ : α₀
+    snd₃ : β₁
 
 postulate PProd:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : PProd α₀ β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁) → motive₂ (PProd:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PProd α₀ β₁) → motive₂ t₃
 
-postulate PUnit : Set
-
-postulate PUnit:unit : PUnit
+record PUnit : Set where
+  constructor PUnit:unit
 
 postulate PUnit:rec : {motive₀ : PUnit → Set} → motive₀ PUnit:unit → (t₁ : PUnit) → motive₀ t₁
 
@@ -59,9 +59,8 @@ postulate List:reverseAux : {α₀ : Set} → List α₀ → List α₀ → List
 
 postulate List:reverse : {α₀ : Set} → List α₀ → List α₀
 
-postulate True : Set
-
-postulate True:intro : True
+record True : Set where
+  constructor True:intro
 
 postulate True:rec : {motive₀ : True → Set} → motive₀ True:intro → (t₁ : True) → motive₀ t₁
 

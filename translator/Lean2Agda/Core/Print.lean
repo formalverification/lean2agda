@@ -2,6 +2,7 @@
 File: translator/Lean2Agda/Core/Print.lean
 -/
 import Lean2Agda.Core.Naming
+import Lean2Agda.Core.InductiveShape
 import Lean.Environment
 import Lean.LocalContext
 
@@ -53,10 +54,12 @@ def Visibility.closing : Visibility → String
   | .instance => " ⦄"
 
 /-- The Agda terms the printer produces.  `sort` is `Set`, the only sort
-under profile U; a Pi type without a name is non-dependent. -/
+under profile U; a Pi type without a name is non-dependent; `field r f`
+is Agda's projection `r.f` of field `f` from record `r`. -/
 inductive AgdaTerm where
   | var (name : String)
   | const (name : String)
+  | field (record name : String)
   | sort
   | nat (value : Nat)
   | str (value : String)
@@ -94,6 +97,7 @@ def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
   let out := if paren then out ++ "(" else out
   let out := match t with
     | .var n | .const n => out ++ n
+    | .field r f => out ++ r ++ "." ++ f
     | .sort => out ++ "Set"
     | .nat n => out ++ toString n
     | .str s => out ++ agdaStringLiteral s
@@ -119,6 +123,18 @@ def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
   if paren then out ++ ")" else out
 
 def AgdaTerm.render (t : AgdaTerm) : String := t.renderTo "" 0
+
+/-- The constants a printed term refers to, in order of first occurrence;
+a field projection refers to its record. -/
+def AgdaTerm.constants (t : AgdaTerm) : Array String :=
+  go t #[]
+where
+  go : AgdaTerm → Array String → Array String
+    | .const n, acc | .field n _, acc => if acc.contains n then acc else acc.push n
+    | .app f _ a, acc => go a (go f acc)
+    | .lam _ _ ty b, acc | .pi _ _ ty b, acc => go b (go ty acc)
+    | .letE _ ty v b, acc => go b (go v (go ty acc))
+    | _, acc => acc
 
 /-! ## Names -/
 
@@ -177,16 +193,19 @@ the printer prints the expected visibility.  At the top level the lambdas
 are the leading ones of a definition's value, matched against its type;
 deeper, they are lambdas checked against any other expected type: an
 argument's binder type, a `let`'s type, or a lambda's codomain below the
-top. -/
+top.  A projection prints as a record's field projection, or, from a
+structure-like type that is not a record, through its recursor. -/
 structure PrintCounts where
   topRepairs : Nat := 0
   deepRepairs : Nat := 0
   projections : Nat := 0
+  fieldProjections : Nat := 0
   deriving BEq, Repr, Inhabited
 
 def PrintCounts.add (a b : PrintCounts) : PrintCounts :=
   { topRepairs := a.topRepairs + b.topRepairs, deepRepairs := a.deepRepairs + b.deepRepairs,
-    projections := a.projections + b.projections }
+    projections := a.projections + b.projections,
+    fieldProjections := a.fieldProjections + b.fieldProjections }
 
 structure Printer where
   env : Environment
@@ -273,18 +292,25 @@ where
     | .forallE x t b bi, k + 1 => .lam x t (go b k) bi
     | _, _ => .bvar (n - 1 - i)
 
-/-- `Expr.proj S i t` as an application of `S`'s recursor, the only
-eliminator the scaffold has until issue M2-4 emits records:
+/-- `Expr.proj S i t` for a structure-like `S` that is not an Agda record
+(`String`, which stays a postulate for `BUILTIN STRING`, or a type whose
+constructor binds a parameter explicitly), as an application of `S`'s
+recursor:
 `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`, where `Tᵢ` is the
 field's type with each earlier field `fⱼ` replaced by `proj S j self`,
 exactly as the kernel types a projection.  The motive's universe is not
-printed under U, so the level it is given here is zero. -/
+printed under U, so the level it is given here is zero.  It checks
+against a postulated recursor for a field whose type mentions no earlier
+field, and needs the recursor to compute (issue M2-5) for the others. -/
 def projectionAsRecursor (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM Expr := do
   let env := (← read).env
   let some (.inductInfo ind) := env.find? S
     | throw s!"a projection from {S}, which is not an inductive type"
   let [ctor] := ind.ctors | throw s!"a projection from {S}, which has more than one constructor"
   unless ind.numIndices == 0 do throw s!"a projection from {S}, which has indices"
+  -- A recursive type's minor premise also takes the fields' induction
+  -- hypotheses, which this minor premise lacks.
+  if ind.isRec then throw s!"a projection from {S}, which is recursive and not a record"
   let some (.ctorInfo c) := env.find? ctor | throw s!"unknown constructor {ctor}"
   let some (.recInfo r) := env.find? (mkRecName S) | throw s!"unknown recursor of {S}"
   unless i < c.numFields do throw s!"a projection of field {i} from {S}"
@@ -320,8 +346,10 @@ partial def printExpr (s : Scope) (e : Expr) : PrintM AgdaTerm := do
   | .lit (.strVal v) => return .str v
   | .mdata _ b => printExpr s b
   | .proj S i t =>
-    modify fun c => { c with projections := c.projections + 1 }
-    printExpr s (← projectionAsRecursor s S i t)
+    if isAgdaRecordName (← read).env S then printFieldProjection s S i t
+    else
+      modify fun c => { c with projections := c.projections + 1 }
+      printExpr s (← projectionAsRecursor s S i t)
   | .app .. => printApp s e
   | .lam .. => printLambda s e none false
   | .forallE n t b bi =>
@@ -389,19 +417,53 @@ partial def printApp (s : Scope) (e : Expr) : PrintM AgdaTerm := do
     out := .app out v (← printAgainst s args[i] dom false)
   return out
 
+/-- `Expr.proj S i t` for a record `S`: Agda's projection `S.fᵢ` of the
+field, applied to `S`'s parameters as Agda's projections take them
+(instance arguments for the parameters declared as instances, implicit
+ones for the rest), then to `t`.  The parameters are read from the type
+of `t`, as the kernel types a projection. -/
+partial def printFieldProjection (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM AgdaTerm := do
+  let env := (← read).env
+  let some (.inductInfo ind) := env.find? S | throw s!"a projection from {S}, which is not an inductive type"
+  let [ctor] := ind.ctors | throw s!"a projection from {S}, which has more than one constructor"
+  let some (.ctorInfo c) := env.find? ctor | throw s!"unknown constructor {ctor}"
+  let some (x, depth) := recordFieldBinder c.type ind.numParams i
+    | throw s!"a projection of field {i} from {S}"
+  let structType ← kernelWhnf s (← kernelType s t)
+  let head := structType.getAppFn
+  let params := structType.getAppArgs
+  unless head.isConstOf S && params.size == ind.numParams do
+    throw s!"a projection from {describe structType}"
+  modify fun c => { c with fieldProjections := c.fieldProjections + 1 }
+  let binders ← argumentBinders s head params
+  let mut out := AgdaTerm.field ((← read).naming.constant S) (binderName x depth)
+  for h : j in [:params.size] do
+    let (v, dom) := binders[j]!
+    out := .app out (if v == .instance then .instance else .implicit) (← printAgainst s params[j] dom false)
+  return .app out .explicit (← printExpr s t)
+
 end
 
-/-- The first `n` binders of a type as a telescope, and the rest of the
-type in their scope, as a `data` type's parameters and its sort. -/
-partial def printTelescope (s : Scope) (type : Expr) :
-    Nat → PrintM (Array (Visibility × String × AgdaTerm) × AgdaTerm)
-  | 0 => return (#[], ← printExpr s type)
+/-- Enter the first `n` binders of a type: their printed binders, the
+scope inside them, and the rest of the type with their free variables in
+place, for the caller to print in that scope.  Every binder is entered,
+used or not, as a declaration's telescope names each one. -/
+partial def enterTelescope (s : Scope) (type : Expr) :
+    Nat → PrintM (Array (Visibility × String × AgdaTerm) × Scope × Expr)
+  | 0 => return (#[], s, type)
   | k + 1 => do
     let some (.forallE n t b bi) ← asPi s type | throw "a telescope longer than its type"
     let dom ← printExpr s t
     let (s', x, fv) := s.enter n t bi
-    let (rest, body) ← printTelescope s' (b.instantiate1 fv) k
-    return (#[(Visibility.ofBinderInfo bi, x, dom)] ++ rest, body)
+    let (rest, inner, body) ← enterTelescope s' (b.instantiate1 fv) k
+    return (#[(Visibility.ofBinderInfo bi, x, dom)] ++ rest, inner, body)
+
+/-- The first `n` binders of a type as a telescope, and the rest of the
+type in their scope, as a `data` type's parameters and its sort. -/
+partial def printTelescope (s : Scope) (type : Expr) (n : Nat) :
+    PrintM (Array (Visibility × String × AgdaTerm) × AgdaTerm) := do
+  let (binders, inner, rest) ← enterTelescope s type n
+  return (binders, ← printExpr inner rest)
 
 def renderTelescope (binders : Array (Visibility × String × AgdaTerm)) : String :=
   " ".intercalate (binders.toList.map fun (v, x, t) => v.opening ++ x ++ " : " ++ t.render ++ v.closing)

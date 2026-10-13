@@ -1,2 +1,2 @@
 # File: translator/tests/expected/scaffolds/selected.refusals.txt
-checked 34 of 34 declarations
+checked 29 of 29 declarations, 6 of 6 data types and records

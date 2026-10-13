@@ -119,11 +119,11 @@ def checkConstructors (env : Environment) : IO Unit := do
   -- An instance argument is passed explicitly, in instance braces.
   ok (mkApp2 (.const ``Inhabited.default [.succ .zero]) (mkConst ``Nat) (mkConst ``instInhabitedNat))
     "Inhabited:default {Nat} ⦃ instInhabitedNat ⦄" "instance argument"
-  -- A projection prints through the structure's recursor.
+  -- A projection from a record prints as its field projection;
+  -- tests/Inductives.lean has the other cases.
   ok (.lam `p (mkApp2 (.const ``Prod [.zero, .zero]) (mkConst ``Nat) (mkConst ``Nat))
       (.proj ``Prod 0 (.bvar 0)) .default)
-    ("λ (p₀ : Prod Nat Nat) → Prod:rec {Nat} {Nat} {λ (self₁ : Prod Nat Nat) → Nat} " ++
-     "(λ (fst₁ : Nat) → λ (snd₂ : Nat) → fst₁) p₀") "projection"
+    "λ (p₀ : Prod Nat Nat) → Prod.fst₂ {Nat} {Nat} p₀" "projection"
   -- A telescope: the first binders, and the rest in their scope.
   let some cons := env.find? ``List.cons | throw (IO.userError "missing List.cons")
   let ((binders, rest), _) ← IO.ofExcept (p.telescope cons.type 1)

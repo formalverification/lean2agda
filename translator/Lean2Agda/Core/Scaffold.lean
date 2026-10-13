@@ -1,28 +1,35 @@
 /-
 File: translator/Lean2Agda/Core/Scaffold.lean
 -/
-import Lean2Agda.Core.Print
+import Lean2Agda.Core.Inductive
 import Lean2Agda.Core.Share
 
 /-!
 # The profile U scaffold
 
-One Agda module per closure, the test of the printer until issues M2-4 to
-M2-7 emit inductive types, definitions and quotients.  It declares every
-constant of the closure with its printed type.  Each constant is a
-postulate, except the following:
+One Agda module per closure, the test of the printer and the emitters
+until issues M2-5 to M2-7 emit recursors, definitions and quotients.  It
+declares every constant of the closure with its printed type.  Each
+constant is a postulate, except the following:
 
-+  `Nat`, a `data` type bound to `BUILTIN NATURAL`, so that literals print
-   as decimals;
-+  `String`, a postulate bound to `BUILTIN STRING`;
++  the inductive types, each block of them one declaration
+   (`Inductive.lean`): a record for each structure-like type and a data
+   type for each other, `Nat` among them, bound to `BUILTIN NATURAL` so
+   that literals print as decimals;
++  `String`, a postulate bound to `BUILTIN STRING`, which needs one, and
+   so its constructor and recursor are postulates too;
 +  the type abbreviations, definitions with their printed values, since a
    type can be well formed only through one (`outParam`, `DecidableEq`);
++  the projection functions of records, definitions whose values print as
+   the records' field projections, so that a type mentioning `S.f x`
+   checks where Agda's projection is expected;
 +  the roots that have values, and the sharing pass's auxiliary
    definitions, definitions with their printed values.
 
 Agda parses and scope-checks the whole module.  It type-checks each
-declaration that needs no definitional unfolding beyond the type
-abbreviations; `docs/translator/printing.md` says which do not, and why.
+declaration that needs no definitional unfolding beyond these
+definitions and the records' projections; `docs/translator/printing.md`
+says which do not, and why.
 -/
 
 namespace Lean2Agda
@@ -30,17 +37,6 @@ namespace Lean2Agda
 open Lean
 
 def profileUOptions : String := "{-# OPTIONS --type-in-type #-}"
-
-/-- The constants a printed term refers to, in order of first occurrence. -/
-def AgdaTerm.constants (t : AgdaTerm) : Array String :=
-  go t #[]
-where
-  go : AgdaTerm → Array String → Array String
-    | .const n, acc => if acc.contains n then acc else acc.push n
-    | .app f _ a, acc => go a (go f acc)
-    | .lam _ _ ty b, acc | .pi _ _ ty b, acc => go b (go ty acc)
-    | .letE _ ty v b, acc => go b (go v (go ty acc))
-    | _, acc => acc
 
 /-- One declaration of a module: the identifiers it declares, those its
 text refers to, and its text.  A definition also carries its fallback, the
@@ -164,37 +160,43 @@ def definitionItem (p : Printer) (decl : Declaration) : Except String (ScaffoldI
             text := s!"{name} : {t.render}\n{clause.render name}\n",
             fallback := some (t.constants, s!"postulate {name} : {t.render}\n") }, c₁.add c₂)
 
-/-- `Nat` as the data type `BUILTIN NATURAL` asks for, with Lean's
-constructors under their own identifiers. -/
-def naturalItem (p : Printer) (nat : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
-  let .inductInfo v := nat.info | throw "Nat is not an inductive type"
-  unless v.ctors == [``Nat.zero, ``Nat.succ] do throw "Nat has unexpected constructors"
-  let (t, counts) ← p.type nat.info.type
-  let mut lines := #[s!"data {agdaIdent ``Nat} : {t.render} where"]
-  let mut counts := counts
-  for ctor in v.ctors do
-    let some info := p.env.find? ctor | throw s!"unknown constructor {ctor}"
-    let (ct, c) ← p.type info.type
-    counts := counts.add c
-    lines := lines.push s!"  {agdaIdent ctor} : {ct.render}"
-  lines := lines.push s!"\{-# BUILTIN NATURAL {agdaIdent ``Nat} #-}"
-  return ({ provides := #[``Nat, ``Nat.zero, ``Nat.succ].map agdaIdent, references := #[],
-            text := "\n".intercalate lines.toList ++ "\n" }, counts)
+/-- `String`, a postulate, since `BUILTIN STRING` binds Agda's string
+literals to a postulated type, whether or not it is a root. -/
+def stringItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
+  let (item, counts) ← postulateItem p decl
+  return ({ item with text := item.text ++ s!"\{-# BUILTIN STRING {agdaIdent ``String} #-}\n" }, counts)
 
-/-- The scaffold's item for one declaration, or none for a constructor
-of `Nat`, which the `data` item declares.  `Nat` and `String` are bound to
-their builtins whether or not they are roots. -/
-def scaffoldItem (p : Printer) (closure : Closure) (hasNat : Bool) (decl : Declaration) :
-    Except String (Option (ScaffoldItem × PrintCounts)) := do
-  if hasNat && decl.name == ``Nat then return some (← naturalItem p decl)
-  if hasNat && (decl.name == ``Nat.zero || decl.name == ``Nat.succ) then return none
-  if decl.name == ``String && decl.kind == .inductive then
-    let (item, counts) ← postulateItem p decl
-    return some ({ item with
-      text := item.text ++ s!"\{-# BUILTIN STRING {agdaIdent ``String} #-}\n" }, counts)
-  if decl.auxiliary || isTypeAbbreviation decl.info || closure.roots.contains decl.name then
-    return some (← definitionItem p decl)
-  return some (← postulateItem p decl)
+/-- A block of inductive types as one item, declaring its types and
+constructors. -/
+def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : InductiveVal) :
+    Except String (ScaffoldItem × PrintCounts) := do
+  let d ← inductiveDecl p (← blockMembers (fun n => byName[n]?.map (·.info)) v)
+  return ({ provides := d.provides, references := d.references,
+            text := "\n".intercalate d.lines.toList ++ "\n" }, d.counts)
+
+/-- Whether the scaffold gives a declaration its value: an auxiliary
+definition, a type abbreviation, a projection function of a record, or a
+root. -/
+def emitsValue (env : Environment) (closure : Closure) (decl : Declaration) : Bool :=
+  decl.auxiliary || isTypeAbbreviation decl.info || isRecordProjection env decl.name ||
+    closure.roots.contains decl.name
+
+/-- The scaffold's item for one declaration, or none for one that its
+inductive block's item declares: a constructor, or a type of a mutual
+block other than its first. -/
+def scaffoldItem (p : Printer) (closure : Closure) (byName : Std.HashMap Name Declaration)
+    (decl : Declaration) : Except String (Option (ScaffoldItem × PrintCounts)) := do
+  match decl.info with
+  | .inductInfo v =>
+    if v.name == ``String then return some (← stringItem p decl)
+    if v.all.head? != some v.name then return none
+    return some (← inductiveItem p byName v)
+  | .ctorInfo c =>
+    if c.induct == ``String then return some (← postulateItem p decl)
+    return none
+  | _ =>
+    if emitsValue p.env closure decl then return some (← definitionItem p decl)
+    return some (← postulateItem p decl)
 
 /-- The scaffold of a closure that the sharing pass has already rewritten.
 Its path is the one its names sidecar has, from the source module of the
@@ -206,19 +208,19 @@ def scaffold (env : Environment) (root : Root) (closure : Closure) : Except Stri
   let decls := closure.declarations
   let some owner := decls.find? (·.name == first) | throw s!"root {first} missing"
   let some module := owner.sourceModule | throw s!"no source module assigned to {first}"
+  let byName : Std.HashMap Name Declaration := decls.foldl (fun m d => m.insert d.name d) {}
   let auxiliaries : Std.HashMap Name Declaration :=
     decls.foldl (fun m d => if d.auxiliary then m.insert d.name d else m) {}
   let needed := reachableAuxiliaries auxiliaries <| decls.foldl (fun acc d =>
     if d.auxiliary then acc
-    else if isTypeAbbreviation d.info || closure.roots.contains d.name then acc ++ constantExprs d.info
+    else if emitsValue env closure d then acc ++ constantExprs d.info
     else acc.push d.info.type) #[]
-  let hasNat := decls.any (·.name == ``Nat)
   let p : Printer := { env }
   let mut counts : PrintCounts := {}
   let mut items := #[]
   for decl in decls do
     unless decl.auxiliary && !needed.contains decl.name do
-      if let some (item, c) ← scaffoldItem p closure hasNat decl then
+      if let some (item, c) ← scaffoldItem p closure byName decl then
         items := items.push item
         counts := counts.add c
   return { path := agdaModule root module, items := ← orderItems (breakCycles items), counts }

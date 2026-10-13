@@ -15,14 +15,20 @@ Description:
   checks; when Agda refuses a declaration's type, the declaration and
   everything that refers to it are dropped.  It stops when the rest
   checks, and prints one line per refusal and per dropped declaration,
-  in the order Agda met them, after a line counting what checked.
+  in the order Agda met them, after a line counting what checked: the
+  declarations, and the data types and records the inductive types
+  became.
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
-        [--timeout SECONDS] [--messages] MODULE.agda
+        [--timeout SECONDS] [--messages] [--types-only] MODULE.agda
 
   The listing is deterministic, so a test compares it with an expected
-  one; `--messages` adds the first line of each error message.  The
-  number of Agda runs and their times go to standard error.
+  one; `--messages` adds the first line of each error message.
+  `--types-only` checks the data types and records alone, with the
+  declarations they mention, directly or through each other: what
+  Agda's positivity checker sees, in a module a fraction of the size,
+  since Agda's time grows faster than a module.  The number of Agda runs
+  and their times go to standard error.
 
 Design Principles:
   - The module is never edited in place: the checker writes its copies
@@ -33,7 +39,12 @@ Design Principles:
     runner and clock.
   - A declaration is a block of lines between blank lines, as
     Scaffold.render in translator/Lean2Agda/Core/Scaffold.lean writes
-    them; its first word (after `postulate` or `data`) is its name.
+    them: a postulate, a definition, a data type with its constructors
+    on the lines under it, a record with its constructor and fields, a
+    mutual block of data types and records, each possibly after or
+    before a pragma line.  The names a block declares are the ones its
+    users can mention: a record's fields are mentioned as `R.f`, which
+    names the record.
 """
 from __future__ import annotations
 
@@ -42,8 +53,11 @@ import re
 import sys
 import tempfile
 from dataclasses import dataclass
+from functools import reduce
+from itertools import accumulate, groupby
+from operator import itemgetter
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from _utils.file_ops import ensure_dir_exists, read_text, write_text
 from _utils.pipeline_types import ErrorType, PipelineError, Result
@@ -52,8 +66,9 @@ from agda_run import Clock, FileRun, Outcome, Runner, check_file, real_clock, ru
 DEFAULT_TIMEOUT: float = 600.0
 
 # Identifiers in printed Agda are separated by whitespace and these
-# delimiters; a dot never occurs in the scaffold's names.
-_TOKEN = re.compile(r"[^\s(){}⦃⦄;]+")
+# delimiters.  A dot never occurs in the scaffold's names: it separates a
+# record from its field in a projection `R.f`, which mentions `R`.
+_TOKEN = re.compile(r"[^\s(){}⦃⦄;.]+")
 # "<path>:<line>.<column>-<end>: error: [Name]", where the end is a
 # column or a line.column.
 _ERROR = re.compile(r":(\d+)\.\d+-(?:\d+\.)?\d+: error: \[(\w+)\]")
@@ -62,12 +77,14 @@ _MODULE = re.compile(r"^module (\S+) where$", re.MULTILINE)
 
 @dataclass(frozen=True)
 class Item:
-    """One declaration: its kind ("postulate", "data" or "definition"),
-    the names it declares, and its text."""
+    """One declaration: its kind ("postulate", "data", "record",
+    "mutual", "definition" or "pragma"), the names it declares, its text,
+    and the data types and records among those names."""
 
     kind: str
     names: tuple[str, ...]
     text: str
+    types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -111,16 +128,48 @@ class State:
     events: tuple[Event, ...]
 
 
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def declared_types(lines: tuple[str, ...]) -> tuple[str, ...]:
+    """The types that the lines of a data type, a record or a mutual block
+    declare, one per `data T` or `record T` line."""
+    return tuple(words[1] for words in (line.split() for line in lines)
+                 if words and words[0] in ("data", "record"))
+
+
+def declared_names(lines: tuple[str, ...]) -> tuple[str, ...]:
+    """The types and constructors that the lines of a data type, a record
+    or a mutual block declare: each `data T` or `record T` line names a
+    type; under a data type, each line one step deeper names a
+    constructor; under a record, its `constructor` line does, and its
+    fields, mentioned only as `T.f`, name nothing."""
+    def step(acc: tuple[tuple[str, ...], Optional[tuple[str, int]]],
+             line: str) -> tuple[tuple[str, ...], Optional[tuple[str, int]]]:
+        names, current = acc
+        words = line.split()
+        if words and words[0] in ("data", "record"):
+            return names + (words[1],), (words[0], _indent(line))
+        if not words or current is None or _indent(line) != current[1] + 2:
+            return acc
+        if current[0] == "data":
+            return names + (words[0],), current
+        return (names + (words[1],), current) if words[0] == "constructor" else acc
+    return reduce(step, lines, ((), None))[0]
+
+
 def parse_item(text: str) -> Item:
-    """Classify a block by its first line and collect its names; a data
-    type also declares the constructors on its indented lines."""
-    lines = text.split("\n")
+    """Classify a block by its first line that is not a pragma and collect
+    the names it declares."""
+    lines = tuple(line for line in text.split("\n") if not line.startswith("{-#"))
+    if not lines:
+        return Item("pragma", (), text)
     words = lines[0].split()
     if words[0] == "postulate":
         return Item("postulate", (words[1],), text)
-    if words[0] == "data":
-        constructors = tuple(line.split()[0] for line in lines[1:] if line.startswith("  "))
-        return Item("data", (words[1],) + constructors, text)
+    if words[0] in ("data", "record", "mutual"):
+        return Item(words[0], declared_names(lines), text, declared_types(lines))
     return Item("definition", (words[0],), text)
 
 
@@ -142,6 +191,27 @@ def references(items: tuple[Item, ...]) -> tuple[frozenset[int], ...]:
     )
 
 
+def reach(start: frozenset[int], successors: Callable[[int], frozenset[int]]) -> frozenset[int]:
+    """Everything reachable from `start` through `successors`, `start`
+    included.  A loop over a frontier, not a recursion: a chain of
+    references can be thousands of declarations long, and each one is
+    visited once."""
+    found, frontier = start, start
+    while frontier:
+        frontier = frozenset().union(*(successors(i) for i in frontier)) - found
+        found = found | frontier
+    return found
+
+
+def types_only(module: Module) -> Module:
+    """The module's data types, records and mutual blocks, and the
+    declarations they mention, directly or through each other, in the
+    module's order."""
+    refs = references(module.items)
+    keep = reach(frozenset(i for i, item in enumerate(module.items) if item.types), lambda i: refs[i])
+    return Module(module.name, module.header, tuple(item for i, item in enumerate(module.items) if i in keep))
+
+
 def render(module: Module, state: State) -> tuple[str, tuple[tuple[int, int], ...]]:
     """The module's text with the live items, and for each live item its
     index and first line."""
@@ -154,10 +224,9 @@ def render(module: Module, state: State) -> tuple[str, tuple[tuple[int, int], ..
 
 def _starts(heights: tuple[int, ...], first: int) -> tuple[int, ...]:
     """The first line of each block, given their heights and one blank
-    line between blocks."""
-    if not heights:
-        return ()
-    return (first,) + _starts(heights[1:], first + heights[0] + 1)
+    line between blocks.  A running sum, not recursion: a scaffold of a
+    few thousand declarations would exhaust Python's stack."""
+    return tuple(accumulate((h + 1 for h in heights[:-1]), initial=first)) if heights else ()
 
 
 def parse_refusal(output: str) -> Optional[Refusal]:
@@ -180,10 +249,9 @@ def locate(layout: tuple[tuple[int, int], ...], line: int) -> Optional[tuple[int
 def dependents(index: int, refs: tuple[frozenset[int], ...], alive: tuple[bool, ...]) -> tuple[int, ...]:
     """The live items that refer to `index`, directly or through each
     other, in module order, `index` first."""
-    def grow(found: frozenset[int]) -> frozenset[int]:
-        more = found | frozenset(i for i, r in enumerate(refs) if alive[i] and r & found)
-        return found if more == found else grow(more)
-    return (index,) + tuple(sorted(grow(frozenset((index,))) - {index}))
+    pairs = sorted((i, j) for j, r in enumerate(refs) if alive[j] for i in r)
+    users = {i: frozenset(j for _, j in group) for i, group in groupby(pairs, key=itemgetter(0))}
+    return (index,) + tuple(sorted(reach(frozenset((index,)), lambda i: users.get(i, frozenset())) - {index}))
 
 
 def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
@@ -205,9 +273,13 @@ def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
 
 
 def listing(state: State, messages: bool) -> str:
-    """The report: what checked, then one line per event."""
+    """The report: what checked, declarations and the data types and
+    records among them, then one line per event."""
     total = len(state.items)
-    lines = (f"checked {sum(state.alive)} of {total} declarations",) + tuple(
+    types = sum(len(item.types) for item in state.items)
+    checked_types = sum(len(item.types) for item, alive in zip(state.items, state.alive) if alive)
+    lines = (f"checked {sum(state.alive)} of {total} declarations, "
+             f"{checked_types} of {types} data types and records",) + tuple(
         " ".join(w for w in (e.action, e.error, e.name) if w)
         + (f" | {e.message}" if messages and e.message else "")
         for e in state.events
@@ -264,9 +336,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--agda", default="agda")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     parser.add_argument("--messages", action="store_true")
+    parser.add_argument("--types-only", action="store_true")
     args = parser.parse_args(argv)
     with tempfile.TemporaryDirectory(prefix="scaffold-check-") as scratch:
-        outcome = read_text(args.module).and_then(parse_module).and_then(
+        outcome = read_text(args.module).and_then(parse_module).map(
+            lambda m: types_only(m) if args.types_only else m).and_then(
             lambda m: check_module(run_agda, real_clock, args.agda, m, args.timeout, Path(scratch)))
     if outcome.is_err:
         print(f"scaffold_check: {outcome.unwrap_err()}", file=sys.stderr)

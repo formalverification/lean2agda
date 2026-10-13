@@ -1,0 +1,2 @@
+# File: translator/tests/expected/scaffolds/inductives.refusals.txt
+checked 79 of 79 declarations, 25 of 25 data types and records
