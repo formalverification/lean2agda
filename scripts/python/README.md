@@ -9,6 +9,12 @@ follows:
    type-checks every translated corpus entry; run by `make corpus-check`.
    `corpus_manifest.py` holds the manifest's rules and `agda_run.py` the
    call to Agda, which issue M2-8's `agda_check.py` is to reuse.
++  `corpus_tables.py` (issue M1-10): prints the corpus's tables from the
+   manifest and the entries' files (the coverage of the gap catalog's
+   features, the matrix of entries against features, and the sizes of
+   each export and Agda file), which `corpus/README.md` and
+   `docs/foundations/gap-report-corpus.md` carry; run by
+   `make corpus-tables`.
 +  `atlas_report.py` (issue M1-11): reads the records `lake exe atlas`
    writes and writes the atlas's report under `docs/reports/`, checking
    them against `corpus/manifest.json`; run by `make atlas`.
