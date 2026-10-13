@@ -18,7 +18,7 @@ from typing import Sequence
 
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from scaffold_check import (
-    Event, Item, Refusal, State, check_module, dependents, listing, locate, parse_item,
+    Event, Item, Module, Refusal, State, check_module, dependents, listing, locate, parse_item,
     parse_module, parse_refusal, references, render, step, types_only,
 )
 
@@ -121,6 +121,27 @@ class TestTypesOnly(unittest.TestCase):
         kept = types_only(module)
         self.assertEqual([i.names[0] for i in kept.items], ["Nat", "Box", "Hidden"])
         self.assertEqual((kept.name, kept.header), (module.name, module.header))
+
+
+def chain(n: int) -> tuple[Item, ...]:
+    """A data type that mentions a0, each a{i} the next, a{n-1} nothing:
+    one reference chain n declarations long."""
+    return (Item("data", ("T", "T:c"), "data T : Set where\n  T:c : a0 → T", ("T",)),) + tuple(
+        Item("postulate", (f"a{i}",), f"postulate a{i} : a{i + 1}" if i < n - 1 else f"postulate a{i} : Set")
+        for i in range(n))
+
+
+class TestLongChains(unittest.TestCase):
+    # Thousands of declarations in one chain of references: the fixed
+    # points are loops, not recursions that would exhaust Python's stack.
+    def test_types_only_follows_a_long_chain(self) -> None:
+        items = chain(3000)
+        self.assertEqual(len(types_only(Module("U.A", "module U.A where", items)).items), 3001)
+
+    def test_dependents_follow_a_long_chain(self) -> None:
+        items = chain(3000)
+        found = dependents(3000, references(items), tuple(True for _ in items))
+        self.assertEqual(found, (3000,) + tuple(range(3000)))
 
 
 class TestRenderAndLocate(unittest.TestCase):

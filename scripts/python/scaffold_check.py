@@ -54,9 +54,10 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from functools import reduce
-from itertools import accumulate
+from itertools import accumulate, groupby
+from operator import itemgetter
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from _utils.file_ops import ensure_dir_exists, read_text, write_text
 from _utils.pipeline_types import ErrorType, PipelineError, Result
@@ -190,16 +191,24 @@ def references(items: tuple[Item, ...]) -> tuple[frozenset[int], ...]:
     )
 
 
+def reach(start: frozenset[int], successors: Callable[[int], frozenset[int]]) -> frozenset[int]:
+    """Everything reachable from `start` through `successors`, `start`
+    included.  A loop over a frontier, not a recursion: a chain of
+    references can be thousands of declarations long, and each one is
+    visited once."""
+    found, frontier = start, start
+    while frontier:
+        frontier = frozenset().union(*(successors(i) for i in frontier)) - found
+        found = found | frontier
+    return found
+
+
 def types_only(module: Module) -> Module:
     """The module's data types, records and mutual blocks, and the
     declarations they mention, directly or through each other, in the
     module's order."""
     refs = references(module.items)
-
-    def grow(found: frozenset[int]) -> frozenset[int]:
-        more = found.union(*(refs[i] for i in found))
-        return found if more == found else grow(more)
-    keep = grow(frozenset(i for i, item in enumerate(module.items) if item.types))
+    keep = reach(frozenset(i for i, item in enumerate(module.items) if item.types), lambda i: refs[i])
     return Module(module.name, module.header, tuple(item for i, item in enumerate(module.items) if i in keep))
 
 
@@ -240,10 +249,9 @@ def locate(layout: tuple[tuple[int, int], ...], line: int) -> Optional[tuple[int
 def dependents(index: int, refs: tuple[frozenset[int], ...], alive: tuple[bool, ...]) -> tuple[int, ...]:
     """The live items that refer to `index`, directly or through each
     other, in module order, `index` first."""
-    def grow(found: frozenset[int]) -> frozenset[int]:
-        more = found | frozenset(i for i, r in enumerate(refs) if alive[i] and r & found)
-        return found if more == found else grow(more)
-    return (index,) + tuple(sorted(grow(frozenset((index,))) - {index}))
+    pairs = sorted((i, j) for j, r in enumerate(refs) if alive[j] for i in r)
+    users = {i: frozenset(j for _, j in group) for i, group in groupby(pairs, key=itemgetter(0))}
+    return (index,) + tuple(sorted(reach(frozenset((index,)), lambda i: users.get(i, frozenset())) - {index}))
 
 
 def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
