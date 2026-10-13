@@ -160,7 +160,7 @@ corpus-check: ## Type-check every translated corpus entry under the flags its fi
 # (docs/foundations/gap-report-corpus.md) carry, printed from the manifest
 # and the entries' files: features by entry, and the sizes of each export
 # and Agda file.  Each table is headed by a comment naming the command that
-# prints it alone.
+# prints it alone; a test keeps the README's coverage table current.
 corpus-tables: ## Print the corpus's coverage, matrix and size tables from the manifest
 	$(PYTHON) scripts/python/corpus_tables.py
 

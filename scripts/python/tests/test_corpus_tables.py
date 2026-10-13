@@ -2,8 +2,11 @@
 File: scripts/python/tests/test_corpus_tables.py
 
 Description:
-  Tests of corpus_tables.py: every pure table function, and the edge
-  (read_entries, read_sizes, main) on a temporary corpus.
+  Tests of corpus_tables.py: every pure table function, the edge
+  (read_entries, read_sizes, main) on a temporary corpus, and one
+  consistency check against the repository: the coverage table in
+  corpus/README.md is the one corpus_tables.py prints from
+  corpus/manifest.json.
 """
 from __future__ import annotations
 
@@ -22,6 +25,7 @@ from corpus_tables import (
     sidecar_bytes, ticked,
 )
 
+REPO = Path(__file__).resolve().parents[3]
 CC = ("--safe", "--cubical-compatible")
 CU = ("--safe", "--cubical", "--guardedness")
 SIDECAR = json.dumps({"bytes": 1_234_567, "sha256": "0" * 64, "command": "lake exe lean4export M -- n"})
@@ -205,6 +209,13 @@ class TestEdge(unittest.TestCase):
             with redirect_stderr(err), redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["--corpus", tmp, "--table", "sizes"]), 1)
             self.assertIn("neither term.ndjson nor term.sidecar.json", err.getvalue())
+
+
+class TestRepository(unittest.TestCase):
+    def test_the_readme_coverage_table_is_generated(self) -> None:
+        readme = (REPO / "corpus" / "README.md").read_text("utf-8")
+        generated = render("coverage", REPO / "corpus", read_entries(REPO / "corpus").unwrap()).unwrap()
+        self.assertIn(generated, readme)
 
 
 if __name__ == "__main__":
