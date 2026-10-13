@@ -9,8 +9,9 @@ predecessors' treatment, and the references (issue [#5]).  The catalog is the
 checklist the translator is built against and the vocabulary of everything that
 classifies: the corpus manifest's `features` field uses the entry slugs below
 ([`../../corpus/SCHEMA.md`][corpus-schema], section Features), the gap report
-of [#10] counts corpus entries per entry, and ADR 0001 ([#12]), once written,
-is to cite it.  It supersedes the table "What the translation has to bridge" in
+of [#10] counts corpus entries per entry, and ADR 0001 ([#12]) cites it
+([`../adr/0001-translation-architecture.md`][adr]).  It supersedes the
+table "What the translation has to bridge" in
 the [README][readme].
 
 Everything here was checked on 2026-10-07 at the project's pins
@@ -1195,6 +1196,7 @@ Mathlib's large-eliminating propositions excepted.
 [cubical-prelude]: https://github.com/agda/cubical/blob/v0.9/Cubical/Foundations/Prelude.agda
 [cubical-univalence]: https://github.com/agda/cubical/blob/v0.9/Cubical/Foundations/Univalence.agda
 [related-work]: ../related-work.md
+[adr]: ../adr/0001-translation-architecture.md
 [roadmap]: ../GITHUB_PROJECT.md
 [readme]: ../../README.md
 [pinning]: ../pinning.md

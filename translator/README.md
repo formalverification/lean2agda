@@ -11,7 +11,8 @@ name encoding, module paths, and reverse-map sidecars; issue M2-3 adds the
 expression printer, the sharing pass, and the profile U scaffold
 (`../docs/translator/printing.md`).  The
 architecture it implements is described in the Description section of
-`../docs/GITHUB_PROJECT.md` and, once written, in `../docs/architecture.md`.
+`../docs/GITHUB_PROJECT.md` and in `../docs/architecture.md`, the companion
+note of ADR 0001 (`../docs/adr/0001-translation-architecture.md`).
 
 ## Layout
 
