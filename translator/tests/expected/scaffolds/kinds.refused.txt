@@ -1,0 +1,7 @@
+# File: translator/tests/expected/scaffolds/kinds.refused.txt
+definition	KindFixtures.danger	unsafe: exempt from Lean's kernel
+definition	KindFixtures.onDanger	unsafe: exempt from Lean's kernel
+axiom	sorryAx	sorryAx: a proof left to sorry
+theorem	KindFixtures.usesSorry	depends on sorryAx
+definition	KindFixtures.onSorry	depends on KindFixtures.usesSorry, and through it on sorryAx
+definition	KindFixtures.wide	unsafe: exempt from Lean's kernel

@@ -1,8 +1,63 @@
 # File: translator/tests/expected/scaffolds/nat-gcd-succ.refusals.txt
-checked 241 of 246 declarations, 23 of 23 data types and records
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:ble~ueq~utrue~uof~ule:match~u1~u7 | Nat:le n₀ m₄ !=< LE.le₁ instLENat n₀ m₄
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:succ~ule~usucc:match~u1~u7 | Nat:le n₀ m₄ !=< LE.le₁ instLENat n₀ m₄
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:le~utrans:match~u1~u10 | Nat:le m₁ k₅ !=< LE.le₁ instLENat m₁ k₅
-refused type UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 | Nat:le n₄ n₄ !=< LE.le₁ instLENat n₄ n₄
-refused type UnequalTerms ~uprivate:Init:Data:Nat:Basic:~n0:Nat:zero~ult~uof~une~uzero:match~u1~u1 | (HAdd.hAdd₃ instHAdd a₃ (OfNat:ofNat _)) != (Nat:succ a₃) of type
-refused value UnequalTerms Nat:gcd~usucc | ite (Eq (Nat:succ x₀) (OfNat:ofNat _)) y₁
+checked 241 of 252 declarations, 23 of 23 data types and records
+unfolded 0 of 65 theorems, 0 in vain
+refused value UnequalTerms Bool:noConfusion | (k₄ : P₀) → P₀ !=<
+refused value UnequalTerms Bool:decEq | Bool:rec (Bool:casesOn Bool:true (False → False) False)
+refused value UnequalTerms Nat:add:~uf | (Nat:rec PUnit (λ n₂ → PProd (Nat → Nat)) (Nat:succ b₄)) !=<
+refused value UnequalTerms Nat:brecOn:go | PUnit !=< Nat:rec PUnit (λ n₂ → PProd (motive₀ n₂)) Nat:zero of
+refused value UnequalTerms Nat:beq:~uf | (Nat:rec PUnit (λ n₂ → PProd (Nat → Bool)) (Nat:succ n₃)) !=<
+refused value UnequalTerms Nat:ble:~uf | (Nat:rec PUnit (λ n₂ → PProd (Nat → Bool)) (Nat:succ n₃)) !=<
+refused value UnequalTerms Nat:ble~uself~ueq~utrue:~uf | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:ble:~uf)
+refused value UnequalTerms ~uprivate:Init:Prelude:~n0:noConfusion~uof~uNat:aux:~uf | True !=< Bool:rec False True (Nat:beq Nat:zero Nat:zero)
+refused value UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:ble~usucc~ueq~utrue:match~u1~u1 | Bool:rec False True
+refused value UnequalTerms Nat:ble~usucc~ueq~utrue:~uf | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:ble:~uf)
+refused value UnequalTerms Nat:le:brecOn | Nat !=< Nat:le n₀ _a₂_496
+refused value UnequalTerms eq~uof~uheq | Eq:rec x₆ x₉ != x₆ of type x₄
+refused value UnequalTerms Nat:casesAuxOn | (PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) n₂) !=
+refused value UnequalTerms Nat:eq~uof~ubeq~ueq~utrue:~uf | Bool:rec
+refused value UnequalTerms Nat:noConfusion | (k₄ : P₀) → P₀ !=<
+refused value UnequalTerms Nat:ne~uof~ubeq~ueq~ufalse:~uf | Bool:rec (Bool:casesOn Bool:false (False → False) False)
+refused value UnequalTerms Nat:succ~ule~usucc | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) m₇ !=
+refused value UnequalTerms Nat:zero~ule:~uf | (Nat:rec PUnit (λ n₃ → PProd (LE:le (OfNat:ofNat _) n₃))
+refused value UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:le~uof~uble~ueq~utrue:match~u1~u1 | Bool:rec False True
+refused value UnequalTerms Nat:le~uof~uble~ueq~utrue:~uf | (Nat:rec PUnit
+refused value UnequalTerms Nat:le~uof~uble~ueq~utrue | Nat !=<
+refused value UnequalTerms Nat:div:go:match~u1 | Bool:rec False True
+refused value UnequalTerms Nat:pred~ule~upred | Nat:zero !=
+refused value UnequalTerms Nat:le~uof~usucc~ule~usucc | Nat:rec (OfNat:ofNat _) (λ n₄ nih₅ → n₄) (Nat:succ n₀) != n₀ of
+refused value UnequalTerms Nat:not~usucc~ule~uzero | Nat:rec
+refused value UnequalTerms Nat:not~usucc~ule~uself:~uf | (Nat:succ n₂) !=
+refused value UnequalTerms Nat:pred~ule | Nat:rec (OfNat:ofNat _) (λ n₄ nih₅ → n₄) Nat:zero != Nat:zero of
+refused value UnequalTerms Nat:sub:~uf | (Nat:rec PUnit (λ n₂ → PProd (Nat → Nat)) (Nat:succ b₄)) !=<
+refused value UnequalTerms Nat:sub~ule | PProd.fst₂ (Nat:brecOn:go Nat:zero Nat:sub:~uf) n₀ != n₀ of type
+refused value UnequalTerms Nat:succ~usub~usucc~ueq~usub | 1 != 0 of type Nat
+refused value UnequalTerms Nat:div~urec~ufuel~ulemma | (PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) fuel₂) !=
+refused value UnequalTerms Nat:eq~uor~ult~uof~ule:~uf | (Nat:rec PUnit
+refused value UnequalTerms Nat:lt~uadd~uone | Nat:succ n₀ !=
+refused value UnequalTerms Nat:lt~usucc~uself | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) n₀ !=
+refused value UnequalTerms Nat:modCore:go:~uf | (Nat:rec PUnit (λ n₂ → PProd ((x₉ : Nat) → LT:lt x₉ n₂ → Nat))
+refused value UnequalTerms ite~uself | Decidable:rec (λ x₅ → a₃) (λ x₅ → a₃) (Decidable:isFalse h₄) != a₃
+refused value UnequalTerms Nat:le~uof~ult~uadd~uone | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) m₁ !=
+refused value UnequalTerms WellFounded:Nat:fix:~uproof~u1 | (Nat:succ x₂) !=
+refused value UnequalTerms Nat:lt~uor~uge:~uf | (Nat:rec PUnit (λ n₂ → PProd (Or (LT:lt n₀ n₂) (GE:ge n₀ n₂)))
+refused value UnequalTerms Nat:modCoreGo~ult | (Nat:succ x₃) !=
+refused value UnequalTerms Nat:modCore~ult | PProd.fst₂
+refused value UnequalTerms ~uprivate:Init:Prelude:~n0:Nat:mod~ult:match~u1~u3 | Bool:rec False True
+refused value UnequalTerms Nat:mod~ult | Nat:zero !=
+refused type UnequalTerms ~uprivate:Init:Data:Nat:Basic:~n0:Nat:zero~ult~uof~une~uzero:match~u1~u1 | (Nat:succ a₃) !=
+dropped Nat:zero~ult~uof~une~uzero
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:~uproof~u1
+dropped Nat:gcd:~uunary
+dropped Nat:gcd
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:eq~udef:~ushare:~n3
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:eq~udef:~ushare:~n4
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:eq~udef
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:eq~udef
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:eq~u1
+dropped Nat:gcd~usucc
+refused value UnequalTerms WellFounded:Nat:fix:go:congr~usimp | a₁₀ != Eq:rec a₁₀ (Eq:refl fuel₆) of type
+refused value UnequalTerms Nat:recAux | (PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) n₁) !=
+refused value UnequalTerms funext | Quot:lift (λ f₈ → f₈ x₇) (λ x₈ x₉ h₁₀ → h₁₀ x₇) (Quot:mk eqv₅ f₂)
+refused value UnequalTerms WellFounded:Nat:fix:go~ucongr | Bool:rec False True
+refused value UnequalTerms WellFounded:Nat:fix~ueq | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) (h₂ x₄) !=
+refused value UnequalTerms ~uprivate:Init:Data:Nat:Gcd:~n0:PSigma:casesOn:~uarg~upusher | ((y₁₂ : α₃) → rel₆ t₁₁ y₁₂ → β₄ y₁₂) → motive₂ t₁₁ != motive₂ t₁₁

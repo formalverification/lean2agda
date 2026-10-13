@@ -33,11 +33,14 @@ PRINTING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Printing.lea
 (cd "$scratch" && "${AGDA:-agda}" PrintingLexical.agda)
 
 "$lake_cmd" env "$lean_cmd" tests/Inductives.lean
+"$lake_cmd" env "$lean_cmd" tests/Scaffold.lean
 
 # A scaffold (the profile U module --out writes) must scope-check (the
 # acceptance criterion of issue M2-3) and type-check except for the
-# refusals its golden listing names; check_scaffold also compares the
-# module with its golden file.
+# refusals its golden listing names, which also counts the theorems the
+# fallback unfolded; check_scaffold also compares the module with its
+# golden file, and the declarations the translator refuses with the
+# golden refused.txt, or requires them to be none.
 check_refusals() {
   local name=$1 file relative
   shift
@@ -54,6 +57,11 @@ check_scaffold() {
   local name=$1
   check_refusals "$@"
   tail -n +2 "tests/expected/scaffolds/$name.agda" | diff -u - "$(find "$scratch/scaffold-$name" -name '*.agda')"
+  if [[ -f "tests/expected/scaffolds/$name.refused.txt" ]]; then
+    tail -n +2 "tests/expected/scaffolds/$name.refused.txt" | diff -u - "$scratch/scaffold-$name/refusals.txt"
+  else
+    [[ ! -s "$scratch/scaffold-$name/refusals.txt" ]]
+  fi
 }
 
 check_scaffold list-reverse-reverse Init.Data.List.Lemmas -- List.reverse_reverse
@@ -70,6 +78,7 @@ check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.
   InductiveFixtures.Token InductiveFixtures.Rose InductiveFixtures.Rose.label InductiveFixtures.Rose.children \
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
+check_scaffold kinds TranslatorTests.Input.Kinds
 
 # The acceptance criterion of issue M2-4: every inductive type of the
 # closure of Init.Core's declarations is declared and checks.  They are

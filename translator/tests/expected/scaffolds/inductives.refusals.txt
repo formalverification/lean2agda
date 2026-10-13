@@ -1,2 +1,5 @@
 # File: translator/tests/expected/scaffolds/inductives.refusals.txt
-checked 79 of 79 declarations, 25 of 25 data types and records
+checked 77 of 77 declarations, 24 of 24 data types and records
+unfolded 0 of 1 theorems, 0 in vain
+refused value UnequalTerms Nat:add:~uf | (Nat:rec PUnit (λ n₂ → PProd (Nat → Nat)) (Nat:succ b₄)) !=<
+refused value UnequalTerms Nat:brecOn:go | PUnit !=< Nat:rec PUnit (λ n₂ → PProd (motive₀ n₂)) Nat:zero of
