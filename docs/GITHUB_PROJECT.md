@@ -106,6 +106,11 @@ serious predecessor (lyphyser's `lean2agda`, Deducteam's `lean2dk` and
 5. **Check**.  Run Agda under the profile's flags; feed every failure
    back into the atlas with its category.
 
+The decisions behind these stages, with the evidence that earned each,
+are recorded in ADR 0001 (`docs/adr/0001-translation-architecture.md`);
+`docs/architecture.md` explains the stages with their inputs, outputs
+and predecessors.
+
 ### Target profiles
 
 A profile is the set of Agda flags the output must check under, plus
@@ -121,10 +126,14 @@ follows:
 
 ### Layers
 
-Lean's `#print axioms` sorts declarations into tiers: T0 (no axioms),
+The atlas sorts declarations into tiers by their exact axiom sets
+(`#print axioms` under-reports at the pinned Lean): T0 (no axioms),
 T1 (`propext` and/or `Quot.sound`, both validated by univalent type
-theory), T2 (`Classical.choice`), T3 (`Lean.ofReduceBool`, `sorryAx`,
-`unsafe` or `partial` definitions).  The emitted library has a
+theory), T2 (`Classical.choice`), T3 (any other axiom: `sorryAx`, the
+native-reduction family, the compiler's `lcProof`, the axioms
+`native_decide` generates).  The hatches no axiom shows (`unsafe`,
+`partial`, `implemented_by`) are atlas fields, and the layer rules of
+M4-2 say what they refuse.  The emitted library has a
 **Constructive** layer (T0 and T1) and a **Classical** layer (T2) that
 imports it; T3 is refused and reported.  Both layers are `--safe`:
 the classical principles are record-typed module parameters in the

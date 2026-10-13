@@ -4,9 +4,12 @@
 
 A Lean 4 to Agda translator, and the Agda libraries it produces.
 
-**Status**: planning, October 2026.  Nothing translates yet.  The
-roadmap, with milestones, labels, issues and dependency graphs, is
-[`docs/GITHUB_PROJECT.md`](docs/GITHUB_PROJECT.md).
+**Status**: October 2026.  Milestone 1 is complete but for the
+acceptance of its design record and the outreach to the predecessors'
+authors; of Milestone 2, the translator loads the environment, names
+every constant and prints kernel terms, and no translated module
+checks whole yet.  The roadmap, with milestones, labels, issues and
+dependency graphs, is [`docs/GITHUB_PROJECT.md`](docs/GITHUB_PROJECT.md).
 
 ## Why
 
@@ -108,6 +111,13 @@ predecessor works.  It runs in five stages, as follows:
 5. **Check**.  Run Agda under the profile's flags; every failure goes
    back into the atlas with its category.
 
+The decisions behind these stages, with the evidence that earned each,
+are recorded in ADR 0001,
+[`docs/adr/0001-translation-architecture.md`](docs/adr/0001-translation-architecture.md);
+the pipeline itself, stage by stage with its inputs, outputs and
+predecessors, is explained in
+[`docs/architecture.md`](docs/architecture.md).
+
 ### Target profiles
 
 A *profile* is the set of Agda flags the output must check under, plus
@@ -122,10 +132,14 @@ what remains a module parameter.
 
 ### Layers
 
-Lean's `#print axioms` sorts declarations into tiers: T0 (no axioms),
+The atlas sorts declarations into tiers by their exact axiom sets
+(`#print axioms` under-reports at the pinned Lean): T0 (no axioms),
 T1 (`propext` or `Quot.sound`, both validated by univalent type
-theory), T2 (`Classical.choice`), T3 (`Lean.ofReduceBool`, `sorryAx`,
-`unsafe`, `partial`).  The emitted library has a **constructive**
+theory), T2 (`Classical.choice`), T3 (any other axiom: `sorryAx`, the
+native-reduction family, the compiler's `lcProof`, the axioms
+`native_decide` generates).  The hatches no axiom shows (`unsafe`,
+`partial`, `implemented_by`) are atlas fields, and the layer rules of
+M4-2 say what they refuse.  The emitted library has a **constructive**
 layer (T0 and T1) and a **classical** layer (T2) importing it; T3 is
 refused.  Both layers are `--safe`: the classical principles are
 record-typed module parameters, as in TypeTopology, and a one-line user
