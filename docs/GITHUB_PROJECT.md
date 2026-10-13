@@ -688,7 +688,7 @@ Write `docs/foundations/gap-catalog.md`: one entry per feature of Lean's kernel 
 ## Acceptance criteria
 
 - [x] Every entry has all five fields filled in.
-- [ ] The catalog is linked from the README and from ADR 0001.
+- [x] The catalog is linked from the README and from ADR 0001.
 
 ---
 
@@ -779,7 +779,7 @@ Translate by hand the entries whose Lean form is classical or leans on Mathlib's
 
 ---
 
-### Issue M1-10: Gap report from the hand translations (#10)
+### Issue M1-10: Gap report from the hand translations (#10, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `foundations`
 
@@ -795,7 +795,7 @@ Collect the `notes.md` files of M1-7, M1-8 and M1-9 into `docs/foundations/gap-r
 
 ## Acceptance criteria
 
-- [ ] The report is complete for all twelve entries and linked from ADR
+- [x] The report is complete for all twelve entries and linked from ADR
       0001.
 
 ---
@@ -832,9 +832,9 @@ Record the architecture decision with the evidence that earned it: a direct tran
 
 ## Tasks
 
-- [ ] Write `docs/adr/0001-translation-architecture.md`.
-- [ ] Write `docs/architecture.md` (the pipeline stages, their inputs and outputs, where each predecessor's idea is used).
-- [ ] Define every term on first use: profile, layer, tier, atlas, normalizer, Lean⁻.
+- [x] Write `docs/adr/0001-translation-architecture.md`.
+- [x] Write `docs/architecture.md` (the pipeline stages, their inputs and outputs, where each predecessor's idea is used).
+- [x] Define every term on first use: profile, layer, tier, atlas, normalizer, Lean⁻.
 
 ## Acceptance criteria
 
