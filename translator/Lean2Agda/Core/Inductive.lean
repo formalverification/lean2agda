@@ -16,7 +16,9 @@ check against it:
 
 +  Agda's constructors take a type's parameters implicitly, or as instance
    arguments where the type declares them as instances, which is how
-   Lean's constructors take theirs.
+   Lean's constructors take theirs, except where Lean promoted an index
+   that a constructor binds explicitly (`Eq.refl (a : α)`); those
+   parameters, and the ones after them, become indices (`agdaParamCount`).
 +  A record's fields are bound as its constructor's fields are, explicitly,
    implicitly (`{n₂} : Nat`) or as instances (`⦃ toFunctor₁ ⦄ : Functor f₀`).
 +  A record has eta, as Lean's structure-like types have.
@@ -95,7 +97,7 @@ def binderTerms (binders : Array (Visibility × String × AgdaTerm)) : Array Agd
 /-- `data T params : indices → Set where`, then each constructor with its
 type after the parameters, in the scope of the type's parameters. -/
 def dataLines (m : InductiveMember) (indent : String) : PrintM Printed := do
-  let k := m.type.numParams
+  let k := agdaParamCount (← read).env m.type
   let (binders, inner, rest) ← enterTelescope {} m.type.type k
   let target ← printExpr inner rest
   let mut lines := #[s!"{indent}data {agdaIdent m.type.name}{telescopeText binders} : {target.render} where"]
