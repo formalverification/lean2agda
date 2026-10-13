@@ -153,10 +153,13 @@ scaffold declares a block as one item, its types with their constructors,
 so an auxiliary that mentioned the block would have to sit inside it;
 excluded, every auxiliary a block uses precedes the block.  Such a
 subterm is rare, since it must be closed: it occurs only in the
-constructors of a type without parameters. -/
+constructors of a type without parameters.  A subterm mentions a type as
+`expressionDependencies` counts it, by a constant or by a projection,
+though Lean's kernel refuses a projection of a block's type in the
+block's own constructors, whose constructor it does not yet know. -/
 def outsideBlock (block : List Name) (e : Expr) : Bool :=
   block.isEmpty || (e.find? fun sub => match sub with
-    | .const n _ => block.contains n
+    | .const n _ | .proj n _ _ => block.contains n
     | _ => false).isNone
 
 /-- One declaration after sharing: the declaration with its type and value

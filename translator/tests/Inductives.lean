@@ -160,6 +160,10 @@ def checkSharing (env : Environment) : IO Unit := do
   require (shared.auxiliaries.size == 1) s!"auxiliaries of Wide.node: {shared.auxiliaries.size}"
   require (shared.auxiliaries.all fun a => (a.info.value!.find? (·.isConstOf ``InductiveFixtures.Wide)).isNone)
     "an auxiliary of Wide.node mentions Wide"
+  -- A subterm mentions a block's type through a constant or a projection.
+  let x := mkConst ``Nat.zero
+  require (!outsideBlock [`T] (mkApp (mkConst `T) x) && !outsideBlock [`T] (.proj `T 0 x) &&
+    outsideBlock [`T] (.proj `U 0 x) && outsideBlock [] (.proj `T 0 x)) "outsideBlock"
   let closure ← IO.ofExcept (dependencyClosure env #[``InductiveFixtures.Wide])
   let s ← IO.ofExcept (scaffold env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
   let position (n : String) : IO Nat := do
