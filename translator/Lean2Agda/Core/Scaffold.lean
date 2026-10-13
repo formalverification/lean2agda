@@ -20,12 +20,15 @@ constant is a postulate, except the following:
    so its constructor and recursor are postulates too;
 +  the type abbreviations, definitions with their printed values, since a
    type can be well formed only through one (`outParam`, `DecidableEq`);
++  the projection functions of records, definitions whose values print as
+   the records' field projections, so that a type mentioning `S.f x`
+   checks where Agda's projection is expected;
 +  the roots that have values, and the sharing pass's auxiliary
    definitions, definitions with their printed values.
 
 Agda parses and scope-checks the whole module.  It type-checks each
 declaration that needs no definitional unfolding beyond these
-definitions; `docs/translator/printing.md`
+definitions and the records' projections; `docs/translator/printing.md`
 says which do not, and why.
 -/
 
@@ -172,9 +175,11 @@ def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : Ind
             text := "\n".intercalate d.lines.toList ++ "\n" }, d.counts)
 
 /-- Whether the scaffold gives a declaration its value: an auxiliary
-definition, a type abbreviation, or a root. -/
-def emitsValue (_env : Environment) (closure : Closure) (decl : Declaration) : Bool :=
-  decl.auxiliary || isTypeAbbreviation decl.info || closure.roots.contains decl.name
+definition, a type abbreviation, a projection function of a record, or a
+root. -/
+def emitsValue (env : Environment) (closure : Closure) (decl : Declaration) : Bool :=
+  decl.auxiliary || isTypeAbbreviation decl.info || isRecordProjection env decl.name ||
+    closure.roots.contains decl.name
 
 /-- The scaffold's item for one declaration, or none for one that its
 inductive block's item declares: a constructor, or a type of a mutual

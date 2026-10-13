@@ -2,14 +2,17 @@
 File: translator/Lean2Agda/Core/InductiveShape.lean
 -/
 import Lean.Environment
+import Lean.ProjFns
 
 /-!
 # The shape of an inductive type in Agda
 
 How a Lean inductive type maps onto an Agda declaration: whether it
-becomes a `record` or a `data` type, and how many of its parameters stay
-Agda parameters.  These are pure functions of the environment, for the
-emitter in `Inductive.lean`, which declares the types.
+becomes a `record` or a `data` type, how many of its parameters stay Agda
+parameters, and which binder of its constructor each record field is.
+These are pure functions of the environment, shared by the printer, which
+prints a projection from a record as the record's field projection, and
+by the emitter in `Inductive.lean`, which declares the types.
 `docs/translator/inductives.md` gives the rules and the probes behind
 them.
 -/
@@ -65,5 +68,30 @@ def isAgdaRecordName (env : Environment) (n : Name) : Bool :=
   match env.find? n with
   | some (.inductInfo v) => isAgdaRecord env v
   | _ => false
+
+/-- The binder name and depth of field `i` of a constructor of type
+`ctorType` with `numParams` parameters: a record's declaration enters
+every parameter and field in turn, so field `i` sits at depth
+`numParams + i`, and the printer names it from both. -/
+def recordFieldBinder (ctorType : Expr) (numParams i : Nat) : Option (Name × Nat) :=
+  go ctorType (numParams + i)
+where
+  go : Expr → Nat → Option (Name × Nat)
+    | .mdata _ b, k => go b k
+    | .forallE x _ _ _, 0 => some (x, numParams + i)
+    | .forallE _ _ b _, k + 1 => go b k
+    | _, _ => none
+
+/-- Whether a constant is a projection function of a type that becomes
+a record.  Its value, `fun params self => self.i`, prints as the record's
+field projection, and the scaffold gives it that value, so that a type
+mentioning `S.f self` checks against one whose field projection is
+Agda's. -/
+def isRecordProjection (env : Environment) (n : Name) : Bool :=
+  match env.getProjectionFnInfo? n with
+  | some info => match env.find? info.ctorName with
+    | some (.ctorInfo c) => isAgdaRecordName env c.induct
+    | _ => false
+  | none => false
 
 end Lean2Agda

@@ -2,7 +2,6 @@
 File: translator/Lean2Agda/Core/Inductive.lean
 -/
 import Lean2Agda.Core.Print
-import Lean2Agda.Core.InductiveShape
 
 /-!
 # Inductive types as Agda declarations
