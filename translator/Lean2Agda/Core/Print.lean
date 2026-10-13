@@ -120,6 +120,17 @@ def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
 
 def AgdaTerm.render (t : AgdaTerm) : String := t.renderTo "" 0
 
+/-- The constants a printed term refers to, in order of first occurrence. -/
+def AgdaTerm.constants (t : AgdaTerm) : Array String :=
+  go t #[]
+where
+  go : AgdaTerm → Array String → Array String
+    | .const n, acc => if acc.contains n then acc else acc.push n
+    | .app f _ a, acc => go a (go f acc)
+    | .lam _ _ ty b, acc | .pi _ _ ty b, acc => go b (go ty acc)
+    | .letE _ ty v b, acc => go b (go v (go ty acc))
+    | _, acc => acc
+
 /-! ## Names -/
 
 /-- How constant references print.  Within one module every constant is
@@ -391,17 +402,26 @@ partial def printApp (s : Scope) (e : Expr) : PrintM AgdaTerm := do
 
 end
 
-/-- The first `n` binders of a type as a telescope, and the rest of the
-type in their scope, as a `data` type's parameters and its sort. -/
-partial def printTelescope (s : Scope) (type : Expr) :
-    Nat → PrintM (Array (Visibility × String × AgdaTerm) × AgdaTerm)
-  | 0 => return (#[], ← printExpr s type)
+/-- Enter the first `n` binders of a type: their printed binders, the
+scope inside them, and the rest of the type with their free variables in
+place, for the caller to print in that scope.  Every binder is entered,
+used or not, as a declaration's telescope names each one. -/
+partial def enterTelescope (s : Scope) (type : Expr) :
+    Nat → PrintM (Array (Visibility × String × AgdaTerm) × Scope × Expr)
+  | 0 => return (#[], s, type)
   | k + 1 => do
     let some (.forallE n t b bi) ← asPi s type | throw "a telescope longer than its type"
     let dom ← printExpr s t
     let (s', x, fv) := s.enter n t bi
-    let (rest, body) ← printTelescope s' (b.instantiate1 fv) k
-    return (#[(Visibility.ofBinderInfo bi, x, dom)] ++ rest, body)
+    let (rest, inner, body) ← enterTelescope s' (b.instantiate1 fv) k
+    return (#[(Visibility.ofBinderInfo bi, x, dom)] ++ rest, inner, body)
+
+/-- The first `n` binders of a type as a telescope, and the rest of the
+type in their scope, as a `data` type's parameters and its sort. -/
+partial def printTelescope (s : Scope) (type : Expr) (n : Nat) :
+    PrintM (Array (Visibility × String × AgdaTerm) × AgdaTerm) := do
+  let (binders, inner, rest) ← enterTelescope s type n
+  return (binders, ← printExpr inner rest)
 
 def renderTelescope (binders : Array (Visibility × String × AgdaTerm)) : String :=
   " ".intercalate (binders.toList.map fun (v, x, t) => v.opening ++ x ++ " : " ++ t.render ++ v.closing)
