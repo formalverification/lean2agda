@@ -94,17 +94,22 @@ serious predecessor (lyphyser's `lean2agda`, Deducteam's `lean2dk` and
    extend the same mechanism to the definitional computation rule of
    `Quot.lift` where the target has no definitional quotients.
 3. **Elaborate universes**.  Specialize each constant by which of its
-   universe parameters are instantiated at `Prop`, then compute
-   predicative, universe-polymorphic Agda level annotations by
-   constraint solving in the style of Felicissimo and Blanqui's
-   Predicativize.  Constants that use impredicativity in an essential
-   way are reported, not translated.
+   universe-level parameters are zero, which decides which of its sorts
+   are `Prop`, then compute predicative, universe-polymorphic Agda level
+   annotations by constraint solving in the style of Felicissimo and
+   Blanqui's Predicativize.  Constants that use impredicativity in an
+   essential way are reported, not translated.
 4. **Emit**.  Print one Agda module per Lean module and layer:
    inductive types as `data` or `record`, recursors as pattern-matching
    definitions, theorems in `opaque` blocks, axioms as module
    parameters, with `.agda-lib` files and an import graph.
 5. **Check**.  Run Agda under the profile's flags; feed every failure
    back into the atlas with its category.
+
+The decisions behind these stages, with the evidence that earned each,
+are recorded in ADR 0001 (`docs/adr/0001-translation-architecture.md`);
+`docs/architecture.md` explains the stages with their inputs, outputs
+and predecessors.
 
 ### Target profiles
 
@@ -121,12 +126,16 @@ follows:
 
 ### Layers
 
-Lean's `#print axioms` sorts declarations into tiers: T0 (no axioms),
+The atlas sorts declarations into tiers by their exact axiom sets
+(`#print axioms` under-reports at the pinned Lean): T0 (no axioms),
 T1 (`propext` and/or `Quot.sound`, both validated by univalent type
-theory), T2 (`Classical.choice`), T3 (`Lean.ofReduceBool`, `sorryAx`,
-`unsafe` or `partial` definitions).  The emitted library has a
-**Constructive** layer (T0 and T1) and a **Classical** layer (T2) that
-imports it; T3 is refused and reported.  Both layers are `--safe`:
+theory), T2 (`Classical.choice`), T3 (any other axiom: `sorryAx`, the
+native-reduction family, the compiler's `lcProof`, the axioms
+`native_decide` generates).  The hatches no axiom shows are atlas
+fields (`unsafe` and `partial` today, `implemented_by` with M4-1), and
+the layer rules of M4-2 say what they refuse.  The emitted library has
+a **Constructive** layer (T0 and T1) and a **Classical** layer (T2)
+that imports it; T3 is refused and reported.  Both layers are `--safe`:
 the classical principles are record-typed module parameters in the
 style of TypeTopology, and a one-line user module may postulate them
 for anyone who prefers that.
@@ -679,7 +688,7 @@ Write `docs/foundations/gap-catalog.md`: one entry per feature of Lean's kernel 
 ## Acceptance criteria
 
 - [x] Every entry has all five fields filled in.
-- [ ] The catalog is linked from the README and from ADR 0001.
+- [x] The catalog is linked from the README and from ADR 0001.
 
 ---
 
@@ -770,7 +779,7 @@ Translate by hand the entries whose Lean form is classical or leans on Mathlib's
 
 ---
 
-### Issue M1-10: Gap report from the hand translations (#10)
+### Issue M1-10: Gap report from the hand translations (#10, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `foundations`
 
@@ -786,7 +795,7 @@ Collect the `notes.md` files of M1-7, M1-8 and M1-9 into `docs/foundations/gap-r
 
 ## Acceptance criteria
 
-- [ ] The report is complete for all twelve entries and linked from ADR
+- [x] The report is complete for all twelve entries and linked from ADR
       0001.
 
 ---
@@ -823,9 +832,9 @@ Record the architecture decision with the evidence that earned it: a direct tran
 
 ## Tasks
 
-- [ ] Write `docs/adr/0001-translation-architecture.md`.
-- [ ] Write `docs/architecture.md` (the pipeline stages, their inputs and outputs, where each predecessor's idea is used).
-- [ ] Define every term on first use: profile, layer, tier, atlas, normalizer, Lean⁻.
+- [x] Write `docs/adr/0001-translation-architecture.md`.
+- [x] Write `docs/architecture.md` (the pipeline stages, their inputs and outputs, where each predecessor's idea is used).
+- [x] Define every term on first use: profile, layer, tier, atlas, normalizer, Lean⁻.
 
 ## Acceptance criteria
 

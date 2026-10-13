@@ -5,7 +5,7 @@
 What the twelve hand translations of the corpus needed, feature by feature of
 the gap catalog ([`gap-catalog.md`][catalog]): for every catalog entry, how
 many corpus entries exercised it, what it cost, and what the translator will
-have to do (issue [#10]).  ADR 0001 ([#12]) is to cite it as evidence, and its
+have to do (issue [#10]).  ADR 0001 ([#12]) cites it as evidence, and its
 section on the two encodings of `Prop` is the corpus's evidence for [#27].
 
 Everything here was read on 2026-10-12 from the repository at commit `9f83acd`,
