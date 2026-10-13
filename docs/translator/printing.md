@@ -406,16 +406,17 @@ term.  Lean's kernel compares proofs by proof irrelevance before it unfolds a
 theorem, so a term that relies on a theorem's unfolding is rare by
 construction; the place to expect one is a recursor on a proof, `Acc.rec`
 under well-founded recursion or `Eq.rec` on a proof that must reduce to
-`rfl`, once [#19] makes recursors compute.  On `Init.Core`'s closure,
-measured before [#18] merged (2,145 declarations, 1,660 values), the
-checker ran Agda 321 times in 44 minutes: 1,229 values checked, 307 were
-refused and 124 stood behind nine refused types; the fallback fired four
-times, in vain each time, so no theorem of `Init.Core` needed to unfold
-either.  Ten of its refusals were two proof variables of one proposition
-compared (`property₇ != property₈`), which is [#27]'s encoding of `Prop`
-to settle, and one a structure eta, which [#18]'s records now give.  The
-dated report [`opaque-theorems`][report-opaque] has the tables and the
-classes.
+`rfl`, once [#19] makes recursors compute.  On `Init.Core`'s closure
+(1,963 declarations, 1,660 values), the checker ran Agda 320 times in 63
+minutes: 1,344 values check, 312 are refused and 4 stand behind one
+refused type; the fallback fired six times, and once it helped:
+`Quotient.rec` is refused with `Quotient.sound p != Quot.sound p`, which
+Lean accepts by proof irrelevance, and checks once `Quotient.sound`
+unfolds to `Quot.sound`.  Eleven of its refusals are two proof variables
+of one proposition compared (`property₇ != property₈`), which is [#27]'s
+encoding of `Prop` to settle.  The dated report
+[`opaque-theorems`][report-opaque] has the tables, the classes, and the
+same run with the inductive types still postulates.
 
 ## Verification
 
