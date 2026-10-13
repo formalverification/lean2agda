@@ -183,7 +183,7 @@ def emitsValue (env : Environment) (closure : Closure) (decl : Declaration) : Bo
 
 /-- The scaffold's item for one declaration, or none for one that its
 inductive block's item declares: a constructor, or a type of a mutual
-block other than its first, which the emitter refuses for now. -/
+block other than its first. -/
 def scaffoldItem (p : Printer) (closure : Closure) (byName : Std.HashMap Name Declaration)
     (decl : Declaration) : Except String (Option (ScaffoldItem × PrintCounts)) := do
   match decl.info with

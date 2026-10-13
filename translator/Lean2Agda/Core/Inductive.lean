@@ -6,9 +6,11 @@ import Lean2Agda.Core.Print
 /-!
 # Inductive types as Agda declarations
 
-An inductive type becomes one Agda declaration: a `record` when
-`isAgdaRecord` says so (structure-like, every parameter an Agda
-parameter) and a `data` type otherwise.  Every constructor and field keeps the
+A block of inductive types, one type or the types of a mutual
+declaration, becomes one Agda declaration: each type a `record` when
+`isAgdaRecord` says so (one constructor, no indices, every parameter an
+Agda parameter) and a `data` type otherwise, inside a `mutual` block when
+the block has more than one type.  Every constructor and field keeps the
 binder visibilities of its Lean type, so that the printer's applications,
 which pass each argument with the visibility of the head's Lean type,
 check against it:
@@ -20,7 +22,15 @@ check against it:
    parameters, and the ones after them, become indices (`agdaParamCount`).
 +  A record's fields are bound as its constructor's fields are, explicitly,
    implicitly (`{n₂} : Nat`) or as instances (`⦃ toFunctor₁ ⦄ : Functor f₀`).
-+  A record has eta, as Lean's structure-like types have.
++  A record has eta, as Lean's structure-like types have; a recursive one
+   (`structure Tree where children : List Tree`) has neither eta in Lean
+   nor, declared `no-eta-equality`, in Agda, and keeps its projections,
+   which reduce on its constructor in both.
++  A nested type needs nothing more: Agda accepts an occurrence of the type
+   inside another type's parameters (`Array Syntax`) and checks it for
+   positivity through that type's definition.  The kernel's auxiliary
+   types for it exist only in its recursors' motives, which the scaffold
+   postulates until issue M2-5.
 
 `docs/translator/inductives.md` gives the rules and the probes behind
 them.
@@ -109,13 +119,19 @@ def dataLines (m : InductiveMember) (indent : String) : PrintM Printed := do
 
 /-- `record T params : Set where`, its constructor, and its fields, each
 field's type printed in the scope of the parameters and the fields before
-it, under the name the printer gives a projection of it. -/
+it, under the name the printer gives a projection of it.  A recursive
+record is `inductive`, without eta, as in Lean, and open to pattern
+matching on its constructor, as a data type is. -/
 def recordLines (m : InductiveMember) (indent : String) : PrintM Printed := do
   let k := m.type.numParams
   let (binders, inner, rest) ← enterTelescope {} m.type.type k
   let target ← printExpr inner rest
   let #[c] := m.ctors | throw s!"the record {m.type.name} has other than one constructor"
   let mut lines := #[s!"{indent}record {agdaIdent m.type.name}{telescopeText binders} : {target.render} where"]
+  -- A recursive record needs `inductive`; Lean gives it no eta, and
+  -- without eta Agda matches on its constructor only after `pattern`.
+  if m.type.isRec then
+    lines := lines ++ #[s!"{indent}  inductive", s!"{indent}  no-eta-equality", s!"{indent}  pattern"]
   lines := lines.push s!"{indent}  constructor {agdaIdent c.name}"
   let mut terms := binderTerms binders |>.push target
   if c.numFields > 0 then lines := lines.push s!"{indent}  field"
@@ -135,12 +151,17 @@ def recordLines (m : InductiveMember) (indent : String) : PrintM Printed := do
 def memberLines (m : InductiveMember) (indent : String) : PrintM Printed := do
   if isAgdaRecord (← read).env m.type then recordLines m indent else dataLines m indent
 
-/-- A type's block as one declaration, `Nat` with `BUILTIN NATURAL`, so
-that literals print as decimals.  A mutual block is refused until the
-emitter declares one. -/
+/-- A block as one declaration: a lone type as itself, several in a
+`mutual` block; `Nat` with `BUILTIN NATURAL`, so that literals print as
+decimals; and an unsafe block after `NO_POSITIVITY_CHECK`, since Lean's
+kernel checks no unsafe type for positivity. -/
 def inductiveDecl (p : Printer) (members : Array InductiveMember) : Except String InductiveDecl := do
-  let #[m] := members | throw s!"a mutual block of {members.size} types"
-  let ((lines, terms), counts) ← runPrint p (memberLines m "")
+  let ((lines, terms), counts) ← runPrint p do
+    if members.size == 1 then memberLines members[0]! ""
+    else members.foldlM (init := (#["mutual"], #[])) fun (lines, terms) m => do
+      let (more, moreTerms) ← memberLines m "  "
+      return (lines ++ more, terms ++ moreTerms)
+  let lines := if members.any (·.type.isUnsafe) then #["{-# NO_POSITIVITY_CHECK #-}"] ++ lines else lines
   let lines := if members.map (·.type.name) == #[``Nat] then lines.push s!"\{-# BUILTIN NATURAL {agdaIdent ``Nat} #-}"
     else lines
   let provides := members.foldl (fun acc m =>

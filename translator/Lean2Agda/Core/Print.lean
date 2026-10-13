@@ -308,6 +308,9 @@ def projectionAsRecursor (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM Ex
     | throw s!"a projection from {S}, which is not an inductive type"
   let [ctor] := ind.ctors | throw s!"a projection from {S}, which has more than one constructor"
   unless ind.numIndices == 0 do throw s!"a projection from {S}, which has indices"
+  -- A recursive type's minor premise also takes the fields' induction
+  -- hypotheses, which this minor premise lacks.
+  if ind.isRec then throw s!"a projection from {S}, which is recursive and not a record"
   let some (.ctorInfo c) := env.find? ctor | throw s!"unknown constructor {ctor}"
   let some (.recInfo r) := env.find? (mkRecName S) | throw s!"unknown recursor of {S}"
   unless i < c.numFields do throw s!"a projection of field {i} from {S}"

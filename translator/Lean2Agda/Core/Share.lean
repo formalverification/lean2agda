@@ -76,10 +76,11 @@ def ShareNode.candidate (node : ShareNode) (threshold : Nat) : Bool :=
 
 /-- Count each subterm's occurrences in the printed tree, parents before
 children, and choose the subterms to share as the count is settled: a
-subterm occurring twice or more, closed, and at least `threshold` in size.
-A chosen subterm is printed once, in its auxiliary definition, so its
-children are counted once for it. -/
-def ShareGraph.choose (g : ShareGraph) (roots : Array Nat) (threshold : Nat) : Array Bool := Id.run do
+subterm occurring twice or more, closed, at least `threshold` in size,
+and `allowed`.  A chosen subterm is printed once, in its auxiliary
+definition, so its children are counted once for it. -/
+def ShareGraph.choose (g : ShareGraph) (roots : Array Nat) (threshold : Nat)
+    (allowed : Expr → Bool := fun _ => true) : Array Bool := Id.run do
   let mut occurrences : Array Nat := .replicate g.nodes.size 0
   for r in roots do occurrences := occurrences.modify r (· + 1)
   let mut chosen : Array Bool := .replicate g.nodes.size false
@@ -87,7 +88,7 @@ def ShareGraph.choose (g : ShareGraph) (roots : Array Nat) (threshold : Nat) : A
     let i := g.nodes.size - 1 - j
     let node := g.nodes[i]!
     let o := occurrences[i]!
-    let share := o ≥ 2 && node.candidate threshold
+    let share := o ≥ 2 && node.candidate threshold && allowed node.expr
     if share then chosen := chosen.set! i true
     let each := if share then 1 else o
     for k in node.children do occurrences := occurrences.modify k (· + each)
@@ -137,6 +138,27 @@ def replaceExprs (info : ConstantInfo) (type : Expr) (value : Option Expr) : Con
   | .ctorInfo v, _ => .ctorInfo { v with type }
   | .recInfo v, _ => .recInfo { v with type }
 
+/-- The inductive types of the block a type or a constructor belongs to,
+and none for any other declaration. -/
+def ownBlock (env : Environment) : ConstantInfo → List Name
+  | .inductInfo v => v.all
+  | .ctorInfo c => match env.find? c.induct with
+    | some (.inductInfo v) => v.all
+    | _ => [c.induct]
+  | _ => []
+
+/-- Whether a subterm of a type's or a constructor's type may become an
+auxiliary definition: only if it mentions no type of their block.  The
+scaffold declares a block as one item, its types with their constructors,
+so an auxiliary that mentioned the block would have to sit inside it;
+excluded, every auxiliary a block uses precedes the block.  Such a
+subterm is rare, since it must be closed: it occurs only in the
+constructors of a type without parameters. -/
+def outsideBlock (block : List Name) (e : Expr) : Bool :=
+  block.isEmpty || (e.find? fun sub => match sub with
+    | .const n _ => block.contains n
+    | _ => false).isNone
+
 /-- One declaration after sharing: the declaration with its type and value
 rewritten, and its auxiliary definitions, each before any that uses it. -/
 structure Shared where
@@ -151,7 +173,7 @@ def shareDeclaration (env : Environment) (threshold : Nat) (decl : Declaration) 
     Except String Shared := do
   let exprs := (constantExprs decl.info).map stripMData
   let (roots, g) := ShareGraph.build exprs
-  let chosen := g.choose roots threshold
+  let chosen := g.choose roots threshold (outsideBlock (ownBlock env decl.info))
   let picked := (List.range g.nodes.size).filter (chosen[·]!) |>.toArray
   let mut names : Std.HashMap ExprStructEq Name := {}
   for h : k in [:picked.size] do
