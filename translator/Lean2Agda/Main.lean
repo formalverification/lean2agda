@@ -22,8 +22,9 @@ def scaffoldComment (closure : Closure) : String :=
   s!"lean2agda, profile U: the scaffold of the closure of {" ".intercalate shown}{more}"
 
 /-- With `--out DIR`, write the listing, the names sidecars of the shared
-closure (so that they cover its auxiliary definitions), and the scaffold
-at the path of its root's sidecar. -/
+closure (so that they cover its auxiliary definitions), the scaffold at
+the path of its root's sidecar, and `refusals.txt`, one line per
+declaration the scaffold refuses, with its reason. -/
 def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (closure : Closure)
     (listing : String) : IO Unit := do
   let shared ← IO.ofExcept (shareClosure env args.share closure)
@@ -38,6 +39,7 @@ def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (clos
   let file := s.filePath dir
   IO.FS.createDirAll file.parent.get!
   IO.FS.writeFile file (s.render (scaffoldComment closure))
+  IO.FS.writeFile (dir / "refusals.txt") s.renderRefusals
 
 def run (args : Args) : IO Unit := do
   let env ← importEnvironment args.modules
