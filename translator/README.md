@@ -7,9 +7,10 @@ Agda.  Issue M1-3 created it as a Lake package, `lean2agda`, that
 requires Mathlib and lean4export at pinned tags; issue M1-11 added the
 axiom atlas; issue M2-1 added the translator's command line, the
 environment loader and the golden-test harness; issue M2-2 added structured
-name encoding, module paths, and reverse-map sidecars; issue M2-3 adds the
+name encoding, module paths, and reverse-map sidecars; issue M2-3 added the
 expression printer, the sharing pass, and the profile U scaffold
-(`../docs/translator/printing.md`).  The
+(`../docs/translator/printing.md`); and issue M2-4 adds the inductive
+types, as records and data types (`../docs/translator/inductives.md`).  The
 architecture it implements is described in the Description section of
 `../docs/GITHUB_PROJECT.md` and, once written, in `../docs/architecture.md`.
 
@@ -27,13 +28,15 @@ architecture it implements is described in the Description section of
 +  `Lean2Agda/Core/`: pure declaration types, command-line parsing,
    dependency closure and ordering, diagnostic rendering, statistics,
    name encoding, module paths, reverse maps, the expression printer
-   (`Print.lean`), the sharing pass (`Share.lean`), and the scaffold
-   (`Scaffold.lean`).
+   (`Print.lean`), the sharing pass (`Share.lean`), the inductive types'
+   shapes (`InductiveShape.lean`) and declarations (`Inductive.lean`), and
+   the scaffold (`Scaffold.lean`).
 +  `Lean2Agda/Main.lean`: the IO shell, which loads compiled modules and
    writes the closure listing, the reverse-map sidecars, and the scaffold.
 +  `tests/`: compiled Lean inputs, semantic checks, atlas and golden
-   fixtures, the printer's checks (`Printing.lean`) and golden scaffolds
-   (`expected/scaffolds/`), and the shell harness.
+   fixtures, the printer's checks (`Printing.lean`), the inductive types'
+   checks (`Inductives.lean`), golden scaffolds (`expected/scaffolds/`),
+   and the shell harness.
 +  `Atlas/`: the axiom atlas (`../atlas/README.md`).  `Record.lean`
    and `Graph.lean` are the pure core (the record and its line, the
    dependency graph and the exact axiom sets), `AutoDecl.lean` is
@@ -43,6 +46,9 @@ architecture it implements is described in the Description section of
    imports Lean only and building it never needs Mathlib's modules.
 +  `scripts/Smoke.lean`: a standalone check that Mathlib's `.olean`
    files load.
++  `scripts/InductiveTypes.lean`: the inductive types of a module's
+   closure or of a set of modules, one name per line, as roots for a
+   scaffold that declares them all.
 
 What each pin is and how to move it is in `../docs/pinning.md`.
 

@@ -8,8 +8,9 @@ repeated closed subterms into auxiliary definitions, so that the text
 stays near the size of the shared term.  Issue [#17] implements both, in
 `translator/Lean2Agda/Core/Print.lean` and `Core/Share.lean`, and a
 scaffold, `Core/Scaffold.lean`, that tests them with Agda until the
-emitters of [#18], [#20] and [#21] exist.  The measurements behind the
-choices below are in the dated report [`printing-blowup`][report].
+emitters of [#19] to [#21] exist; [#18] added the inductive types
+([`inductives.md`][inductives]).  The measurements behind the choices
+below are in the dated report [`printing-blowup`][report].
 
 ## Command line
 
@@ -164,17 +165,22 @@ the three corpus entries has a string literal; the printing fixture's
 
 ### Projections
 
-Until [#18] emits records, the scaffold has no projection functions that
-compute, so `Expr.proj S i t` prints through the structure's recursor,
-`S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`, where `Tᵢ` is the
-field's type with each earlier field replaced by its projection from
-`self`, as the kernel types a projection.  For a field whose type does not
-mention an earlier field (`Prod.fst`, `PProd.fst`), this type-checks against
-a postulated recursor.  For a dependent field
-(`PrintFixtures.Dependent.value`) the recursor's minor premise needs the
-recursor to compute, and Agda refuses it until [#18] or [#19] gives it a
-computation rule.  Once [#18] emits records, `projectionAsRecursor` is the
-one function to change, to the record's field projection.
+`Expr.proj S i t` from a type `S` that the scaffold declares as a record
+prints as Agda's projection of the field, `S.fᵢ {params} t`, its
+parameters passed implicitly, or as instance arguments for those `S`
+declares as instances, as Agda's projections take them
+([`inductives.md`][inductives-projections]).  From a type with one
+constructor that is not a record (`String`, a postulate for
+`BUILTIN STRING`, or a type whose constructor binds a parameter
+explicitly) it prints through the type's recursor, as every projection
+did before [#18]: `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`,
+where `Tᵢ` is the field's type with each earlier field replaced by its
+projection from `self`, as the kernel types a projection.  That checks
+against a postulated recursor for a field whose type does not mention an
+earlier field, and needs the recursor to compute ([#19]) for the others.
+The printing fixture's dependent field `PrintFixtures.Dependent.value`,
+which Agda refused printed through the recursor, checks as a field
+projection.
 
 ### Other constructors
 
@@ -237,9 +243,14 @@ The scaffold is one Agda module per closure under
 `{-# OPTIONS --type-in-type #-}`.  It declares every constant with its
 printed type, each as a postulate, except the following:
 
-+  `Nat`, a `data` type with Lean's constructors under their own
-   identifiers, bound to `BUILTIN NATURAL`;
-+  `String`, a postulate bound to `BUILTIN STRING`;
++  the inductive types, each block of them one declaration: a record for
+   each type with one constructor and no indices, a data type for each
+   other, `Nat` among them, bound to `BUILTIN NATURAL`
+   ([`inductives.md`][inductives]);
++  `String`, a postulate bound to `BUILTIN STRING`, with its constructor
+   and recursor;
++  the projection functions of records, definitions whose values print as
+   the records' field projections;
 +  the type abbreviations: a definition whose type ends in a sort and whose
    value, under its leading lambdas, is a Pi type, a sort or one of its
    parameters (`outParam`, `optParam`, `DecidableEq`, `DecidablePred`);
@@ -257,7 +268,7 @@ printed type, each as a postulate, except the following:
 roots.
 
 Declarations follow the closure's groups, and inside a group (an inductive
-type with its constructors and recursor) the printed references decide.
+type with its recursor) the printed references decide.
 The module sits at the path of its first root's sidecar until [#22] splits
 it into one module per Lean module, so a reverse lookup of an identifier in
 it may need any sidecar of the output directory.
@@ -282,17 +293,20 @@ everything that refers to it are dropped; and it repeats until the rest
 checks, listing each refusal in the order Agda met it.  The harness
 compares that listing with a golden one.
 
-| Scaffold | Declarations | Refused | Types checked |
-| --- | --- | --- | --- |
-| `list-reverse-reverse` | 41 | the root's value | 41 |
-| `nat-gcd-succ` | 272 | the root's value, 5 types | 267 |
-| `nat-gcd-self` | 337 | the root's value, 6 types | 331 |
-| printing fixture | 377 | `Dependent.value`'s value, 4 types | 373 |
-| `Fixtures.selected` | 34 | nothing | 34 |
+| Scaffold | Declarations | Data types and records | Refused | Types checked |
+| --- | --- | --- | --- | --- |
+| `list-reverse-reverse` | 34 | 6 | the root's value | 34 |
+| `nat-gcd-succ` | 246 | 23 | the root's value, 5 types | 241 |
+| `nat-gcd-self` | 310 | 24 | the root's value, 6 types | 304 |
+| printing fixture | 332 | 41 | 4 types | 328 |
+| `Fixtures.selected` | 29 | 6 | nothing | 29 |
 
-Every value not listed checks: the type abbreviations', the auxiliary
-definitions', `Fixtures.selected`'s, and the printing fixture's twelve
-other roots.
+A declaration is a declaration of the Agda module: a data type or a record
+with its constructors is one, so the counts fell from 41, 272, 337, 377 and
+34 when [#18] declared the inductive types.  Every value not listed
+checks: the type abbreviations', the auxiliary definitions', the records'
+projection functions', `Fixtures.selected`'s, and the printing fixture's
+thirteen roots, `Dependent.value` among them since [#18].
 
 Every refusal is an `UnequalTerms` that needs unfolding, as follows:
 
@@ -302,14 +316,16 @@ Every refusal is an `UnequalTerms` that needs unfolding, as follows:
    (instances, `Nat.add`, and its recursor), the identification the corpus
    notes describe;
 +  four compiled matchers' types annotate a motive's binder with
-   `n ≤ m` where `Nat.le n m` is expected, which needs the instance
-   `instLENat` and the projection `LE.le` to compute;
+   `n ≤ m` where `Nat.le n m` is expected; the projection `LE.le` unfolds
+   to the field projection `LE.le₁ instLENat n m` since [#18], and the
+   instance `instLENat` must unfold too, which is [#20]'s;
 +  a fifth matcher's type, and `Nat.modCore.go.eq_1`'s in
    `nat-gcd-self`, need `a + 1` to be `Nat.succ a`.
 
 Printing every value of each closure, with every definition and theorem
-as a root, Agda checks 139 of `nat-gcd-self`'s 266 values outright, refuses
-54, and leaves 73 unchecked behind a refused type; every refusal is again
+as a root, the scaffold of [#17] (before [#18]) had Agda check 139 of
+`nat-gcd-self`'s 266 values outright, refuse
+54, and leave 73 unchecked behind a refused type; every refusal is again
 an `UnequalTerms`, and their causes are the recursors (`Nat.rec`,
 `Decidable.rec`), instance projections, literals against `OfNat.ofNat`,
 `Quot.lift` in `funext` ([#21]'s case), and K-like reduction in
@@ -329,12 +345,14 @@ broke each rule in turn and showed which checks fail:
    linear size), and the type-abbreviation rule;
 +  `PrintingLexical.agda`, which `tests/Printing.lean` writes: a binder
    built from every Agda keyword and sort name, which Agda checks;
-+  five scaffolds against golden files in `tests/expected/scaffolds/`,
++  six scaffolds against golden files in `tests/expected/scaffolds/`,
    scope-checked, and type-checked with `scaffold_check.py` against golden
    listings: the three core-Lean corpus entries, the printing fixture
    (`tests/TranslatorTests/Input/Printing.lean`, which prints every
-   constructor, every visibility and both repairs in values that check
-   against postulates) and `Fixtures.selected`;
+   constructor, every visibility and both repairs in values that check),
+   `Fixtures.selected`, and the inductive types' fixture of
+   [`inductives.md`][inductives]; and the scaffold of `Init.Core`'s
+   inductive types, against its listing alone;
 +  the scaffold of the printing fixture's whole module, mutual `partial`
    definitions included, scope-checked.
 
@@ -357,8 +375,13 @@ The printer exposes the following, all pure:
 +  `shareClosure env threshold closure` shares a closure, and
    `addAuxiliaries env closure` returns the environment the printer needs
    for it.
-+  Each call returns `PrintCounts`: repairs at the top and below, and
-   projections printed through a recursor.
++  Each call returns `PrintCounts`: repairs at the top and below,
+   projections printed through a recursor, and projections printed as a
+   record's field projection.
++  `Inductive.lean`, above the printer, declares a block of inductive
+   types (`inductiveDecl`, from `blockMembers`), and
+   `InductiveShape.lean`, below it, decides each type's shape
+   ([`inductives.md`][inductives]).
 
 It assumes the following of its callers:
 
@@ -369,8 +392,10 @@ It assumes the following of its callers:
    the head's type.  A record field, a data constructor or a pattern-matching
    definition that changes a constant's visibilities breaks every
    application of it.
-+  [#18] replaces `projectionAsRecursor` with record projections, and
-   `Nat`'s `data` declaration with its own; [#20] makes definitions
++  [#18] printed projections from records as field projections and
+   declared every inductive type, `Nat` included; [#19] defines the
+   recursors, which `projectionAsRecursor` still uses for the types with
+   one constructor that are not records; [#20] makes definitions
    transparent and theorems opaque, which turns most of the refusals
    above into checks; [#21] gives `Quot.lift` its rewrite rule.
 +  The scaffold's golden listings measure that progress: a refusal that
@@ -388,5 +413,7 @@ It assumes the following of its callers:
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [report]: ../reports/printing-blowup-2026-10-12.md
 [naming]: naming.md
+[inductives]: inductives.md
+[inductives-projections]: inductives.md#projections
 [related]: ../related-work.md
 [catalog-let]: ../foundations/gap-catalog.md#projections-and-let

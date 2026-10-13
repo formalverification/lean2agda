@@ -648,7 +648,14 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    easier to check.  `no-eta-equality` turns η off per record; the `ETA` pragma
    that forces it for unguarded recursive records is forbidden under `--safe`
    ([agda-safe]).  By profile, as follows.
-   +  U: as K.
+   +  U: as K, since [#18]: every structure-like type of `Init.Core`'s
+      closure but `String` is a record, `String` a postulate for
+      `BUILTIN STRING`; a recursive type with one constructor is a record
+      declared `no-eta-equality`, without the eta Lean also withholds
+      (27 in `import Lean`, none in `Init`); and a structure-like type
+      whose constructor binds a parameter explicitly is a data type with
+      an index and loses its eta (`Lean.Meta.CheckTactic.CheckGoalType`,
+      the one in `import Lean`) ([`inductives.md`][inductives]).
    +  K: structure-like inductives become `record`s and keep both rules;
       unit-like types become records with no fields.
    +  CC: as K; η for records is unaffected by `--cubical-compatible` (probe
@@ -658,7 +665,8 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    the eta cases in [#32]; and the decision in [#26] about Lean4Less's optional
    eliminations of structure-like reduction and unit eta, which Agda's own η
    for records suggests leaving switched off.  Recursive structures need
-   nothing: Agda grants what Lean withholds.  The corpus expects
+   nothing beyond `no-eta-equality`, which [#18] declares so that Agda
+   withholds the eta Lean withholds.  The corpus expects
    `subtype-coe-eta` to exercise this entry.
 +  **Predecessors**.  lyphyser emits records "where possible" ([related-work],
    lyphyser/lean2agda); Lean4Less eliminates structure-like reduction since
@@ -948,7 +956,15 @@ literals**.
    types, mutual `Even` and `Odd` predicates and an inductive-recursive
    universe under `--safe --cubical-compatible`, and `P27CubicalInductives` the
    same under `--safe --cubical`.  By profile, as follows.
-   +  U: as K.
+   +  U: as K, since [#18]: a mutual block is one Agda `mutual` block and a
+      nested type is declared directly, its kernel auxiliaries surviving
+      only in its recursors' motives, postulated until [#19].
+      `Lean.Syntax` checks in `Init.Core`'s closure, and of the 72 nested
+      or mutual types in `import Lean`, 62 check, all ten mutual blocks
+      among them, while the other ten wait behind definitions that must
+      unfold ([#20]); no type Lean accepts was refused for positivity, and
+      an unsafe one, which Lean does not check, is declared after
+      `NO_POSITIVITY_CHECK` ([`inductives.md`][inductives]).
    +  K: both forms are native; a mutual family of propositions is a mutual
       family of `Set`s in Agda and eliminates anywhere.
    +  CC: as K (probe `P14NestedMutual`).
@@ -995,10 +1011,13 @@ literals**.
    introduce sharing"; a record pattern is allowed on the left ([agda-let]);
    `(let x = 1 in x + x) ≡ 2` and `(let (a , b) = p in a + b) ≡ 3` hold by
    `refl` (probe `P15ProjLet`).  By profile, as follows.
-   +  U: as K once [#18] emits records; until then the printer of [#17]
-      prints a projection through the structure's recursor, which checks
-      against postulates for a non-dependent field only, and `let` as
-      Agda's `let` ([`printing.md`][printing]).
+   +  U: as K: since [#18], a projection from a record prints as its
+      field projection and Lean's projection functions unfold to it, so
+      that a dependent field checks; from `String`, a postulate, and from
+      a type whose constructor binds a parameter explicitly, it still
+      prints through the recursor, which checks against postulates for a
+      non-dependent field only.  `let` prints as Agda's `let`
+      ([`printing.md`][printing], [`inductives.md`][inductives]).
    +  K: projections become applications of the record's projection functions;
       `let` becomes Agda's `let` or, where sharing matters for checking time,
       an auxiliary definition.
@@ -1273,3 +1292,4 @@ Mathlib's large-eliminating propositions excepted.
     binder" and the sentence "Note that we don't have any congruence rules for
     let."
 [printing]: ../translator/printing.md
+[inductives]: ../translator/inductives.md
