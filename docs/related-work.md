@@ -29,10 +29,12 @@ is a set of Agda flags the output must check under, plus what remains a module
 parameter: U (`--type-in-type`, scaffolding only), K (`--safe` with Agda's K
 rule), CC (`--safe --cubical-compatible`) and CU (`--safe --cubical`).  A
 *layer* is one of the two halves of the emitted library, constructive and
-classical.  A *tier* sorts a declaration by the axioms it depends on and, for
-the lowest tier, by the trust escape hatches it uses: T0 none, T1 `propext` or
-`Quot.sound`, T2 `Classical.choice`, T3 `sorryAx`, `Lean.ofReduceBool`,
-`unsafe` or `partial` definitions and `implemented_by`.  The *atlas* is the
+classical.  A *tier* sorts a declaration by the axioms it depends on: T0 none,
+T1 `propext` or `Quot.sound`, T2 `Classical.choice`, T3 any other axiom
+(`sorryAx`, `Lean.ofReduceBool`, the compiler's `lcProof`); the trust escape
+hatches no axiom shows (`unsafe`, `partial` and `implemented_by`) are recorded
+apart from the tier, as ADR 0001 decides
+(`adr/0001-translation-architecture.md`, section 5).  The *atlas* is the
 per-declaration record of axioms, computability and kernel features from which
 the layering is computed.  The *normalizer* is the roadmap's name for the
 pipeline stage that replaces definitional proof irrelevance and K-like

@@ -101,9 +101,10 @@ predecessor works.  It runs in five stages, as follows:
    the computation rule of `Quot.lift` where the target has no
    definitional quotients.
 3. **Elaborate universes**.  Specialize each constant by which of its
-   universe parameters are `Prop`, then compute predicative,
-   universe-polymorphic level annotations by constraint solving, in the
-   style of Felicissimo and Blanqui's Predicativize.
+   universe-level parameters are zero, which decides which of its sorts
+   are `Prop`, then compute predicative, universe-polymorphic level
+   annotations by constraint solving, in the style of Felicissimo and
+   Blanqui's Predicativize.
 4. **Emit**.  One Agda module per Lean module and layer: `data` and
    `record` types, recursors as pattern-matching definitions, theorems
    in `opaque` blocks, axioms as module parameters, `.agda-lib` files
@@ -137,11 +138,11 @@ The atlas sorts declarations into tiers by their exact axiom sets
 T1 (`propext` or `Quot.sound`, both validated by univalent type
 theory), T2 (`Classical.choice`), T3 (any other axiom: `sorryAx`, the
 native-reduction family, the compiler's `lcProof`, the axioms
-`native_decide` generates).  The hatches no axiom shows (`unsafe`,
-`partial`, `implemented_by`) are atlas fields, and the layer rules of
-M4-2 say what they refuse.  The emitted library has a **constructive**
-layer (T0 and T1) and a **classical** layer (T2) importing it; T3 is
-refused.  Both layers are `--safe`: the classical principles are
+`native_decide` generates).  The hatches no axiom shows are atlas
+fields (`unsafe` and `partial` today, `implemented_by` with M4-1), and
+the layer rules of M4-2 say what they refuse.  The emitted library has
+a **constructive** layer (T0 and T1) and a **classical** layer (T2)
+importing it; T3 is refused.  Both layers are `--safe`: the classical principles are
 record-typed module parameters, as in TypeTopology, and a one-line user
 module may postulate them for anyone who prefers that.  A theorem whose
 statement is constructive but whose Mathlib proof is classical sits in

@@ -32,9 +32,10 @@ where it first needs them.
 
 +  A *profile* is a set of Agda flags the output must check under, plus what
    remains a module parameter; the four are U, K, CC and CU (§ 4).
-+  A *tier* sorts a declaration by the axioms it depends on, computed exactly:
-   T0 none, T1 `propext` or `Quot.sound` only, T2 `Classical.choice`, T3 any
-   other axiom (§ 5).
++  A *tier* sorts a declaration by the axioms it depends on, computed exactly,
+   the first rule that applies deciding: T3 if any axiom is outside the
+   standard three, else T2 if `Classical.choice` is among them, else T1 if
+   `propext` or `Quot.sound` is, else T0 (§ 5).
 +  A *layer* is one of the two halves of an emitted library, the constructive
    one (tiers T0 and T1) and the classical one (T2); T3 is refused (§ 5).
 +  The *atlas* is the per-declaration record, computed over the whole pinned
@@ -83,9 +84,9 @@ decides one.
    of quotients.  The Dedukti route, which exists in pieces and has never been
    run end to end, is the recorded alternative and a future baseline (§ 2).
 +  **Universe levels in two steps**.  Specialize each constant by which of its
-   universe parameters are `Prop`, which removes `imax`, then compute
-   predicative level annotations by constraint solving in the style of
-   Predicativize (§ 3).
+   universe-level parameters are zero, which decides which of its sorts are
+   `Prop` and removes `imax`, then compute predicative level annotations by
+   constraint solving in the style of Predicativize (§ 3).
 +  **Four target profiles**.  U (`--type-in-type`, scaffolding only), K
    (`--safe` with Agda's K, the faithful target), CC
    (`--safe --cubical-compatible`, the primary deliverable) and CU
@@ -397,27 +398,29 @@ proposition; `Prop` is impredicative.  Agda's levels have `lzero`, `lsuc` and
 
 **Decision**.  The universe stage runs in two steps, in the order
 rocq-lean-import and lyphyser's tool both chose.  First, specialize each
-constant by which of its universe parameters are instantiated at `Prop`,
-generating instances lazily as they are used, which removes every `imax`
-([#28]).  Then compute predicative, universe-polymorphic level annotations by
-collecting level constraints and unifying them in the equational theory of
-levels, in the style of Felicissimo and Blanqui's Predicativize, with a hook
-for constraints added by hand per constant ([#29]).  A constant whose
-constraints have no solution is reported as essentially impredicative, not
-translated.
+constant by which of its universe-level parameters are zero (`Sort 0` is
+`Prop`, so this decides which of its sorts are propositions; rocq-lean-import
+calls the pattern a `Prop` instantiation), generating instances lazily as they
+are used, which removes every `imax` ([#28]).  Then compute predicative,
+universe-polymorphic level annotations by collecting level constraints and
+unifying them in the equational theory of levels, in the style of Felicissimo
+and Blanqui's Predicativize, with a hook for constraints added by hand per
+constant ([#29]).  A constant whose constraints have no solution is reported as
+essentially impredicative, not translated.
 
 **Evidence**.
 
 +  **The predecessors**.  rocq-lean-import duplicates each constant per pattern
-   of `Prop`-instantiated universe parameters (`_instX`) and gives each
-   distinct algebraic universe a surrogate parameter; lyphyser's level clauses
-   are the same specialization, needed even under `--type-in-type` because
-   Agda's syntax separates `Prop` from `Set`; Predicativize's elaboration took
-   Matita's arithmetic library to Agda that checks under `--safe`, with level
-   constraints added by hand for some constants, and its paper proves that not
-   every solvable level-unification problem has a most general unifier (Theorem
-   6.1) and reports that Agda's own unifier fails a constraint theirs solves,
-   `_0 ⊔ _1 = _0 ⊔ _2` (Remark 6.3) ([`related-work.md`], the three sections).
+   of universe parameters instantiated at `Prop`, that is, at level zero
+   (`_instX`) and gives each distinct algebraic universe a surrogate parameter;
+   lyphyser's level clauses are the same specialization, needed even under
+   `--type-in-type` because Agda's syntax separates `Prop` from `Set`;
+   Predicativize's elaboration took Matita's arithmetic library to Agda that
+   checks under `--safe`, with level constraints added by hand for some
+   constants, and its paper proves that not every solvable level-unification
+   problem has a most general unifier (Theorem 6.1) and reports that Agda's own
+   unifier fails a constraint theirs solves, `_0 ⊔ _1 = _0 ⊔ _2` (Remark 6.3)
+   ([`related-work.md`], the three sections).
 +  **Without the first step**.  Printing `Prop` for every sort whose level
    normalizes to zero, under `--prop --type-in-type`, raised Agda's refusals on
    the `nat-gcd-succ` and `nat-gcd-self` scaffolds from 6 to 17 and from 7 to
@@ -569,8 +572,10 @@ the pinned environment depends on: its axioms and tier, its kind and module,
 and the flags no axiom shows (`noncomputable`, `unsafe`, `partial`); later
 versions add the kernel features its typing used, the normalizer's casts, and
 its acceptance under each profile.  A *tier* sorts a constant by its exact
-axiom set: T0 none, T1 `propext` or `Quot.sound` only, T2 `Classical.choice`,
-T3 any other axiom.  A *layer* is one of the two halves of the emitted library.
+axiom set, the first rule that applies deciding: T3 if any axiom is outside the
+standard three, else T2 if `Classical.choice` is among them, else T1 if
+`propext` or `Quot.sound` is, else T0; the atlas's `tierOf` tests the rules in
+that order.  A *layer* is one of the two halves of the emitted library.
 
 **Decision**.  The emitted library has a constructive layer (tiers T0 and T1)
 and a classical layer (T2) that imports it; T3 is refused and reported with the
@@ -591,18 +596,19 @@ from the atlas, declaration by declaration, as follows.
    (`lcProof : ∀ {α : Prop}, α` among them), and `native_decide` creates a
    bespoke axiom per invocation (`<theorem>._native.native_decide.ax_1_1`),
    which no list written today can name.
-+  **The hatches no axiom shows are atlas fields, not tiers**.  An `unsafe`
-   constant is exempt from kernel checking and is refused.  A `partial def` is
-   an `opaque` constant whose only trace is a companion `<name>._unsafe_rec` of
-   safety `partial`, invisible to `#print axioms` and detected by the
-   companion; `implemented_by` replaces a constant in compiled code only, which
-   the kernel never sees.  The roadmap's description and the README listed
-   `unsafe` and `partial` under T3 until this record and are corrected with it,
-   and the survey's Terms ([`related-work.md`], Terms) still list them, with
-   `implemented_by`; this record keeps the tier an axiom-only notion and leaves
-   the refusal rule for the hatches to the layer rules of [#37], which has to
-   reconcile it with [#20]'s emission of `partial` definitions as `opaque`
-   constants.
++  **The hatches no axiom shows are atlas fields, not tiers**: `unsafe` and
+   `partial` in the atlas's version 0, and `implemented_by` from [#36].  An
+   `unsafe` constant is exempt from kernel checking and is refused.  A
+   `partial def` is an `opaque` constant whose only trace is a companion
+   `<name>._unsafe_rec` of safety `partial`, invisible to `#print axioms` and
+   detected by the companion; `implemented_by` replaces a constant in compiled
+   code only, which the kernel never sees.  The roadmap's description, the
+   README and the survey's Terms ([`related-work.md`], Terms) listed `unsafe`
+   and `partial` under T3 until this record, the survey with `implemented_by`
+   too, and are corrected with it; this record keeps the tier an axiom-only
+   notion and leaves the refusal rule for the hatches to the layer rules of
+   [#37], which has to reconcile it with [#20]'s emission of `partial`
+   definitions as `opaque` constants.
 +  **`propext` and `Quot.sound` are constructive** because univalent type
    theory validates both: in the cubical library `funExt` and `hPropExt` are
    theorems and set quotients are higher inductive types whose `rec` computes
@@ -631,15 +637,15 @@ from the atlas, declaration by declaration, as follows.
    percent) are T2.  Over the whole environment of 771,129 constants the tiers
    hold 154,356, 179,007, 437,511 and 255
    ([`reports/atlas-mathlib-v4.33.1-0df444a.md`], Tiers, Mathlib by kind).
-+  **T3 is small, and all of it is compiler code**.  Mathlib's 41 T3 constants
-   all depend on `lcProof` and all are `unsafe` definitions: fourteen `Repr`
-   instances (`Real`, `Complex`, `Finset` among them), the floating-point
-   arithmetic of `Mathlib.Data.FP.Basic`, `Part.unwrap`, `Quot.unquot`,
-   `Multiset.instToExprOfToLevel` and four tactic-side helpers.  Of the
-   environment's 255, 249 are `unsafe` and the other 6 are the native-reduction
-   family and `sorryAx`; no theorem is T3, and nothing safe rests on an unsafe
-   axiom (LF-2).  `sorryAx` has no dependent but itself, and no `native_decide`
-   axiom exists in `import Mathlib` (LF-2;
++  **Mathlib's T3 is 41 constants, every one on the compiler axiom `lcProof`**.
+   Mathlib's 41 T3 constants all depend on `lcProof` and all are `unsafe`
+   definitions: fourteen `Repr` instances (`Real`, `Complex`, `Finset` among
+   them), the floating-point arithmetic of `Mathlib.Data.FP.Basic`,
+   `Part.unwrap`, `Quot.unquot`, `Multiset.instToExprOfToLevel` and four
+   tactic-side helpers.  Of the environment's 255, 249 are `unsafe` and the
+   other 6 are the native-reduction family and `sorryAx`; no theorem is T3, and
+   nothing safe rests on an unsafe axiom (LF-2).  `sorryAx` has no dependent
+   but itself, and no `native_decide` axiom exists in `import Mathlib` (LF-2;
    [`reports/atlas-mathlib-v4.33.1-0df444a.md`], T3).
 +  **Why exact reachability**.  `Lean.collectAxioms`, which `#print axioms`
    calls, caches the axioms of a constant it reaches while one of that
@@ -727,13 +733,13 @@ only by the absurd pattern; the propositions Lean eliminates largely (`Eq`,
 `proof-irrelevance` and `large-elimination` entries use the two letters the
 other way round; this record uses [#27]'s, the roadmap's and the corpus's.
 
-**Decision**.  Not taken here.  Both encodings are implemented behind a switch
-and decided by measurement on the corpus and `Init` in [#27], ADR 0002; the
-losing encoding stays available for Milestone 6 if it is the cubical-friendly
-one.  Under either encoding the subsingleton eliminators live in `Set` ([#32]),
-the quotient record's `squash` is needed, and the level costs of § 3 stand.
-What this record fixes is the evidence each candidate starts from and the order
-in which [#27] measures.
+**Decision**.  Not taken here.  Both encodings are to be implemented behind a
+switch and decided by measurement on the corpus and `Init` in [#27], ADR 0002;
+the losing encoding is to stay available for Milestone 6 if it is the
+cubical-friendly one.  Under either encoding the subsingleton eliminators live
+in `Set` ([#32]), the quotient record's `squash` is needed, and the level costs
+of § 3 stand.  What this record fixes is the evidence each candidate starts
+from and the order in which [#27] measures.
 
 **Evidence**.
 
@@ -925,13 +931,18 @@ translation needed; the translator is built to reproduce it.
 library, selected so that every entry of the gap catalog but
 `trust-escape-hatches`, which no translated entry can exercise, is exercised at
 least once, are the translator's test oracle; its golden tests ([#23]) and its
-comparison with lyphyser's tool ([#24]) run on them.  Every tool is pinned and
-moves on purpose: Lean v4.33.1, Mathlib tag v4.33.1, lean4export v4.33.0, and
-Agda 2.8.0 with agda-stdlib 2.3 and cubical 0.9, all from one `nix develop`,
-and Mathlib is never rebuilt from source.  The translator and every generated
-library are Apache-2.0; code adapted from a predecessor keeps its notice and is
-listed in `NOTICE`; an unlicensed predecessor (Lean4Less, Predicativize) is
-used as an external tool and never copied.
+comparison with lyphyser's tool ([#24]) run on them.  Every tool the pipeline
+runs today is pinned and moves on purpose: Lean v4.33.1, Mathlib tag v4.33.1,
+lean4export v4.33.0, and Agda 2.8.0 with agda-stdlib 2.3 and cubical 0.9, all
+from one `nix develop`, and Mathlib is never rebuilt from source; Lean4Less,
+which nothing runs yet, is not pinned, and its pin lands with [#26].  The
+translator is Apache-2.0, and so is every library generated from Mathlib, as a
+derived work of it; a library generated from another Lean library carries that
+library's license, and one whose license is incompatible with Apache-2.0 is not
+translated until the question is settled with its authors; code adapted from a
+predecessor keeps its notice and is listed in `NOTICE`; an unlicensed
+predecessor (Lean4Less, Predicativize) is used as an external tool and never
+copied.
 
 **Evidence**.
 
@@ -1013,10 +1024,10 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 | 2 | lyphyser's tool cited and not copied before [#24] | Adopted ([#4], PR [#65]) | 3,177 lines against Lean v4.12.0-rc1; its choices are the ones K and CC undo (§ 1) |
 | 3 | Casts before any term is printed, with Lean4Less as the instrument, external and never copied while unlicensed; casts recorded apart from the axioms; the Dedukti route recorded as the alternative; re-implementation over Lean4Lean as the fallback | Proposed ([#26], [#30], [#36], [#14]) | 6.3 percent of `Std`'s constants, 15.5 percent growth; `prfIrrel` a theorem from `propext`; the chain never run; v4.28.0-rc1 against v4.33.1 (§ 2) |
 | 4 | Lean4Less's eliminations of structure-like reduction and unit eta stay off | Proposed ([#26]) | Agda's records have eta; three closures use structure eta at no cost (§ 2) |
-| 5 | Universe levels: specialize by `Prop`-instantiation, then predicativize with a hook for hand constraints; essential impredicativity reported | Proposed ([#28], [#29]) | rocq-lean-import and lyphyser; Predicativize's Theorem 6.1; refusals 6 to 17 and 7 to 20 without the first step; one essential case in twelve (§ 3) |
+| 5 | Universe levels: specialize by which level parameters are zero, then predicativize with a hook for hand constraints; essential impredicativity reported | Proposed ([#28], [#29]) | rocq-lean-import and lyphyser; Predicativize's Theorem 6.1; refusals 6 to 17 and 7 to 20 without the first step; one essential case in twelve (§ 3) |
 | 6 | Four profiles U, K, CC and CU; U with `--type-in-type` alone; K the stepping stone; CC the primary deliverable; CU constructive layer first | Adopted as targets (roadmap; U in PR [#77]); K [#33], CC [#34] and [#51], CU [#52] | Probes `P05` to `P07`, `P17`, `P19`; sixteen files `--safe`, fourteen CC, two CU, no postulate, no K; Lemma 3.8.5 (§ 4) |
 | 7 | Two layers from the atlas: T0 and T1 constructive, T2 classical, T3 refused; both `--safe` with the principles as parameters | Adopted as the roadmap's shape; the rules [#37], the parameters [#38] | 14.7, 21.1, 64.2 and under 0.1 percent of Mathlib's constants; three of four T2 statements proved constructively (§ 5) |
-| 8 | The tier is the exact axiom set's; any other axiom is T3; the hatches no axiom shows are atlas fields whose refusal rule is [#37]'s | Adopted for the atlas (PR [#71]); the rule [#37] | 15 axioms at the pin and `native_decide`'s bespoke axioms; 1,837 under-reports, 532 Mathlib tiers wrong by `#print axioms`; 41 T3, all `lcProof` (§ 5) |
+| 8 | The tier is the exact axiom set's; any other axiom is T3; the hatches no axiom shows are atlas fields (`unsafe` and `partial` today, `implemented_by` from [#36]) whose refusal rule is [#37]'s | Adopted for the atlas (PR [#71]); the rule [#37] | 15 axioms at the pin and `native_decide`'s bespoke axioms; 1,837 under-reports, 532 Mathlib tiers wrong by `#print axioms`; 41 T3, all `lcProof` (§ 5) |
 | 9 | `propext` and `Quot.sound` are constructive | Proposed ([#37]) | `funExt`, `hPropExt` and set quotients in the cubical library; two CU files instantiate the records (§ 5) |
 | 10 | The encoding of `Prop` is open: A and B behind a switch, decided by [#27] in ADR 0002 in the measured order | Open ([#27]) | Seven entries as A, one both ways; `refl` against a witness; `P25bPropEqCC`; copies by level (§ 6) |
 | 11 | Injective names from structured components, with reverse-map sidecars | Adopted ([#16], PR [#74]) | Zero collisions over the atlas; 771,129 names round-tripped; LF-9 (§ 7) |
@@ -1025,8 +1036,8 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 | 14 | One Agda module per Lean module | Proposed ([#22]) | lyphyser's out of memory; 6 s to 1,652 s for 0.7 MB to 7.5 MB in one module (§ 7) |
 | 15 | Records with eta, `data`, recursors by pattern matching, opaque theorems, quotient postulates with a rewrite rule under U | Proposed ([#18] to [#21]) | Every refusal Agda makes today but the K-like one needs a definition unfolded or a recursor computed, which these supply; the K-like one waits for the normalizer (§ 7) |
 | 16 | Twelve hand-translated entries as the oracle | Adopted ([#6] to [#10]) | Four assumptions corrected and one finding; coverage flat by closure (§ 8) |
-| 17 | One pinned toolchain, Mathlib never rebuilt | Adopted ([#3], PR [#64]) | `.olean` files per release; the symlink trap (§ 8) |
-| 18 | Apache-2.0 throughout; unlicensed predecessors as external tools | Adopted ([#13], PR [#62]) | The predecessors' licenses (§ 8) |
+| 17 | One pinned toolchain, Mathlib never rebuilt; Lean4Less's pin waits for [#26] | Adopted ([#3], PR [#64]) | `.olean` files per release; the symlink trap (§ 8) |
+| 18 | Apache-2.0 for the translator and the libraries generated from Mathlib, the source's own license for other libraries; unlicensed predecessors as external tools | Adopted ([#13], PR [#62]) | The predecessors' licenses (§ 8) |
 
 ---
 

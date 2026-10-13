@@ -26,8 +26,9 @@ The deep notes it summarizes stay beside their components:
    (`--safe --cubical-compatible`, which implies `--without-K`) and CU
    (`--safe --cubical`).
 +  A **tier** sorts a declaration by the axioms it depends on, computed
-   exactly: T0 none, T1 `propext` or `Quot.sound` only, T2 `Classical.choice`,
-   T3 any other axiom.
+   exactly, the first rule that applies deciding: T3 if any axiom is outside
+   the standard three, else T2 if `Classical.choice` is among them, else T1 if
+   `propext` or `Quot.sound` is, else T0.
 +  A **layer** is one of the two halves of an emitted library: the constructive
    layer holds tiers T0 and T1, and the classical layer holds T2 and imports
    the first; T3 is refused.
@@ -78,7 +79,7 @@ flowchart TB
   load["Load: environment, closure, dependency order"]:::built
   atlas["Profile: the atlas, with each constant's axioms and tier;<br/>the failures Check finds return here, by category"]:::built
   norm["Normalize: Lean4Less inserts casts for proof irrelevance,<br/>K-like reduction and the computation rule of Quot.lift"]:::planned
-  univ["Elaborate universes: specialize by Prop-instantiation,<br/>then predicativize"]:::planned
+  univ["Elaborate universes: specialize by which levels are zero,<br/>then predicativize"]:::planned
   emit["Emit: names, printed terms and the scaffold (built);<br/>data and record, recursors, opaque theorems,<br/>parameters, one module per Lean module (planned)"]:::partial
   check["Check: Agda under the profile's flags<br/>(the scaffold checker built; the driver for emitted modules planned)"]:::partial
   lib["An Agda library in two layers, constructive and classical"]:::planned
@@ -92,7 +93,7 @@ flowchart TB
 | Load | the pinned `.olean` modules; a list of modules and of root declarations | an `Environment`; the closure of the roots in dependency order, each constant with its source module | built | [#15] |
 | Profile | the environment | one record per constant (axioms, tier, kind, module, `noncomputable`, `unsafe`, `partial`, `auto`) and the report | built, version 0 | [#11]; [#36] adds the fields the later stages fill |
 | Normalize | the environment of the modules to translate, through Lean4Less's `.olean` output or inside its process ([#26] chooses the bridge across the toolchain skew) | a Lean⁻ environment; the casts inserted per constant; the constants aborted | planned | [#26], [#30] |
-| Elaborate universes | the Lean⁻ environment | each constant specialized by which universe parameters are `Prop`, with predicative level annotations; the essentially impredicative constants, reported | planned | [#28], [#29] |
+| Elaborate universes | the Lean⁻ environment | each constant specialized by which of its universe-level parameters are zero, with predicative level annotations; the essentially impredicative constants, reported | planned | [#28], [#29] |
 | Emit | the closure, the profile and the layer | Agda modules | names, the printer, the sharing pass and the profile U scaffold built; the rest planned | [#16] to [#22], [#27], [#32], [#33], [#37], [#38] |
 | Check | the emitted modules and the profile's flags | Agda's verdict per module, with time and memory; the failures, fed back into the atlas by category | the scaffold checker and the corpus checker exist; the driver for emitted modules is planned | [#22], [#23], [#43], [#45] |
 
@@ -146,35 +147,37 @@ Lean4Less) is a modified Lean4Lean type checker that inserts a cast, justified
 by a proof-irrelevance lemma and congruence lemmas, wherever the original
 checker would have used proof irrelevance or K-like reduction; its output is a
 Lean⁻ environment and `aborted.txt`, the constants it gave up on.  The project
-runs it as an external tool at its own toolchain (its `main` names Lean
-v4.28.0-rc1, five minor releases behind the pin), restores or works around its
-`.olean` output or runs the translator inside its process, and records per
+is to run it as an external tool at its own toolchain (its `main` names Lean
+v4.28.0-rc1, five minor releases behind the pin), restore or work around its
+`.olean` output or run the translator inside its process, and record per
 constant the casts inserted and whether translation was aborted, as atlas
-fields.  Since the lemma `prfIrrel` is a theorem from `propext`, a cast also
-adds `propext` to a constant's dependencies, which the atlas keeps apart from
-the source's own axioms.  [#30] extends the same device to the computation rule
-of `Quot.lift`, which Lean has definitionally and the parameter record of
-profiles K and CC has only propositionally: every definitional use becomes a
-rewrite by the record's `lift-β`.  Lean4Less's optional eliminations of
-structure-like reduction and unit eta stay off, since Agda's records have eta.
+fields; none of this exists yet.  Since the lemma `prfIrrel` is a theorem from
+`propext`, a cast also adds `propext` to a constant's dependencies in Lean⁻,
+which the atlas is to keep apart from the source's own axioms.  [#30] is to
+extend the same device to the computation rule of `Quot.lift`, which Lean has
+definitionally and the parameter record of profiles K and CC has only
+propositionally: every definitional use would become a rewrite by the record's
+`lift-β`.  Lean4Less's optional eliminations of structure-like reduction and
+unit eta are to stay off, since Agda's records have eta.
 
 ### Elaborate universes
 
 Planned by [#28] and [#29].  Two steps, in the order rocq-lean-import and
 lyphyser's tool both chose.  First, each constant is specialized by which of
-its universe parameters are instantiated at `Prop`: lyphyser's level clauses
-and rocq-lean-import's `_instX` duplicates are the same idea, instances are
-generated lazily as uses demand them, and within an instance every `imax`
-reduces to `max` or to zero.  Second, predicative, universe-polymorphic level
-annotations are computed by collecting the constraints between levels and
-unifying them in the equational theory of levels, Felicissimo and Blanqui's
-universe-polymorphic elaboration (Predicativize), with constraint postponement,
-explicit `Level` binders in the emitted signatures, and a file of hand-added
-constraints per constant, since not every solvable problem has a most general
-unifier.  A constant whose constraints have no solution is essentially
-impredicative and is reported, not translated; the corpus met one, Mathlib's
-infimum of substructures ([`foundations/gap-report-corpus.md`][report],
-`impredicative-prop`).
+its universe-level parameters are zero, which decides which of its sorts are
+`Prop` (`Sort 0`): lyphyser's level clauses and rocq-lean-import's `_instX`
+duplicates, one per pattern of parameters instantiated at `Prop`, are the same
+idea; instances are generated lazily as uses demand them, and within an
+instance every `imax` reduces to `max` or to zero.  Second, predicative,
+universe-polymorphic level annotations are computed by collecting the
+constraints between levels and unifying them in the equational theory of
+levels, Felicissimo and Blanqui's universe-polymorphic elaboration
+(Predicativize), with constraint postponement, explicit `Level` binders in the
+emitted signatures, and a file of hand-added constraints per constant, since
+not every solvable problem has a most general unifier.  A constant whose
+constraints have no solution is essentially impredicative and is reported, not
+translated; the corpus met one, Mathlib's infimum of substructures
+([`foundations/gap-report-corpus.md`][report], `impredicative-prop`).
 
 ### Emit
 
@@ -305,7 +308,7 @@ cubical library.
 | | the postulated `Acc.rec` and `WellFounded.fixFEq` | Subsingleton elimination | [#32] |
 | Lean4Less | the cast insertion and the name Lean⁻; per-constant counts of casts; the overhead baseline | Normalize; Profile | [#26], [#36] |
 | lean2dk | the measured cost of printing shared terms as text; the three classes of stubbed constants | Emit: printing and sharing, term size; literals | [#17], [#44], [#31] |
-| rocq-lean-import | duplication per `Prop`-instantiation pattern; surrogate parameters for algebraic universes | Elaborate universes | [#28], [#29] |
+| rocq-lean-import | duplication per pattern of universe parameters instantiated at `Prop`, that is, at level zero; surrogate parameters for algebraic universes | Elaborate universes | [#28], [#29] |
 | | `Acc` as the hard case of subsingleton elimination | Subsingleton elimination | [#32] |
 | | pathological conversion problems | Check: performance before any Mathlib-scale run | [#43], [#44] |
 | Predicativize | universe-polymorphic elaboration with level unification; hand-added constraints | Elaborate universes, step 2 | [#29] |
