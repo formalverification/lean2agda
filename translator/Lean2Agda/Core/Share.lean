@@ -215,12 +215,16 @@ def shareDeclaration (env : Environment) (threshold : Nat) (decl : Declaration) 
   return { declaration := { decl with info, dependencies := decl.dependencies ++ references },
            auxiliaries }
 
-/-- Share every declaration of a closure, then order the result again by
-strongly connected groups, so that each auxiliary precedes its users and
-follows what it uses. -/
+/-- Share every declaration of a closure but the `unsafe` ones, then order
+the result again by strongly connected groups, so that each auxiliary
+precedes its users and follows what it uses.  An `unsafe` declaration is
+left as it is: the scaffold refuses it, and the kernel would refuse a safe
+auxiliary definition made from a subterm of its value. -/
 def shareClosure (env : Environment) (threshold : Nat) (closure : Closure) : Except String Closure := do
   if threshold == 0 then return closure
-  let shared ← closure.declarations.mapM (shareDeclaration env threshold)
+  let shared ← closure.declarations.mapM fun d =>
+    if d.info.isUnsafe then pure { declaration := d, auxiliaries := #[] }
+    else shareDeclaration env threshold d
   let all := shared.foldl (fun acc s => acc.push s.declaration ++ s.auxiliaries) #[]
   let byName : Std.HashMap Name Declaration := all.foldl (fun m d => m.insert d.name d) {}
   let names := sortNames (all.map (·.name))

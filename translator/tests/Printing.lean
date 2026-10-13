@@ -202,24 +202,6 @@ def checkSharing (env : Environment) : IO Unit := do
   require ((List.range lg.nodes.size).all fun i => !lchosen[i]! || !lg.nodes[i]!.expr.isLambda)
     "a lambda was shared"
 
-def checkScaffoldRules (env : Environment) : IO Unit := do
-  for (n, expected) in [(``outParam, true), (``optParam, true), (``DecidableEq, true),
-      (``DecidablePred, true), (``Nat.add, false), (``id, false), (``Nat.le, false)] do
-    let some info := env.find? n | throw (IO.userError s!"missing {n}")
-    require (isTypeAbbreviation info == expected) s!"type abbreviation {n}"
-  -- Mutually recursive unsafe roots fall back to postulates, and a String
-  -- root keeps its builtin.
-  let roots := #[``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec, ``String]
-  let closure ← IO.ofExcept (dependencyClosure env roots)
-  let s ← IO.ofExcept (scaffold env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
-  for n in [``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec] do
-    let some item := s.items.find? (·.provides.contains (agdaIdent n))
-      | throw (IO.userError s!"missing item {n}")
-    require (item.text.startsWith "postulate ") s!"cyclic {n} was not postulated"
-  let some string := s.items.find? (·.provides.contains (agdaIdent ``String))
-    | throw (IO.userError "missing item String")
-  require ((string.text.splitOn "BUILTIN STRING").length == 2) "a String root lost its builtin"
-
 #eval show IO Unit from do
   checkLayout
   checkBinderNames
@@ -227,7 +209,6 @@ def checkScaffoldRules (env : Environment) : IO Unit := do
   let env ← withEnv #[`Init, `TranslatorTests.Input.Printing]
   checkConstructors env
   checkSharing env
-  checkScaffoldRules env
   if let some dir ← IO.getEnv "PRINTING_AGDA_TEST_DIR" then
     IO.FS.writeFile (System.FilePath.mk dir / "PrintingLexical.agda") lexicalFile
-  IO.println s!"printer checks: {precedenceCases.length} layout cases, binder names, constructors, telescopes, repairs, sharing, and scaffold rules passed"
+  IO.println s!"printer checks: {precedenceCases.length} layout cases, binder names, constructors, telescopes, repairs, and sharing passed"

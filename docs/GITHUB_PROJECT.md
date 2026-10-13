@@ -1007,9 +1007,9 @@ Definitions must stay transparent (Lean terms rely on unfolding them); theorems 
 
 ## Tasks
 
-- [ ] Emission rules for `def`, `theorem`, `opaque`, `axiom`, `instance` (an ordinary definition with an instance binder on the Agda side where useful).
-- [ ] A fallback that re-emits a theorem transparently when Agda fails on a dependent that unfolds it, with a report of how often this happens.
-- [ ] Refusal of declarations depending on `sorryAx` and of `unsafe` declarations, with a reason in the report.
+- [x] Emission rules for `def`, `theorem`, `opaque`, `axiom`, `instance` (an ordinary definition with an instance binder on the Agda side where useful).
+- [x] A fallback that re-emits a theorem transparently when Agda fails on a dependent that unfolds it, with a report of how often this happens.
+- [x] Refusal of declarations depending on `sorryAx` and of `unsafe` declarations, with a reason in the report.
 
 ## Acceptance criteria
 

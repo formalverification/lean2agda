@@ -4,20 +4,27 @@ File: scripts/python/scaffold_check.py
 Description:
   Type-check a profile U scaffold, the Agda module that
   `lake exe lean2agda --out DIR` writes for a closure, and report which
-  declarations Agda refuses.
+  declarations Agda refuses and which theorems had to unfold.
 
   Agda stops at the first error in a module, and a scaffold holds
   hundreds of declarations, some of which cannot check until the
-  emitters of issues M2-4 to M2-7 supply the definitional unfolding they
-  need.  The checker therefore runs Agda on a scratch copy of the module
-  repeatedly.  When Agda refuses the clause of a definition, the
-  definition becomes a postulate of its type, so that what uses it still
-  checks; when Agda refuses a declaration's type, the declaration and
-  everything that refers to it are dropped.  It stops when the rest
-  checks, and prints one line per refusal and per dropped declaration,
-  in the order Agda met them, after a line counting what checked: the
-  declarations, and the data types and records the inductive types
-  became.
+  emitters of issues M2-5 and M2-7 supply the definitional unfolding
+  they need.  The checker therefore runs Agda on a scratch copy of the
+  module repeatedly, and at each error does one of three things.  When
+  the error's message names a theorem, which the scaffold keeps in an
+  `opaque` block, the theorem is re-emitted as a transparent
+  definition, so that what needed it to unfold can see its value: the
+  fallback of issue M2-6, counted and named in the listing.  Otherwise,
+  when Agda refuses the clause of a declaration, the declaration becomes
+  a postulate of its type, so that what uses it still checks; and when
+  Agda refuses a declaration's type, the declaration and everything that
+  refers to it are dropped.  It stops when the rest checks, and prints
+  one line per event, in the order Agda met them, after two lines
+  counting what checked (the declarations, and the data types and
+  records the inductive types became) and what unfolded.  An unfolding
+  is in vain when the declaration it was made for is refused or dropped
+  all the same, which the first later event at or beyond that
+  declaration decides, and the listing says so.
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
         [--timeout SECONDS] [--messages] [--types-only] MODULE.agda
@@ -39,12 +46,14 @@ Design Principles:
     runner and clock.
   - A declaration is a block of lines between blank lines, as
     Scaffold.render in translator/Lean2Agda/Core/Scaffold.lean writes
-    them: a postulate, a definition, a data type with its constructors
-    on the lines under it, a record with its constructor and fields, a
-    mutual block of data types and records, each possibly after or
-    before a pragma line.  The names a block declares are the ones its
-    users can mention: a record's fields are mentioned as `R.f`, which
-    names the record.
+    them: comment lines naming its kind, if any, then a postulate, a
+    definition, an opaque block with its signature and clause indented
+    under the keyword, a data type with its constructors on the lines
+    under it, a record with its constructor and fields, or a mutual
+    block of data types and records, each possibly after or before a
+    pragma line.  The names a block declares are the ones its users can
+    mention: a record's fields are mentioned as `R.f`, which names the
+    record.
 """
 from __future__ import annotations
 
@@ -54,7 +63,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from functools import reduce
-from itertools import accumulate, groupby
+from itertools import accumulate, groupby, takewhile
 from operator import itemgetter
 from pathlib import Path
 from typing import Callable, Optional
@@ -73,23 +82,30 @@ _TOKEN = re.compile(r"[^\s(){}⦃⦄;.]+")
 # column or a line.column.
 _ERROR = re.compile(r":(\d+)\.\d+-(?:\d+\.)?\d+: error: \[(\w+)\]")
 _MODULE = re.compile(r"^module (\S+) where$", re.MULTILINE)
+# The lines of an opaque block are indented under its keyword.
+_INDENT = "  "
 
 
 @dataclass(frozen=True)
 class Item:
     """One declaration: its kind ("postulate", "data", "record",
-    "mutual", "definition" or "pragma"), the names it declares, its text,
-    and the data types and records among those names."""
+    "mutual", "definition", "opaque" or "pragma"), the label of the
+    comment lines heading it ("theorem", "opaque constant", "cyclic
+    definition, postulated", or empty), the names it declares, the index
+    of its signature line, its text, and the data types and records among
+    those names."""
 
     kind: str
+    label: str
     names: tuple[str, ...]
+    signature: int
     text: str
     types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class Module:
-    """A scaffold: its name, its header (options, comment, module line),
+    """A scaffold: its name, its header (options, comments, module line),
     and its declarations."""
 
     name: str
@@ -99,23 +115,27 @@ class Module:
 
 @dataclass(frozen=True)
 class Refusal:
-    """Agda's first error: the line it points at, its name, and the first
-    line of its message."""
+    """Agda's first error: the line it points at, its name, the first
+    line of its message, and the message proper, before the lines saying
+    what Agda was checking."""
 
     line: int
     error: str
     message: str
+    detail: str = ""
 
 
 @dataclass(frozen=True)
 class Event:
-    """What the checker did to a declaration: "refused type",
-    "refused value" or "dropped"."""
+    """What the checker did to a declaration: "unfolded" (a theorem, for
+    the dependent that needed it), "refused type", "refused value" or
+    "dropped"."""
 
     action: str
     name: str
     error: str
     message: str
+    dependent: str = ""
 
 
 @dataclass(frozen=True)
@@ -126,6 +146,11 @@ class State:
     items: tuple[Item, ...]
     alive: tuple[bool, ...]
     events: tuple[Event, ...]
+
+
+def is_theorem(item: Item) -> bool:
+    """A theorem still in its opaque block, which the fallback may unfold."""
+    return item.kind == "opaque" and item.label == "theorem"
 
 
 def _indent(line: str) -> int:
@@ -160,33 +185,48 @@ def declared_names(lines: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def parse_item(text: str) -> Item:
-    """Classify a block by its first line that is not a pragma and collect
-    the names it declares."""
-    lines = tuple(line for line in text.split("\n") if not line.startswith("{-#"))
-    if not lines:
-        return Item("pragma", (), text)
+    """Classify a block by its first line that is neither a comment nor a
+    pragma and collect the names it declares: a data type, a record or a
+    mutual block declares its types and constructors, and an opaque block
+    declares the name on its signature line."""
+    raw = text.split("\n")
+    first = next((i for i, line in enumerate(raw) if not (line.startswith("--") or line.startswith("{-#"))), None)
+    if first is None:
+        return Item("pragma", "", (), 0, text)
+    label = " ".join(line[2:].strip() for line in raw[:first] if line.startswith("--"))
+    lines = tuple(line for line in raw[first:] if not line.startswith("{-#"))
     words = lines[0].split()
     if words[0] == "postulate":
-        return Item("postulate", (words[1],), text)
+        return Item("postulate", label, (words[1],), first, text)
     if words[0] in ("data", "record", "mutual"):
-        return Item(words[0], declared_names(lines), text, declared_types(lines))
-    return Item("definition", (words[0],), text)
+        return Item(words[0], label, declared_names(lines), first, text, declared_types(lines))
+    if words[0] == "opaque":
+        return Item("opaque", label, (lines[1].split()[0],), first + 1, text)
+    return Item("definition", label, (words[0],), first, text)
 
 
 def parse_module(text: str) -> Result[Module, PipelineError]:
-    """Split a scaffold at its blank lines: the first block is the header."""
+    """Split a scaffold at its blank lines: the first block is the header,
+    and a scaffold whose every declaration was refused has nothing after
+    it."""
     blocks = text.rstrip("\n").split("\n\n")
     match = _MODULE.search(blocks[0])
-    if match is None or len(blocks) < 2:
+    if match is None:
         return Result.err(PipelineError(ErrorType.PARSING_ERROR, "not a scaffold module"))
     return Result.ok(Module(match.group(1), blocks[0], tuple(parse_item(b) for b in blocks[1:])))
 
 
+def code(item: Item) -> str:
+    """The item's text without its comment lines, whose words are not
+    references."""
+    return "\n".join(line for line in item.text.split("\n") if not line.startswith("--"))
+
+
 def references(items: tuple[Item, ...]) -> tuple[frozenset[int], ...]:
-    """For each item, the other items whose names its text mentions."""
+    """For each item, the other items whose names its code mentions."""
     owner = {name: i for i, item in enumerate(items) for name in item.names}
     return tuple(
-        frozenset(owner[t] for t in _TOKEN.findall(item.text) if t in owner and owner[t] != i)
+        frozenset(owner[t] for t in _TOKEN.findall(code(item)) if t in owner and owner[t] != i)
         for i, item in enumerate(items)
     )
 
@@ -230,14 +270,17 @@ def _starts(heights: tuple[int, ...], first: int) -> tuple[int, ...]:
 
 
 def parse_refusal(output: str) -> Optional[Refusal]:
-    """The first error of Agda's output and the line of message after it."""
+    """The first error of Agda's output, the line of message after it,
+    and the message proper: the lines up to the first that says what
+    Agda was checking."""
     lines = output.splitlines()
     found = next(((i, m) for i, line in enumerate(lines) if (m := _ERROR.search(line))), None)
     if found is None:
         return None
     i, match = found
-    message = next((line.strip() for line in lines[i + 1:] if line.strip()), "")
-    return Refusal(int(match.group(1)), match.group(2), message)
+    after = tuple(line.strip() for line in lines[i + 1:] if line.strip())
+    detail = " ".join(takewhile(lambda line: not line.startswith("when "), after))
+    return Refusal(int(match.group(1)), match.group(2), after[0] if after else "", detail)
 
 
 def locate(layout: tuple[tuple[int, int], ...], line: int) -> Optional[tuple[int, int]]:
@@ -254,15 +297,44 @@ def dependents(index: int, refs: tuple[frozenset[int], ...], alive: tuple[bool, 
     return (index,) + tuple(sorted(reach(frozenset((index,)), lambda i: users.get(i, frozenset())) - {index}))
 
 
+def unfoldable(items: tuple[Item, ...], alive: tuple[bool, ...], index: int, refusal: Refusal) -> Optional[int]:
+    """The first theorem the error's message names that is still opaque
+    and alive, other than the refused declaration itself."""
+    owner = {name: i for i, item in enumerate(items) for name in item.names}
+    return next((i for i in (owner.get(t) for t in _TOKEN.findall(refusal.detail))
+                 if i is not None and i != index and alive[i] and is_theorem(items[i])), None)
+
+
+def transparent(item: Item, dependent: str) -> Item:
+    """A theorem re-emitted as a transparent definition, under a comment
+    naming the declaration that needed it to unfold."""
+    body = tuple(line[len(_INDENT):] for line in item.text.split("\n")[item.signature:])
+    label = f"theorem, unfolded for {dependent}"
+    return Item("definition", label, item.names, 1, "\n".join((f"-- {label}",) + body))
+
+
+def postulated(item: Item) -> Item:
+    """A declaration with a value reduced to a postulate of its type,
+    keeping the comment that labels it."""
+    signature = item.text.split("\n")[item.signature].strip()
+    comment = (f"-- {item.label}",) if item.label else ()
+    return Item("postulate", item.label, item.names, len(comment), "\n".join(comment + (f"postulate {signature}",)))
+
+
 def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
-    """Apply one refusal.  A definition refused below its signature line
-    keeps its signature as a postulate; anything else is dropped with
-    its dependents."""
+    """Apply one refusal.  A theorem the message names is made
+    transparent; otherwise a declaration refused below its signature
+    keeps its signature as a postulate, and anything else is dropped
+    with its dependents."""
     item = state.items[index]
-    if item.kind == "definition" and offset > 0:
-        signature = item.text.split("\n")[0]
-        items = state.items[:index] + (Item("postulate", item.names, "postulate " + signature),) \
-            + state.items[index + 1:]
+    theorem = unfoldable(state.items, state.alive, index, refusal)
+    if theorem is not None:
+        unfolded = transparent(state.items[theorem], item.names[0])
+        items = state.items[:theorem] + (unfolded,) + state.items[theorem + 1:]
+        event = Event("unfolded", unfolded.names[0], refusal.error, refusal.message, item.names[0])
+        return State(items, state.alive, state.events + (event,))
+    if item.kind in ("definition", "opaque") and offset > item.signature:
+        items = state.items[:index] + (postulated(item),) + state.items[index + 1:]
         event = Event("refused value", item.names[0], refusal.error, refusal.message)
         return State(items, state.alive, state.events + (event,))
     gone = dependents(index, references(state.items), state.alive)
@@ -272,17 +344,43 @@ def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
     return State(state.items, alive, state.events + (first,) + rest)
 
 
+def theorems(items: tuple[Item, ...]) -> int:
+    """How many of the items are theorems, opaque, unfolded or postulated."""
+    return sum(1 for item in items if item.label.startswith("theorem"))
+
+
+def in_vain(events: tuple[Event, ...], index: int, position: dict[str, int]) -> bool:
+    """Whether the unfolding at `index` was made for a declaration that
+    was refused or dropped all the same.  The first later event at or
+    beyond that declaration in module order decides, since an event at an
+    earlier declaration says nothing about it; further unfoldings for it
+    are passed over too."""
+    dependent = events[index].dependent
+    later = (e for e in events[index + 1:]
+             if not (e.action == "unfolded" and e.dependent == dependent)
+             and position[e.name] >= position[dependent])
+    following = next(later, None)
+    return following is not None and following.name == dependent
+
+
 def listing(state: State, messages: bool) -> str:
     """The report: what checked, declarations and the data types and
-    records among them, then one line per event."""
+    records among them, what unfolded and how much of it in vain, then
+    one line per event."""
     total = len(state.items)
     types = sum(len(item.types) for item in state.items)
     checked_types = sum(len(item.types) for item, alive in zip(state.items, state.alive) if alive)
+    position = {name: i for i, item in enumerate(state.items) for name in item.names}
+    vain = tuple(e.action == "unfolded" and in_vain(state.events, i, position) for i, e in enumerate(state.events))
+    unfolded = sum(1 for e in state.events if e.action == "unfolded")
     lines = (f"checked {sum(state.alive)} of {total} declarations, "
-             f"{checked_types} of {types} data types and records",) + tuple(
+             f"{checked_types} of {types} data types and records",
+             f"unfolded {unfolded} of {theorems(state.items)} theorems, {sum(vain)} in vain") + tuple(
         " ".join(w for w in (e.action, e.error, e.name) if w)
+        + (f" for {e.dependent}" if e.dependent else "")
+        + (", in vain" if vain[i] else "")
         + (f" | {e.message}" if messages and e.message else "")
-        for e in state.events
+        for i, e in enumerate(state.events)
     )
     return "\n".join(lines) + "\n"
 
@@ -302,16 +400,16 @@ def check_module(
     runner: Runner, clock: Clock, agda: str, module: Module, timeout: float, scratch: Path
 ) -> Result[Checked, PipelineError]:
     """Run Agda on copies of the module under `scratch` until the
-    remaining declarations check.  Each round removes or rewrites one
-    declaration, so there are at most twice as many rounds as
-    declarations."""
+    remaining declarations check.  Each round unfolds one theorem or
+    removes or rewrites one declaration, so there are at most as many
+    rounds as theorems plus twice the declarations."""
     relative = Path(*module.name.split(".")).with_suffix(".agda")
     made = ensure_dir_exists((scratch / relative).parent)
     if made.is_err:
         return Result.err(made.unwrap_err())
     state = State(module.items, tuple(True for _ in module.items), ())
     runs, seconds = 0, 0.0
-    for _ in range(2 * len(module.items) + 1):
+    for _ in range(2 * len(module.items) + theorems(module.items) + 1):
         text, layout = render(module, state)
         written = write_text(scratch / relative, text)
         if written.is_err:

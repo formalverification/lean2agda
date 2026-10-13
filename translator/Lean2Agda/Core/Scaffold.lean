@@ -8,9 +8,9 @@ import Lean2Agda.Core.Share
 # The profile U scaffold
 
 One Agda module per closure, the test of the printer and the emitters
-until issues M2-5 to M2-7 emit recursors, definitions and quotients.  It
-declares every constant of the closure with its printed type.  Each
-constant is a postulate, except the following:
+until issues M2-5 and M2-7 emit recursors and quotients.  It declares
+every constant of the closure that it does not refuse, by kind, as
+follows:
 
 +  the inductive types, each block of them one declaration
    (`Inductive.lean`): a record for each structure-like type and a data
@@ -18,18 +18,28 @@ constant is a postulate, except the following:
    that literals print as decimals;
 +  `String`, a postulate bound to `BUILTIN STRING`, which needs one, and
    so its constructor and recursor are postulates too;
-+  the type abbreviations, definitions with their printed values, since a
-   type can be well formed only through one (`outParam`, `DecidableEq`);
-+  the projection functions of records, definitions whose values print as
-   the records' field projections, so that a type mentioning `S.f x`
-   checks where Agda's projection is expected;
-+  the roots that have values, and the sharing pass's auxiliary
-   definitions, definitions with their printed values.
++  a definition (`defnInfo`, `partial` companions and the projection
+   functions of records included) as a transparent definition with its
+   printed clause, since Lean's terms rely on unfolding it; the sharing
+   pass's auxiliary definitions are such definitions too;
++  a theorem (`thmInfo`) inside an `opaque` block of its own, so that
+   Agda's conversion checking never unfolds a proof; when a dependent
+   needs one to unfold, `scripts/python/scaffold_check.py` re-emits that
+   theorem transparently and counts it (the fallback);
++  one of Lean's opaque constants (`opaqueInfo`, a `partial` definition
+   among them) inside an `opaque` block with its value, which is what
+   Lean's kernel has: a value it never unfolds;
++  an axiom, a recursor and a quotient primitive as a postulate.
 
-Agda parses and scope-checks the whole module.  It type-checks each
-declaration that needs no definitional unfolding beyond these
-definitions and the records' projections; `docs/translator/printing.md`
-says which do not, and why.
+It refuses `sorryAx`, every `unsafe` declaration, and whatever depends on
+one of those, and names each with its reason (`Scaffold.refused`,
+written to `refusals.txt`).  A definition whose printed value refers to
+itself, or to a definition that refers back to it, is postulated instead
+(`breakCycles`).
+
+Agda parses and scope-checks the whole module, and `scaffold_check.py`
+type-checks it declaration by declaration; `docs/translator/printing.md`
+says what it refuses, and why.
 -/
 
 namespace Lean2Agda
@@ -39,8 +49,8 @@ open Lean
 def profileUOptions : String := "{-# OPTIONS --type-in-type #-}"
 
 /-- One declaration of a module: the identifiers it declares, those its
-text refers to, and its text.  A definition also carries its fallback, the
-references and text of a postulate of its type. -/
+text refers to, and its text.  A declaration with a value also carries
+its fallback, the references and text of a postulate of its type. -/
 structure ScaffoldItem where
   provides : Array String
   references : Array String
@@ -48,10 +58,68 @@ structure ScaffoldItem where
   fallback : Option (Array String × String) := none
   deriving Inhabited
 
+/-! ## Refusals -/
+
+/-- What a refusal bottoms out at: the axiom `sorryAx`, a proof left to
+`sorry`, or an `unsafe` declaration, exempt from Lean's kernel. -/
+inductive RefusalRoot where
+  | sorryAx
+  | unsafeDecl
+  deriving BEq, Repr, Inhabited
+
+/-- A declaration the scaffold leaves out: its name and kind, the
+declaration at the root of the refusal (itself, or one it depends on),
+why that one is refused, and the direct dependency through which the
+refusal arrived, when it is not the declaration's own. -/
+structure Refusal where
+  name : Name
+  kind : Kind
+  root : Name
+  cause : RefusalRoot
+  via : Option Name := none
+  deriving Inhabited
+
+/-- The reason, as `refusals.txt` prints it. -/
+def Refusal.reason (r : Refusal) : String :=
+  match r.via with
+  | none => match r.cause with
+    | .sorryAx => "sorryAx: a proof left to sorry"
+    | .unsafeDecl => "unsafe: exempt from Lean's kernel"
+  | some d => if d == r.root then s!"depends on {r.root}" else s!"depends on {d}, and through it on {r.root}"
+
+/-- The declarations to refuse: `sorryAx`, every `unsafe` declaration,
+and whatever depends on a refused one, which the pass reaches by
+revisiting the closure until nothing changes. -/
+def refuseDeclarations (decls : Array Declaration) : Std.HashMap Name Refusal := Id.run do
+  let mut refused : Std.HashMap Name Refusal := {}
+  let mut changed := true
+  while changed do
+    changed := false
+    for d in decls do
+      unless refused.contains d.name do
+        let own : Option RefusalRoot :=
+          if d.name == ``sorryAx then some .sorryAx
+          else if d.info.isUnsafe then some .unsafeDecl
+          else none
+        let refusal : Option Refusal := match own with
+          | some cause => some { name := d.name, kind := d.kind, root := d.name, cause }
+          | none => (d.dependencies.find? refused.contains).map fun via =>
+              let r := refused[via]!
+              { name := d.name, kind := d.kind, root := r.root, cause := r.cause, via := some via }
+        if let some r := refusal then
+          refused := refused.insert d.name r
+          changed := true
+  return refused
+
+/-! ## The module -/
+
 structure Scaffold where
   path : List String
   items : Array ScaffoldItem
   counts : PrintCounts
+  /-- The refused declarations, in the closure's order, auxiliary
+  definitions left out: an auxiliary is refused only with its owner. -/
+  refused : Array Refusal := #[]
   deriving Inhabited
 
 def Scaffold.moduleName (s : Scaffold) : String := ".".intercalate s.path
@@ -59,27 +127,18 @@ def Scaffold.moduleName (s : Scaffold) : String := ".".intercalate s.path
 def Scaffold.filePath (s : Scaffold) (dir : System.FilePath) : System.FilePath :=
   s.path.foldl (· / ·) dir |>.addExtension "agda"
 
-/-- The module's text: the profile's options, a comment, the header, and
-the declarations, separated by blank lines. -/
+/-- The module's text: the profile's options, a comment, a count of the
+refused declarations when there are any, the header, and the
+declarations, separated by blank lines. -/
 def Scaffold.render (s : Scaffold) (comment : String) : String :=
+  let refused := if s.refused.isEmpty then "" else
+    s!"-- refused {s.refused.size} declarations; refusals.txt names each with its reason\n"
   s.items.foldl (fun out item => out ++ "\n" ++ item.text)
-    s!"{profileUOptions}\n-- {comment}\nmodule {s.moduleName} where\n"
+    s!"{profileUOptions}\n-- {comment}\n{refused}module {s.moduleName} where\n"
 
-/-- A type abbreviation: a definition whose type ends in a sort and whose
-value, under its leading lambdas, is a Pi type, a sort, or one of those
-lambdas' variables. -/
-def isTypeAbbreviation : ConstantInfo → Bool
-  | .defnInfo v => endsInSort v.type && former v.value
-  | _ => false
-where
-  endsInSort : Expr → Bool
-    | .forallE _ _ b _ | .mdata _ b => endsInSort b
-    | .sort _ => true
-    | _ => false
-  former : Expr → Bool
-    | .lam _ _ b _ | .mdata _ b => former b
-    | .forallE .. | .sort _ | .bvar _ => true
-    | _ => false
+/-- One tab-separated line per refused declaration: kind, name, reason. -/
+def Scaffold.renderRefusals (s : Scaffold) : String :=
+  s.refused.foldl (fun out r => out ++ s!"{r.kind.label}\t{r.name}\t{r.reason}\n") ""
 
 /-- The auxiliary definitions reachable from `starts` through the types
 and values of auxiliary definitions. -/
@@ -125,9 +184,10 @@ partial def orderItems (items : Array ScaffoldItem) : Except String (Array Scaff
   return state.2.1.map (items[·]!)
 
 /-- Postulate every definition whose printed value refers to itself or to
-a definition that refers back to it.  Lean's kernel accepts such a cycle
-only among unsafe definitions, such as the `_unsafe_rec` companions of
-mutual `partial` definitions, and Agda could check none of them. -/
+a definition that refers back to it, under a comment saying so.  Lean's
+kernel accepts such a cycle only among the `_unsafe_rec` companions of
+`partial` definitions, whose safety is `partial`, and Agda could check
+none of them. -/
 def breakCycles (items : Array ScaffoldItem) : Array ScaffoldItem := Id.run do
   let provider : Std.HashMap String Nat := (List.range items.size).foldl (fun m i =>
     items[i]!.provides.foldl (fun m n => m.insert n i) m) {}
@@ -140,8 +200,11 @@ def breakCycles (items : Array ScaffoldItem) : Array ScaffoldItem := Id.run do
     if cyclic then
       for i in group do
         if let some (references, text) := items[i]!.fallback then
+          let text := "-- cyclic definition, postulated\n" ++ text
           result := result.set! i { items[i]! with references, text, fallback := none }
   return result
+
+/-! ## Items by kind -/
 
 def postulateItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type decl.info.type
@@ -149,16 +212,32 @@ def postulateItem (p : Printer) (decl : Declaration) : Except String (ScaffoldIt
   return ({ provides := #[name], references := t.constants,
             text := s!"postulate {name} : {t.render}\n" }, counts)
 
-def definitionItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
-  let some value := decl.info.value? (allowOpaque := true) | postulateItem p decl
+/-- A declaration with its printed signature and clause, laid out by
+`layout`, with a postulate of its type as its fallback. -/
+def valueItem (p : Printer) (decl : Declaration) (layout : String → String → String) :
+    Except String (ScaffoldItem × PrintCounts) := do
+  let some value := decl.info.value? (allowOpaque := true)
+    | throw s!"{decl.name} has no value to print"
   let (t, c₁) ← p.type decl.info.type
   let (clause, c₂) ← p.clause decl.info.type value
   let name := agdaIdent decl.name
+  let signature := s!"{name} : {t.render}"
   let references := clause.body.constants.foldl (fun acc n => if acc.contains n then acc else acc.push n)
     t.constants
-  return ({ provides := #[name], references,
-            text := s!"{name} : {t.render}\n{clause.render name}\n",
-            fallback := some (t.constants, s!"postulate {name} : {t.render}\n") }, c₁.add c₂)
+  return ({ provides := #[name], references, text := layout signature (clause.render name),
+            fallback := some (t.constants, s!"postulate {signature}\n") }, c₁.add c₂)
+
+/-- A transparent definition: its signature and its clause. -/
+def definitionItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) :=
+  valueItem p decl fun signature clause => s!"{signature}\n{clause}\n"
+
+/-- A theorem or one of Lean's opaque constants: its signature and clause
+inside an `opaque` block of its own, under a comment naming which of the
+two it is, which `scaffold_check.py` reads to know where the fallback
+applies. -/
+def opaqueItem (p : Printer) (decl : Declaration) (label : String) :
+    Except String (ScaffoldItem × PrintCounts) :=
+  valueItem p decl fun signature clause => s!"-- {label}\nopaque\n  {signature}\n  {clause}\n"
 
 /-- `String`, a postulate, since `BUILTIN STRING` binds Agda's string
 literals to a postulated type, whether or not it is a root. -/
@@ -174,18 +253,11 @@ def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : Ind
   return ({ provides := d.provides, references := d.references,
             text := "\n".intercalate d.lines.toList ++ "\n" }, d.counts)
 
-/-- Whether the scaffold gives a declaration its value: an auxiliary
-definition, a type abbreviation, a projection function of a record, or a
-root. -/
-def emitsValue (env : Environment) (closure : Closure) (decl : Declaration) : Bool :=
-  decl.auxiliary || isTypeAbbreviation decl.info || isRecordProjection env decl.name ||
-    closure.roots.contains decl.name
-
-/-- The scaffold's item for one declaration, or none for one that its
-inductive block's item declares: a constructor, or a type of a mutual
-block other than its first. -/
-def scaffoldItem (p : Printer) (closure : Closure) (byName : Std.HashMap Name Declaration)
-    (decl : Declaration) : Except String (Option (ScaffoldItem × PrintCounts)) := do
+/-- The scaffold's item for one declaration, by its kind, or none for one
+that its inductive block's item declares: a constructor, or a type of a
+mutual block other than its first. -/
+def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration) (decl : Declaration) :
+    Except String (Option (ScaffoldItem × PrintCounts)) := do
   match decl.info with
   | .inductInfo v =>
     if v.name == ``String then return some (← stringItem p decl)
@@ -194,14 +266,16 @@ def scaffoldItem (p : Printer) (closure : Closure) (byName : Std.HashMap Name De
   | .ctorInfo c =>
     if c.induct == ``String then return some (← postulateItem p decl)
     return none
-  | _ =>
-    if emitsValue p.env closure decl then return some (← definitionItem p decl)
-    return some (← postulateItem p decl)
+  | .defnInfo _ => return some (← definitionItem p decl)
+  | .thmInfo _ => return some (← opaqueItem p decl "theorem")
+  | .opaqueInfo _ => return some (← opaqueItem p decl "opaque constant")
+  | _ => return some (← postulateItem p decl)
 
 /-- The scaffold of a closure that the sharing pass has already rewritten.
 Its path is the one its names sidecar has, from the source module of the
 closure's first root.  An auxiliary definition appears when something the
-scaffold prints uses it. -/
+scaffold prints uses it; a refused declaration does not appear, nor do
+its auxiliaries. -/
 def scaffold (env : Environment) (root : Root) (closure : Closure) : Except String Scaffold := do
   let env ← addAuxiliaries env closure
   let some first := closure.roots[0]? | throw "the closure has no roots"
@@ -209,20 +283,21 @@ def scaffold (env : Environment) (root : Root) (closure : Closure) : Except Stri
   let some owner := decls.find? (·.name == first) | throw s!"root {first} missing"
   let some module := owner.sourceModule | throw s!"no source module assigned to {first}"
   let byName : Std.HashMap Name Declaration := decls.foldl (fun m d => m.insert d.name d) {}
+  let refused := refuseDeclarations decls
+  let kept := decls.filter fun d => !refused.contains d.name
   let auxiliaries : Std.HashMap Name Declaration :=
-    decls.foldl (fun m d => if d.auxiliary then m.insert d.name d else m) {}
-  let needed := reachableAuxiliaries auxiliaries <| decls.foldl (fun acc d =>
-    if d.auxiliary then acc
-    else if emitsValue env closure d then acc ++ constantExprs d.info
-    else acc.push d.info.type) #[]
+    kept.foldl (fun m d => if d.auxiliary then m.insert d.name d else m) {}
+  let needed := reachableAuxiliaries auxiliaries <| kept.foldl (fun acc d =>
+    if d.auxiliary then acc else acc ++ constantExprs d.info) #[]
   let p : Printer := { env }
   let mut counts : PrintCounts := {}
   let mut items := #[]
-  for decl in decls do
+  for decl in kept do
     unless decl.auxiliary && !needed.contains decl.name do
-      if let some (item, c) ← scaffoldItem p closure byName decl then
+      if let some (item, c) ← scaffoldItem p byName decl then
         items := items.push item
         counts := counts.add c
-  return { path := agdaModule root module, items := ← orderItems (breakCycles items), counts }
+  return { path := agdaModule root module, items := ← orderItems (breakCycles items), counts,
+           refused := decls.filterMap fun d => if d.auxiliary then none else refused[d.name]? }
 
 end Lean2Agda

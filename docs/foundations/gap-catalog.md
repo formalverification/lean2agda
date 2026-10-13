@@ -531,8 +531,10 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    rejected with `[SafeFlagPostulate] Cannot postulate funext with safe flag`
    (probe `P03SafePostulate`; the rule is the first item of [agda-safe]'s
    list).  By profile, as follows.
-   +  U: postulates allowed, so each axiom is a postulate; the result is never
-      a deliverable.
+   +  U: postulates allowed, so each axiom is a postulate, which is what the
+      scaffold of [#20] emits (`docs/translator/printing.md`, The scaffold);
+      `sorryAx` and the eight `unsafe` compiler axioms are refused instead,
+      with whatever depends on them.  The result is never a deliverable.
    +  K: `propext`, the quotient primitives, `funext` and `Classical.choice`
       are record-typed module parameters in the style of TypeTopology, threaded
       so that a module takes only what its declarations need; a one-line user
@@ -848,7 +850,16 @@ literals**.
    inconsistent ([agda-safe]); `--safe` is coinfective, so every imported
    module must be safe too.  By profile, as follows.
    +  U: no `--safe`, so postulates stand in for everything the scaffold cannot
-      yet express; this is why U is never a deliverable.
+      yet express; this is why U is never a deliverable.  The scaffold of
+      [#20] refuses `sorryAx`, every `unsafe` declaration and their
+      dependents, naming each with its reason in `refusals.txt`; emits one of
+      Lean's `opaque` constants, a `partial` definition's among them, as an
+      Agda `opaque` definition with its value, which Agda's checker then
+      never unfolds, as Lean's kernel never does; postulates the `_unsafe_rec`
+      companions, whose values are cyclic; and puts every theorem in an
+      `opaque` block, falling back to a transparent definition when a
+      dependent needs it to unfold (none did in the corpus's core-Lean
+      closures; `docs/translator/printing.md`, The scaffold).
    +  K: `--safe`; nothing translated may need a hatch.
    +  CC: as K.
    +  CU: as K; `--guardedness` is required by the cubical library and is safe
