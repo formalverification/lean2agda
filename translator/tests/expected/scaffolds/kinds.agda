@@ -1081,21 +1081,16 @@ KindFixtures:Marker:mk:noConfusion {α₀} {P₁} {mark₂} {mark₃} eq₄ k₅
 KindFixtures:Marker:recOn : {α₀ : Set} → {motive₁ : KindFixtures:Marker α₀ → Set} → (t₂ : KindFixtures:Marker α₀) → ((mark₃ : α₀) → motive₁ (KindFixtures:Marker:mk {α₀} mark₃)) → motive₁ t₂
 KindFixtures:Marker:recOn {α₀} {motive₁} t₂ mk₃ = KindFixtures:Marker:rec {α₀} {motive₁} mk₃ t₂
 
-postulate KindFixtures:Q : True → Set
+postulate KindFixtures:Q : Eq {Nat} Nat:zero Nat:zero → Set
 
 -- theorem
 opaque
-  trivial : True
-  trivial = True:intro
+  KindFixtures:base : Eq {Nat} Nat:zero Nat:zero
+  KindFixtures:base = rfl {Nat} {Nat:zero}
 
 -- theorem
 opaque
-  KindFixtures:base : True
-  KindFixtures:base = trivial
-
--- theorem
-opaque
-  KindFixtures:alias : True
+  KindFixtures:alias : Eq {Nat} Nat:zero Nat:zero
   KindFixtures:alias = KindFixtures:base
 
 -- opaque constant

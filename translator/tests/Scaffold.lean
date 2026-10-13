@@ -41,7 +41,7 @@ def checkKinds (env : Environment) : IO Unit := do
     s!"an instance: {inst.text}"
   -- A theorem sits in an opaque block of its own, under its label.
   let base ← itemOf s ``KindFixtures.base
-  require (base.text == "-- theorem\nopaque\n  KindFixtures:base : True\n  KindFixtures:base = trivial\n")
+  require (base.text == "-- theorem\nopaque\n  KindFixtures:base : Eq {Nat} Nat:zero Nat:zero\n  KindFixtures:base = rfl {Nat} {Nat:zero}\n")
     s!"a theorem: {base.text}"
   -- Lean's opaque constants, a `partial` definition among them, sit in
   -- opaque blocks with their values; the `_unsafe_rec` companion, which

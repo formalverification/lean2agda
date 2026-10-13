@@ -1,6 +1,6 @@
 # File: translator/tests/expected/scaffolds/kinds.refusals.txt
-checked 334 of 334 declarations, 41 of 41 data types and records
-unfolded 1 of 52 theorems, 1 in vain
+checked 333 of 333 declarations, 41 of 41 data types and records
+unfolded 2 of 51 theorems, 1 in vain
 refused value UnequalTerms List:brecOn:go | PUnit !=<
 refused value UnequalTerms List:concat:~uf | (List:rec PUnit (λ head₃ tail₄ → PProd (α₀ → List α₀))
 refused value UnequalTerms Nat:brecOn:go | PUnit !=< Nat:rec PUnit (λ n₂ → PProd (motive₀ n₂)) Nat:zero of
@@ -53,3 +53,4 @@ refused value UnequalTerms Nat:div:go:~uf | (Nat:rec PUnit (λ n₂ → PProd ((
 refused value UnequalTerms KindFixtures:Marker:noConfusion | (k₁₀ : HEq mark₉ mark₉ → P₀) → P₀ !=<
 unfolded CannotApply heq~uof~ueq for KindFixtures:Marker:mk:noConfusion, in vain | Expression used as function but does not have function type:
 refused value CannotApply KindFixtures:Marker:mk:noConfusion | Expression used as function but does not have function type:
+unfolded UnequalTerms KindFixtures:alias for KindFixtures:useAlias | KindFixtures:alias != KindFixtures:base of type

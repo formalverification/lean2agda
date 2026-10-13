@@ -1,0 +1,4 @@
+# File: translator/tests/expected/scaffolds/inductives.refused.txt
+inductive	InductiveFixtures.Bad	unsafe: exempt from Lean's kernel
+constructor	InductiveFixtures.Bad.mk	unsafe: exempt from Lean's kernel
+recursor	InductiveFixtures.Bad.rec	unsafe: exempt from Lean's kernel

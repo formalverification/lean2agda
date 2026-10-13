@@ -10,18 +10,20 @@ constants, an axiom, a class with an instance, a `partial` definition
 with its `_unsafe_rec` companion, a theorem left to `sorry` with a
 dependent, and `unsafe` definitions with a dependent.  `useAlias` is the
 pair the fallback fires on: Lean accepts it by proof irrelevance, and
-Agda accepts it only once `alias` unfolds to `base`.  `wide` repeats a
+Agda accepts it only once `alias` unfolds to `base`; the proposition is an
+equation, since `True` is a record on the Agda side, whose eta rule
+identifies its elements without any unfolding.  `wide` repeats a
 closed subterm that mentions an `unsafe` constant, which the sharing pass
 must leave alone.
 -/
 
 namespace KindFixtures
 
-axiom Q : True → Type
+axiom Q : Nat.zero = Nat.zero → Type
 
-theorem base : True := trivial
+theorem base : Nat.zero = Nat.zero := rfl
 
-theorem alias : True := base
+theorem alias : Nat.zero = Nat.zero := base
 
 def useBase (_ : Q base) : Nat := 0
 
@@ -40,7 +42,7 @@ def useMark : Nat := Marker.mark
 
 partial def loop (n : Nat) : Nat := loop n
 
-theorem usesSorry : True := sorry
+theorem usesSorry : Nat.zero = Nat.zero := sorry
 
 def onSorry (_ : Q usesSorry) : Nat := 1
 

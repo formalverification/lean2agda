@@ -372,7 +372,7 @@ a data type or a record with its constructors being one):
 | printing fixture | 333 | 41 | 248 | 199 | 49 | 0 | 47 | 0 |
 | `Fixtures.selected` | 29 | 6 | 17 | 15 | 2 | 0 | 0 | 0 |
 | inductives fixture | 77 | 24 | 29 | 27 | 2 | 0 | 1 | 0 |
-| `kinds` | 334 | 41 | 247 | 196 | 51 | 0 | 52 | 1, in vain |
+| `kinds` | 333 | 41 | 246 | 195 | 51 | 0 | 51 | 2, one in vain |
 | `Init.Core`'s inductive types | 539 | 144 | 246 | 197 | 49 | 0 | 48 | 0 |
 
 Every type checks but three: the compiled matcher of
@@ -394,14 +394,15 @@ a postulate must compute, as follows:
    normalizer of [#26] is to make explicit.
 
 No refusal names a theorem: the fallback fired on none of the corpus and
-inductive scaffolds, and on `kinds` once, in vain, on a `CannotApply`
+inductive scaffolds, and on `kinds` twice, once for the pair written to
+make it fire (`useAlias`, whose argument has type `Q alias` where `Q base`
+is expected, which Lean accepts by proof irrelevance and Agda once `alias`
+unfolds to `base`; the proposition is an equation, since a pair on `True`
+is identified by Agda without any unfolding once [#18] declares `True` as
+a record, whose eta rule makes any two of its elements equal, as Lean's
+kernel does for a unit-like type) and once in vain, on a `CannotApply`
 error whose message mentioned `heq_of_eq` as an argument of the stuck
-term.  The pair the fixture wrote to make it fire, `useAlias`, whose
-argument has type `Q alias` where `Q base` is expected, is identified by
-Agda without any unfolding since [#18] declares `True` as a record, whose
-eta rule makes any two of its elements equal, as Lean's kernel does for a
-unit-like type; a pair on a proposition without eta is to replace it.
-Lean's kernel compares proofs by proof irrelevance before it unfolds a
+term.  Lean's kernel compares proofs by proof irrelevance before it unfolds a
 theorem, so a term that relies on a theorem's unfolding is rare by
 construction; the place to expect one is a recursor on a proof, `Acc.rec`
 under well-founded recursion or `Eq.rec` on a proof that must reduce to
