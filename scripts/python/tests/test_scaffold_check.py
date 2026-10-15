@@ -5,7 +5,8 @@ Description:
   Tests of scaffold_check.py.  The pure functions are tested on a small
   scaffold written by hand in the shape Scaffold.render produces, with a
   theorem in an opaque block and a postulated cyclic definition, on the
-  record, mutual and pragma blocks of the emitter of issue M2-4, and
+  record, mutual and pragma blocks of the emitter of issue M2-4, on the
+  recursor definitions and mutual recursor blocks of issue M2-5, and
   check_module with a fake runner that plays Agda's answers in turn
   (errors shaped as Agda 2.8.0 prints them) and a fake clock.
 """
@@ -18,10 +19,11 @@ from pathlib import Path
 from typing import Sequence
 
 from _utils.pipeline_types import ErrorType, PipelineError, Result
+from agda_run import FileRun, Outcome
 from scaffold_check import (
-    Event, Item, Module, Refusal, State, check_module, code, dependents, in_vain, listing, locate,
-    parse_item, parse_module, parse_refusal, postulated, references, render, step, theorems,
-    transparent, types_only, unfoldable,
+    Event, Item, Module, Refusal, State, capped, check_module, code, dependents, in_vain, listing, locate,
+    parse_exhaustion, parse_item, parse_module, parse_refusal, postulated, recursors, references, render,
+    step, theorems, transparent, types_only, unfoldable,
 )
 
 SCAFFOLD = """{-# OPTIONS --type-in-type #-}
@@ -51,6 +53,39 @@ postulate loop : Nat → Nat
 
 root : Eq {Nat} two 2
 root = two~uok
+"""
+
+
+# A recursor, and a block of two, as Scaffold.render writes them.
+RECURSORS = """{-# OPTIONS --type-in-type #-}
+module U.R where
+
+data Nat : Set where
+  Nat:zero : Nat
+  Nat:succ : Nat → Nat
+
+-- recursor
+Nat:rec : {m₀ : Nat → Set} → m₀ Nat:zero → ((n₁ : Nat) → m₀ n₁ → m₀ (Nat:succ n₁)) → (t₁ : Nat) → m₀ t₁
+Nat:rec {m₀} z₁ s₂ Nat:zero = z₁
+Nat:rec {m₀} z₁ s₂ (Nat:succ n₃) = s₂ n₃ (Nat:rec {m₀} z₁ s₂ n₃)
+
+mutual
+  data Even : Set where
+    Even:zero : Even
+    Even:succ : Odd → Even
+  data Odd : Set where
+    Odd:succ : Even → Odd
+
+-- recursor
+mutual
+  Even:rec : (t₀ : Even) → Nat
+  Odd:rec : (t₀ : Odd) → Nat
+  Even:rec Even:zero = Nat:zero
+  Even:rec (Even:succ o₁) = Nat:succ (Odd:rec o₁)
+  Odd:rec (Odd:succ e₁) = Nat:succ (Even:rec e₁)
+
+two : Nat
+two = Even:rec (Even:succ (Odd:succ Even:zero))
 """
 
 
@@ -119,7 +154,23 @@ class TestParse(unittest.TestCase):
         state = State((), (), ())
         self.assertEqual(render(module, state), (module.header + "\n", ()))
         self.assertEqual(listing(state, False),
-                         "checked 0 of 0 declarations, 0 of 0 data types and records\nunfolded 0 of 0 theorems, 0 in vain\n")
+                         "checked 0 of 0 declarations, 0 of 0 data types and records\nunfolded 0 of 0 theorems, 0 in vain\n"
+                         "defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker\n")
+
+    def test_recursors(self) -> None:
+        module = parse_module(RECURSORS).unwrap()
+        nat, block = module.items[1], module.items[3]
+        self.assertEqual((nat.kind, nat.label, nat.names, nat.signature),
+                         ("definition", "recursor", ("Nat:rec",), 1))
+        self.assertEqual((block.kind, block.label, block.names, block.signature, block.types),
+                         ("mutual", "recursor", ("Even:rec", "Odd:rec"), 3, ()))
+        self.assertEqual(references(module.items)[3], frozenset({0, 2}))
+        self.assertEqual(recursors(module.items, tuple(True for _ in module.items)), (3, 3, 0))
+
+    def test_a_block_of_postulates(self) -> None:
+        block = parse_item("-- recursor, postulated\npostulate A:rec : A → Set\npostulate B:rec : B → Set")
+        self.assertEqual((block.kind, block.label, block.names, block.signature),
+                         ("postulate", "recursor, postulated", ("A:rec", "B:rec"), 1))
 
 
 class TestReferences(unittest.TestCase):
@@ -158,6 +209,20 @@ class TestTypesOnly(unittest.TestCase):
         kept = types_only(module)
         self.assertEqual([i.names[0] for i in kept.items], ["Nat", "Box", "Hidden"])
         self.assertEqual((kept.name, kept.header), (module.name, module.header))
+
+    def test_keeps_the_recursors(self) -> None:
+        module = parse_module(RECURSORS).unwrap()
+        self.assertEqual([i.names[0] for i in types_only(module).items], ["Nat", "Nat:rec", "Even", "Even:rec"])
+
+    def test_postulates_what_the_types_mention(self) -> None:
+        module = parse_module(SCAFFOLD.replace(
+            "postulate Eq : {α₀ : Set} → α₀ → α₀ → Set",
+            "record Box : Set where\n  constructor Box:mk\n  field\n    unbox₀ : Eq {Nat} two 2\n\n"
+            "postulate Eq : {α₀ : Set} → α₀ → α₀ → Set")).unwrap()
+        kept = types_only(module)
+        self.assertEqual([(i.names[0], i.kind) for i in kept.items],
+                         [("Nat", "data"), ("Box", "record"), ("Eq", "postulate"), ("two", "postulate")])
+        self.assertEqual(kept.items[3].text, "postulate two : Nat")
 
 
 def chain(n: int) -> tuple[Item, ...]:
@@ -313,6 +378,7 @@ class TestStep(unittest.TestCase):
         self.assertEqual(listing(after, False),
                          "checked 4 of 7 declarations, 1 of 1 data types and records\n"
                          "unfolded 0 of 1 theorems, 0 in vain\n"
+                         "defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker\n"
                          "refused value UnequalTerms root\nrefused type UnequalTerms two\n"
                          "dropped two~uok\ndropped root\n")
         self.assertIn("refused value UnequalTerms root | two != 2\n", listing(after, True))
@@ -321,13 +387,96 @@ class TestStep(unittest.TestCase):
         _, state = module_and_state()
         stuck = Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T")
         helped = step(state, 6, 1, stuck)
-        self.assertEqual(listing(helped, True).split("\n")[1:3],
+        self.assertEqual(listing(helped, True).split("\n")[1:4],
                          ["unfolded 1 of 1 theorems, 0 in vain",
+                          "defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker",
                           "unfolded UnequalTerms two~uok for root | two~uok != x"])
         vain = step(helped, 6, 1, stuck)
-        self.assertEqual(listing(vain, False).split("\n")[1:4],
-                         ["unfolded 1 of 1 theorems, 1 in vain", "unfolded UnequalTerms two~uok for root, in vain",
-                          "refused value UnequalTerms root"])
+        self.assertEqual(listing(vain, False).split("\n")[1:5],
+                         ["unfolded 1 of 1 theorems, 1 in vain",
+                          "defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker",
+                          "unfolded UnequalTerms two~uok for root, in vain", "refused value UnequalTerms root"])
+
+
+class TestRecursorSteps(unittest.TestCase):
+    def state(self) -> State:
+        module = parse_module(RECURSORS).unwrap()
+        return State(module.items, tuple(True for _ in module.items), ())
+
+    def test_a_refused_clause_postulates_the_recursor(self) -> None:
+        after = step(self.state(), 1, 3, Refusal(12, "UnequalTerms", "m", "m"))
+        self.assertEqual(after.items[1].text, "-- recursor\npostulate Nat:rec : " + RECURSORS.split("Nat:rec : ")[1].split("\n")[0])
+        self.assertEqual(after.events[0].action, "refused value")
+
+    def test_a_refused_clause_postulates_every_member_of_a_block(self) -> None:
+        after = step(self.state(), 3, 5, Refusal(26, "UnequalTerms", "m", "m"))
+        self.assertEqual(after.items[3].text, "-- recursor\npostulate Even:rec : (t₀ : Even) → Nat\n"
+                         "postulate Odd:rec : (t₀ : Odd) → Nat")
+        self.assertEqual((after.items[3].kind, after.items[3].names), ("postulate", ("Even:rec", "Odd:rec")))
+        self.assertTrue(all(after.alive))
+
+    def test_a_refused_signature_in_a_block_drops_it(self) -> None:
+        after = step(self.state(), 3, 3, Refusal(24, "UnequalTerms", "m", "m"))
+        self.assertEqual([(e.action, e.name) for e in after.events],
+                         [("refused type", "Even:rec"), ("dropped", "two")])
+
+    def test_the_termination_checker_points_at_the_first_line(self) -> None:
+        state = self.state()
+        after = step(state, 3, 1, Refusal(22, "TerminationIssue", "Termination checking failed",
+                                          "Termination checking failed for the following functions: Even:rec, Odd:rec"))
+        self.assertEqual(after.items[3].label, "recursor, refused by the termination checker")
+        self.assertTrue(after.items[3].text.startswith("-- recursor, refused by the termination checker\npostulate Even:rec"))
+        self.assertEqual(after.events, (Event("refused value", "Even:rec", "TerminationIssue", "Termination checking failed"),))
+        self.assertEqual(recursors(after.items, after.alive), (3, 1, 2))
+        self.assertEqual(listing(after, False).split("\n")[2],
+                         "defined 1 of 3 recursors by pattern matching, 2 refused by the termination checker")
+
+
+class TestExhaustion(unittest.TestCase):
+    def test_capped_bounds_the_heap_and_names_declarations(self) -> None:
+        seen: list = []
+
+        def runner(command: Sequence[str], cwd: Path, timeout: float) -> Result[subprocess.CompletedProcess, PipelineError]:
+            seen.append(tuple(command))
+            return Result.ok(subprocess.CompletedProcess(list(command), 0, "", ""))
+
+        capped(runner, "6G")(("agda", "U/A.agda"), Path("."), 1.0)
+        self.assertEqual(seen, [("agda", "+RTS", "-M6G", "-RTS", "-v", "tc.decl:5", "U/A.agda")])
+
+    def test_the_last_declaration_named_is_charged(self) -> None:
+        output = "Checking U.R (/s/U/R.agda).\nChecking Nat.\nChecked Nat.\nChecking Rec.\nChecked Rec.\n"
+        heap = FileRun("U/R.agda", Outcome.FAIL, 9.0, "Command failed with exit code 251", output)
+        self.assertEqual(parse_exhaustion(heap), ("Rec", Refusal(0, "HeapExhausted", heap.message, "")))
+        slow = FileRun("U/R.agda", Outcome.TIMEOUT, 9.0, "Command timed out after 60 seconds", output)
+        self.assertEqual(parse_exhaustion(slow)[1].error, "Timeout")
+        self.assertIsNone(parse_exhaustion(FileRun("U/R.agda", Outcome.FAIL, 9.0, "Command failed with exit code 42", output)))
+        self.assertIsNone(parse_exhaustion(FileRun("U/R.agda", Outcome.FAIL, 9.0, heap.message, "")))
+
+    def test_an_exhausted_type_is_dropped_and_a_value_postulated(self) -> None:
+        module = parse_module(RECURSORS).unwrap()
+        state = State(module.items, tuple(True for _ in module.items), ())
+        data = step(state, 2, 0, Refusal(0, "HeapExhausted", "m", ""))
+        self.assertEqual([(e.action, e.error, e.name) for e in data.events],
+                         [("refused type", "HeapExhausted", "Even"), ("dropped", "", "Even:rec"), ("dropped", "", "two")])
+        value = step(state, 4, 0, Refusal(0, "Timeout", "m", ""))
+        self.assertEqual((value.items[4].kind, value.events[0].action), ("postulate", "refused value"))
+
+    def test_check_module_charges_an_exhaustion(self) -> None:
+        module = parse_module(RECURSORS).unwrap()
+        answers = iter([("Checking Nat.\nChecked Nat.\nChecking Even.\nChecked Even.\n", 251), ("", 0)])
+
+        def runner(command: Sequence[str], cwd: Path, timeout: float) -> Result[subprocess.CompletedProcess, PipelineError]:
+            output, code = next(answers)
+            if code == 0:
+                return Result.ok(subprocess.CompletedProcess(list(command), 0, "", ""))
+            return Result.err(PipelineError(ErrorType.COMMAND_FAILED, f"Command failed with exit code {code}",
+                                            context={"stdout": output}))
+
+        ticks = iter(range(100))
+        with tempfile.TemporaryDirectory() as scratch:
+            checked = check_module(runner, lambda: float(next(ticks)), "agda", module, 60.0, Path(scratch)).unwrap()
+        self.assertEqual(listing(checked.state, False).split("\n")[3:6],
+                         ["refused type HeapExhausted Even", "dropped Even:rec", "dropped two"])
 
 
 class TestCheckModule(unittest.TestCase):
