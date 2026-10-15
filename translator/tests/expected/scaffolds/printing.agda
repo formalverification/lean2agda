@@ -1,6 +1,6 @@
 -- File: translator/tests/expected/scaffolds/printing.agda
 {-# OPTIONS --type-in-type #-}
--- lean2agda, profile U: the scaffold of the closure of PrintFixtures:Dependent:value PrintFixtures:Pair:first PrintFixtures:alignedDeep PrintFixtures:alignedTop PrintFixtures:doubling and 10 more
+-- lean2agda, profile U: the scaffold of the closure of PrintFixtures:Dependent:value PrintFixtures:Pair:first PrintFixtures:alignedDeep PrintFixtures:alignedTop PrintFixtures:doubling and 11 more
 module U.TranslatorTests.Input.Printing where
 
 record Add (α₀ : Set) : Set where
@@ -1165,6 +1165,9 @@ PrintFixtures:alignedTop {α₀} a₁ = a₁
 PrintFixtures:applyExplicit : ((α₀ : Set) → α₀ → α₀) → Nat
 PrintFixtures:applyExplicit f₀ = f₀ Nat (OfNat:ofNat {Nat} 3 ⦃ instOfNatNat 3 ⦄)
 
+PrintFixtures:applyHidden : ({_ : Nat} → ⦃ _ : Inhabited Nat ⦄ → Nat) → Nat
+PrintFixtures:applyHidden f₀ = f₀ {OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄} ⦃ Inhabited:mk {Nat} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) ⦄
+
 PrintFixtures:applyInstance : (⦃ _ : Inhabited Nat ⦄ → Nat) → Nat
 PrintFixtures:applyInstance f₀ = f₀ ⦃ Inhabited:mk {Nat} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) ⦄
 
@@ -1204,6 +1207,9 @@ postulate String:rec : {motive₀ : String → Set} → ((toByteArray₁ : ByteA
 
 PrintFixtures:greeting : String
 PrintFixtures:greeting = "a\"b\\c\10\&\955\&\10013\&"
+
+PrintFixtures:hiddenInstanceRepaired : ({_ : Nat} → ⦃ _ : Inhabited Nat ⦄ → Nat) → Nat
+PrintFixtures:hiddenInstanceRepaired g₀ = PrintFixtures:applyHidden (λ {n₁ : Nat} → λ ⦃ inst₂ : Inhabited Nat ⦄ → g₀ {n₁} ⦃ inst₂ ⦄)
 
 PrintFixtures:higher : (Nat → Nat) → ((Nat → Nat) → Nat) → Nat
 PrintFixtures:higher f₀ g₁ = g₁ f₀

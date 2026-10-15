@@ -1,6 +1,6 @@
 -- File: translator/tests/expected/scaffolds/recursors.agda
 {-# OPTIONS --type-in-type #-}
--- lean2agda, profile U: the scaffold of the closure of RecursorFixtures:Doc RecursorFixtures:Doc:~usizeOf~u1 RecursorFixtures:Doc:~usizeOf~u2 RecursorFixtures:Doc:~usizeOf~u2~ueq RecursorFixtures:Doc:~usizeOf~u3 and 173 more
+-- lean2agda, profile U: the scaffold of the closure of RecursorFixtures:Doc RecursorFixtures:Doc:~usizeOf~u1 RecursorFixtures:Doc:~usizeOf~u2 RecursorFixtures:Doc:~usizeOf~u2~ueq RecursorFixtures:Doc:~usizeOf~u3 and 211 more
 module U.TranslatorTests.Input.Recursors where
 
 record Add (α₀ : Set) : Set where
@@ -1271,6 +1271,113 @@ opaque
   RecursorFixtures:Even:zero:sizeOf~uspec : Eq {Nat} (SizeOf:sizeOf {RecursorFixtures:Even} ⦃ RecursorFixtures:Even:~usizeOf~uinst ⦄ RecursorFixtures:Even:zero) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)
   RecursorFixtures:Even:zero:sizeOf~uspec = Eq:refl {Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)
 
+record RecursorFixtures:Tag (α₀ : Set) : Set where
+  constructor RecursorFixtures:Tag:mk
+  field
+    tag₁ : Nat
+
+-- recursor
+RecursorFixtures:Tag:rec : {α₀ : Set} → {motive₁ : RecursorFixtures:Tag α₀ → Set} → ((tag₂ : Nat) → motive₁ (RecursorFixtures:Tag:mk {α₀} tag₂)) → (t₂ : RecursorFixtures:Tag α₀) → motive₁ t₂
+RecursorFixtures:Tag:rec {α₀} {motive₁} mk₂ (RecursorFixtures:Tag:mk tag₃) = mk₂ tag₃
+
+data RecursorFixtures:Holder (α₀ : Set) : Set where
+  RecursorFixtures:Holder:nil : RecursorFixtures:Holder α₀
+  RecursorFixtures:Holder:mk : {_ : Nat} → ⦃ _ : RecursorFixtures:Tag α₀ ⦄ → RecursorFixtures:Holder α₀ → RecursorFixtures:Holder α₀
+
+-- recursor
+RecursorFixtures:Holder:rec : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → motive₁ (RecursorFixtures:Holder:nil {α₀}) → ({n₂ : Nat} → ⦃ inst₃ : RecursorFixtures:Tag α₀ ⦄ → (rest₄ : RecursorFixtures:Holder α₀) → motive₁ rest₄ → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₂} ⦃ inst₃ ⦄ rest₄)) → (t₂ : RecursorFixtures:Holder α₀) → motive₁ t₂
+RecursorFixtures:Holder:rec {α₀} {motive₁} nil₂ mk₃ RecursorFixtures:Holder:nil = nil₂
+RecursorFixtures:Holder:rec {α₀} {motive₁} nil₂ mk₃ (RecursorFixtures:Holder:mk {n₄} ⦃ inst₅ ⦄ rest₆) = mk₃ {n₄} ⦃ inst₅ ⦄ rest₆ (RecursorFixtures:Holder:rec {α₀} {motive₁} nil₂ (λ {n₇ : Nat} → λ ⦃ inst₈ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₉ : RecursorFixtures:Holder α₀) → λ (restih₁₀ : motive₁ rest₉) → mk₃ {n₇} ⦃ inst₈ ⦄ rest₉ restih₁₀) rest₆)
+
+RecursorFixtures:Holder:~usizeOf~u1 : {α₀ : Set} → ⦃ _ : SizeOf α₀ ⦄ → RecursorFixtures:Holder α₀ → Nat
+RecursorFixtures:Holder:~usizeOf~u1 {α₀} ⦃ inst₁ ⦄ t₂ = RecursorFixtures:Holder:rec {α₀} {λ (t₃ : RecursorFixtures:Holder α₀) → Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ {n₃ : Nat} → λ ⦃ inst₄ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₅ : RecursorFixtures:Holder α₀) → λ (restih₆ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (SizeOf:sizeOf {Nat} ⦃ instSizeOfNat ⦄ n₃)) (SizeOf:sizeOf {RecursorFixtures:Tag α₀} ⦃ instSizeOfDefault (RecursorFixtures:Tag α₀) ⦄ inst₄)) restih₆) t₂
+
+RecursorFixtures:Holder:~usizeOf~uinst : (α₀ : Set) → ⦃ _ : SizeOf α₀ ⦄ → SizeOf (RecursorFixtures:Holder α₀)
+RecursorFixtures:Holder:~usizeOf~uinst α₀ ⦃ inst₁ ⦄ = SizeOf:mk {RecursorFixtures:Holder α₀} (λ (m₂ : RecursorFixtures:Holder α₀) → RecursorFixtures:Holder:~usizeOf~u1 {α₀} ⦃ inst₁ ⦄ m₂)
+
+RecursorFixtures:Holder:below : {α₀ : Set} → {_ : RecursorFixtures:Holder α₀ → Set} → RecursorFixtures:Holder α₀ → Set
+RecursorFixtures:Holder:below {α₀} {motive₁} t₂ = RecursorFixtures:Holder:rec {α₀} {λ (t₃ : RecursorFixtures:Holder α₀) → Set} PUnit (λ {n₃ : Nat} → λ ⦃ inst₄ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₅ : RecursorFixtures:Holder α₀) → λ (restih₆ : Set) → PProd (motive₁ rest₅) restih₆) t₂
+
+RecursorFixtures:Holder:brecOn:go : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → ((t₃ : RecursorFixtures:Holder α₀) → RecursorFixtures:Holder:below {α₀} {motive₁} t₃ → motive₁ t₃) → PProd (motive₁ t₂) (RecursorFixtures:Holder:below {α₀} {motive₁} t₂)
+RecursorFixtures:Holder:brecOn:go {α₀} {motive₁} t₂ F1₃ = RecursorFixtures:Holder:rec {α₀} {λ (t₄ : RecursorFixtures:Holder α₀) → PProd (motive₁ t₄) (RecursorFixtures:Holder:below {α₀} {motive₁} t₄)} (PProd:mk {motive₁ (RecursorFixtures:Holder:nil {α₀})} {PUnit} (F1₃ (RecursorFixtures:Holder:nil {α₀}) PUnit:unit) PUnit:unit) (λ {n₄ : Nat} → λ ⦃ inst₅ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₆ : RecursorFixtures:Holder α₀) → λ (restih₇ : PProd (motive₁ rest₆) (RecursorFixtures:Holder:below {α₀} {motive₁} rest₆)) → PProd:mk {motive₁ (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆)} {PProd (motive₁ rest₆) (RecursorFixtures:Holder:below {α₀} {motive₁} rest₆)} (F1₃ (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆) restih₇) restih₇) t₂
+
+RecursorFixtures:Holder:brecOn : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → ((t₃ : RecursorFixtures:Holder α₀) → RecursorFixtures:Holder:below {α₀} {motive₁} t₃ → motive₁ t₃) → motive₁ t₂
+RecursorFixtures:Holder:brecOn {α₀} {motive₁} t₂ F1₃ = PProd.fst₂ {motive₁ t₂} {RecursorFixtures:Holder:below {α₀} {motive₁} t₂} (RecursorFixtures:Holder:brecOn:go {α₀} {motive₁} t₂ F1₃)
+
+RecursorFixtures:Holder:casesOn : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:nil {α₀}) → ({n₃ : Nat} → ⦃ inst₄ : RecursorFixtures:Tag α₀ ⦄ → (rest₅ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₃} ⦃ inst₄ ⦄ rest₅)) → motive₁ t₂
+RecursorFixtures:Holder:casesOn {α₀} {motive₁} t₂ nil₃ mk₄ = RecursorFixtures:Holder:rec {α₀} {motive₁} nil₃ (λ {n₅ : Nat} → λ ⦃ inst₆ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₇ : RecursorFixtures:Holder α₀) → λ (restih₈ : motive₁ rest₇) → mk₄ {n₅} ⦃ inst₆ ⦄ rest₇) t₂
+
+-- theorem
+opaque
+  RecursorFixtures:Holder:brecOn:eq : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → (F1₃ : (t₃ : RecursorFixtures:Holder α₀) → RecursorFixtures:Holder:below {α₀} {motive₁} t₃ → motive₁ t₃) → Eq {motive₁ t₂} (RecursorFixtures:Holder:brecOn {α₀} {motive₁} t₂ F1₃) (F1₃ t₂ (PProd.snd₃ {motive₁ t₂} {RecursorFixtures:Holder:below {α₀} {motive₁} t₂} (RecursorFixtures:Holder:brecOn:go {α₀} {motive₁} t₂ F1₃)))
+  RecursorFixtures:Holder:brecOn:eq {α₀} {motive₁} t₂ F1₃ = RecursorFixtures:Holder:casesOn {α₀} {λ (x₄ : RecursorFixtures:Holder α₀) → Eq {motive₁ x₄} (RecursorFixtures:Holder:brecOn {α₀} {motive₁} x₄ F1₃) (F1₃ x₄ (PProd.snd₃ {motive₁ x₄} {RecursorFixtures:Holder:below {α₀} {motive₁} x₄} (RecursorFixtures:Holder:brecOn:go {α₀} {motive₁} x₄ F1₃)))} t₂ (Eq:refl {motive₁ (RecursorFixtures:Holder:nil {α₀})} (RecursorFixtures:Holder:brecOn {α₀} {motive₁} (RecursorFixtures:Holder:nil {α₀}) F1₃)) (λ {n₄ : Nat} → λ ⦃ inst₅ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₆ : RecursorFixtures:Holder α₀) → Eq:refl {motive₁ (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆)} (RecursorFixtures:Holder:brecOn {α₀} {motive₁} (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆) F1₃))
+
+RecursorFixtures:Holder:ctorElimType : {α₀ : Set} → {_ : RecursorFixtures:Holder α₀ → Set} → Nat → Set
+RecursorFixtures:Holder:ctorElimType {α₀} {motive₁} ctorIdx₂ = cond {Set} (Nat:ble ctorIdx₂ 0) (PULift (motive₁ (RecursorFixtures:Holder:nil {α₀}))) (PULift ({n₃ : Nat} → ⦃ inst₄ : RecursorFixtures:Tag α₀ ⦄ → (rest₅ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₃} ⦃ inst₄ ⦄ rest₅)))
+
+RecursorFixtures:Holder:ctorIdx : {α₀ : Set} → RecursorFixtures:Holder α₀ → Nat
+RecursorFixtures:Holder:ctorIdx {α₀} x₁ = RecursorFixtures:Holder:casesOn {α₀} {λ (x₂ : RecursorFixtures:Holder α₀) → Nat} x₁ 0 (λ {n₂ : Nat} → λ ⦃ inst₃ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₄ : RecursorFixtures:Holder α₀) → 1)
+
+RecursorFixtures:Holder:ctorElim : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (ctorIdx₂ : Nat) → (t₃ : RecursorFixtures:Holder α₀) → Eq {Nat} ctorIdx₂ (RecursorFixtures:Holder:ctorIdx {α₀} t₃) → RecursorFixtures:Holder:ctorElimType {α₀} {motive₁} ctorIdx₂ → motive₁ t₃
+RecursorFixtures:Holder:ctorElim {α₀} {motive₁} ctorIdx₂ t₃ h₄ k₅ = RecursorFixtures:Holder:casesOn {α₀} {λ (t₆ : RecursorFixtures:Holder α₀) → Eq {Nat} ctorIdx₂ (RecursorFixtures:Holder:ctorIdx {α₀} t₆) → motive₁ t₆} t₃ (λ (h₆ : Eq {Nat} ctorIdx₂ 0) → PULift:down {motive₁ (RecursorFixtures:Holder:nil {α₀})} (Eq:ndrec {Nat} {ctorIdx₂} {RecursorFixtures:Holder:ctorElimType {α₀} {motive₁}} k₅ {0} h₆)) (λ {n₆ : Nat} → λ ⦃ inst₇ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₈ : RecursorFixtures:Holder α₀) → λ (h₉ : Eq {Nat} ctorIdx₂ 1) → PULift:down { {n₁₀ : Nat} → ⦃ inst₁₁ : RecursorFixtures:Tag α₀ ⦄ → (rest₁₂ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₁₀} ⦃ inst₁₁ ⦄ rest₁₂) } (Eq:ndrec {Nat} {ctorIdx₂} {RecursorFixtures:Holder:ctorElimType {α₀} {motive₁}} k₅ {1} h₉) {n₆} ⦃ inst₇ ⦄ rest₈) h₄
+
+RecursorFixtures:Holder:depth : RecursorFixtures:Holder Nat → Nat
+RecursorFixtures:Holder:depth h₀ = RecursorFixtures:Holder:rec {Nat} {λ (x₁ : RecursorFixtures:Holder Nat) → Nat} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (λ {n₁ : Nat} → λ ⦃ inst₂ : RecursorFixtures:Tag Nat ⦄ → λ (x₃ : RecursorFixtures:Holder Nat) → λ (d₄ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ d₄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)) h₀
+
+RecursorFixtures:instTagNat : RecursorFixtures:Tag Nat
+RecursorFixtures:instTagNat = RecursorFixtures:Tag:mk {Nat} (OfNat:ofNat {Nat} 7 ⦃ instOfNatNat 7 ⦄)
+
+RecursorFixtures:Holder:depth~uexample:~ushare:~n1 : Nat
+RecursorFixtures:Holder:depth~uexample:~ushare:~n1 = RecursorFixtures:Holder:depth (RecursorFixtures:Holder:mk {Nat} {OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄} ⦃ RecursorFixtures:instTagNat ⦄ (RecursorFixtures:Holder:mk {Nat} {OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄} ⦃ RecursorFixtures:instTagNat ⦄ (RecursorFixtures:Holder:nil {Nat})))
+
+-- theorem
+opaque
+  RecursorFixtures:Holder:depth~uexample : Eq {Nat} RecursorFixtures:Holder:depth~uexample:~ushare:~n1 (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄)
+  RecursorFixtures:Holder:depth~uexample = rfl {Nat} {RecursorFixtures:Holder:depth~uexample:~ushare:~n1}
+
+RecursorFixtures:Holder:mk:elim : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → Eq {Nat} (RecursorFixtures:Holder:ctorIdx {α₀} t₂) 1 → ({n₃ : Nat} → ⦃ inst₄ : RecursorFixtures:Tag α₀ ⦄ → (rest₅ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₃} ⦃ inst₄ ⦄ rest₅)) → motive₁ t₂
+RecursorFixtures:Holder:mk:elim {α₀} {motive₁} t₂ h₃ mk₄ = RecursorFixtures:Holder:ctorElim {α₀} {motive₁} 1 t₂ (Eq:symm {Nat} {RecursorFixtures:Holder:ctorIdx {α₀} t₂} {1} h₃) (PULift:up { {n₅ : Nat} → ⦃ inst₆ : RecursorFixtures:Tag α₀ ⦄ → (rest₇ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₅} ⦃ inst₆ ⦄ rest₇) } (λ {n₅ : Nat} → λ ⦃ inst₆ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₇ : RecursorFixtures:Holder α₀) → mk₄ {n₅} ⦃ inst₆ ⦄ rest₇))
+
+RecursorFixtures:Holder:noConfusionType : Set → {α₀ : Set} → RecursorFixtures:Holder α₀ → {α₁ : Set} → RecursorFixtures:Holder α₁ → Set
+RecursorFixtures:Holder:noConfusionType P₀ {α₁} t₂ {α₃} t₄ = RecursorFixtures:Holder:casesOn {α₁} {λ (t₅ : RecursorFixtures:Holder α₁) → Set} t₂ (RecursorFixtures:Holder:casesOn {α₃} {λ (t₅ : RecursorFixtures:Holder α₃) → Set} t₄ (P₀ → P₀) (λ {n₅ : Nat} → λ ⦃ inst₆ : RecursorFixtures:Tag α₃ ⦄ → λ (rest₇ : RecursorFixtures:Holder α₃) → P₀)) (λ {n₅ : Nat} → λ ⦃ inst₆ : RecursorFixtures:Tag α₁ ⦄ → λ (rest₇ : RecursorFixtures:Holder α₁) → RecursorFixtures:Holder:casesOn {α₃} {λ (t₈ : RecursorFixtures:Holder α₃) → Set} t₄ P₀ (λ {n₈ : Nat} → λ ⦃ inst₉ : RecursorFixtures:Tag α₃ ⦄ → λ (rest₁₀ : RecursorFixtures:Holder α₃) → (Eq {Nat} n₅ n₈ → HEq {RecursorFixtures:Tag α₁} inst₆ {RecursorFixtures:Tag α₃} inst₉ → HEq {RecursorFixtures:Holder α₁} rest₇ {RecursorFixtures:Holder α₃} rest₁₀ → P₀) → P₀))
+
+RecursorFixtures:Holder:noConfusion : {P₀ : Set} → {α₁ : Set} → {t₂ : RecursorFixtures:Holder α₁} → {α₃ : Set} → {t₄ : RecursorFixtures:Holder α₃} → Eq {Set} α₁ α₃ → HEq {RecursorFixtures:Holder α₁} t₂ {RecursorFixtures:Holder α₃} t₄ → RecursorFixtures:Holder:noConfusionType P₀ {α₁} t₂ {α₃} t₄
+RecursorFixtures:Holder:noConfusion {P₀} {α₁} {t₂} {α₃} {t₄} eq1₅ eq2₆ = Eq:ndrec {Set} {α₁} {λ (α₇ : Set) → {t₈ : RecursorFixtures:Holder α₇} → HEq {RecursorFixtures:Holder α₁} t₂ {RecursorFixtures:Holder α₇} t₈ → RecursorFixtures:Holder:noConfusionType P₀ {α₁} t₂ {α₇} t₈} (λ {t₇ : RecursorFixtures:Holder α₁} → λ (eq2₈ : HEq {RecursorFixtures:Holder α₁} t₂ {RecursorFixtures:Holder α₁} t₇) → Eq:ndrec {RecursorFixtures:Holder α₁} {t₂} {λ (t₉ : RecursorFixtures:Holder α₁) → RecursorFixtures:Holder:noConfusionType P₀ {α₁} t₂ {α₁} t₉} (RecursorFixtures:Holder:casesOn {α₁} {λ (t₉ : RecursorFixtures:Holder α₁) → RecursorFixtures:Holder:noConfusionType P₀ {α₁} t₉ {α₁} t₉} t₂ (λ (k₉ : P₀) → k₉) (λ {n₉ : Nat} → λ ⦃ inst₁₀ : RecursorFixtures:Tag α₁ ⦄ → λ (rest₁₁ : RecursorFixtures:Holder α₁) → λ (k₁₂ : Eq {Nat} n₉ n₉ → HEq {RecursorFixtures:Tag α₁} inst₁₀ {RecursorFixtures:Tag α₁} inst₁₀ → HEq {RecursorFixtures:Holder α₁} rest₁₁ {RecursorFixtures:Holder α₁} rest₁₁ → P₀) → k₁₂ (Eq:refl {Nat} n₉) (HEq:refl {RecursorFixtures:Tag α₁} inst₁₀) (HEq:refl {RecursorFixtures:Holder α₁} rest₁₁))) {t₇} (eq~uof~uheq {RecursorFixtures:Holder α₁} {t₂} {t₇} eq2₈)) {α₃} eq1₅ {t₄} eq2₆
+
+-- theorem
+opaque
+  heq~uof~ueq : {α₀ : Set} → {a₁ : α₀} → {a₂ : α₀} → Eq {α₀} a₁ a₂ → HEq {α₀} a₁ {α₀} a₂
+  heq~uof~ueq {α₀} {a₁} {a₂} h₃ = Eq:subst {α₀} {HEq {α₀} a₁ {α₀}} {a₁} {a₂} h₃ (HEq:refl {α₀} a₁)
+
+RecursorFixtures:Holder:mk:noConfusion : {α₀ : Set} → {P₁ : Set} → {n₂ : Nat} → {inst₃ : RecursorFixtures:Tag α₀} → {rest₄ : RecursorFixtures:Holder α₀} → {n₅ : Nat} → {inst₆ : RecursorFixtures:Tag α₀} → {rest₇ : RecursorFixtures:Holder α₀} → Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₂} ⦃ inst₃ ⦄ rest₄) (RecursorFixtures:Holder:mk {α₀} {n₅} ⦃ inst₆ ⦄ rest₇) → (Eq {Nat} n₂ n₅ → HEq {RecursorFixtures:Tag α₀} inst₃ {RecursorFixtures:Tag α₀} inst₆ → HEq {RecursorFixtures:Holder α₀} rest₄ {RecursorFixtures:Holder α₀} rest₇ → P₁) → P₁
+RecursorFixtures:Holder:mk:noConfusion {α₀} {P₁} {n₂} {inst₃} {rest₄} {n₅} {inst₆} {rest₇} eq₈ k₉ = id {P₁} (RecursorFixtures:Holder:noConfusion {P₁} {α₀} {RecursorFixtures:Holder:mk {α₀} {n₂} ⦃ inst₃ ⦄ rest₄} {α₀} {RecursorFixtures:Holder:mk {α₀} {n₅} ⦃ inst₆ ⦄ rest₇} (Eq:refl {Set} α₀) (heq~uof~ueq {RecursorFixtures:Holder α₀} {RecursorFixtures:Holder:mk {α₀} {n₂} ⦃ inst₃ ⦄ rest₄} {RecursorFixtures:Holder:mk {α₀} {n₅} ⦃ inst₆ ⦄ rest₇} eq₈) k₉)
+
+-- theorem
+opaque
+  RecursorFixtures:Holder:mk:inj : {α₀ : Set} → {n₁ : Nat} → {inst₂ : RecursorFixtures:Tag α₀} → {rest₃ : RecursorFixtures:Holder α₀} → {n₄ : Nat} → {inst₅ : RecursorFixtures:Tag α₀} → {rest₆ : RecursorFixtures:Holder α₀} → Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆) → And (Eq {Nat} n₁ n₄) (And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆))
+  RecursorFixtures:Holder:mk:inj {α₀} {n₁} {inst₂} {rest₃} {n₄} {inst₅} {rest₆} x₇ = RecursorFixtures:Holder:mk:noConfusion {α₀} {And (Eq {Nat} n₁ n₄) (And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆))} {n₁} {inst₂} {rest₃} {n₄} {inst₅} {rest₆} x₇ (λ (neq₈ : Eq {Nat} n₁ n₄) → λ (insteq₉ : HEq {RecursorFixtures:Tag α₀} inst₂ {RecursorFixtures:Tag α₀} inst₅) → λ (resteq₁₀ : HEq {RecursorFixtures:Holder α₀} rest₃ {RecursorFixtures:Holder α₀} rest₆) → And:intro {Eq {Nat} n₁ n₄} {And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆)} neq₈ (And:intro {Eq {RecursorFixtures:Tag α₀} inst₂ inst₅} {Eq {RecursorFixtures:Holder α₀} rest₃ rest₆} (eq~uof~uheq {RecursorFixtures:Tag α₀} {inst₂} {inst₅} insteq₉) (eq~uof~uheq {RecursorFixtures:Holder α₀} {rest₃} {rest₆} resteq₁₀)))
+
+-- theorem
+opaque
+  RecursorFixtures:Holder:mk:injEq : {α₀ : Set} → {n₁ : Nat} → ⦃ inst₂ : RecursorFixtures:Tag α₀ ⦄ → (rest₃ : RecursorFixtures:Holder α₀) → (n₄ : Nat) → (inst₅ : RecursorFixtures:Tag α₀) → (rest₆ : RecursorFixtures:Holder α₀) → Eq {Set} (Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆)) (And (Eq {Nat} n₁ n₄) (And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆)))
+  RecursorFixtures:Holder:mk:injEq {α₀} {n₁} ⦃ inst₂ ⦄ rest₃ n₄ inst₅ rest₆ = Eq:propIntro {Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆)} {And (Eq {Nat} n₁ n₄) (And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆))} (RecursorFixtures:Holder:mk:inj {α₀} {n₁} {inst₂} {rest₃} {n₄} {inst₅} {rest₆}) (Lean:injEq~uhelper {Eq {Nat} n₁ n₄} {And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆)} {Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₄} ⦃ inst₅ ⦄ rest₆)} (Eq:ndrec {Nat} {n₁} {λ (n₇ : Nat) → And (Eq {RecursorFixtures:Tag α₀} inst₂ inst₅) (Eq {RecursorFixtures:Holder α₀} rest₃ rest₆) → Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₇} ⦃ inst₅ ⦄ rest₆)} (Lean:injEq~uhelper {Eq {RecursorFixtures:Tag α₀} inst₂ inst₅} {Eq {RecursorFixtures:Holder α₀} rest₃ rest₆} {Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₅ ⦄ rest₆)} (Eq:ndrec {RecursorFixtures:Tag α₀} {inst₂} {λ (inst₇ : RecursorFixtures:Tag α₀) → Eq {RecursorFixtures:Holder α₀} rest₃ rest₆ → Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₇ ⦄ rest₆)} (Eq:ndrec {RecursorFixtures:Holder α₀} {rest₃} {λ (rest₇ : RecursorFixtures:Holder α₀) → Eq {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃) (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₇)} (Eq:refl {RecursorFixtures:Holder α₀} (RecursorFixtures:Holder:mk {α₀} {n₁} ⦃ inst₂ ⦄ rest₃)) {rest₆}) {inst₅})) {n₄}))
+
+-- theorem
+opaque
+  RecursorFixtures:Holder:mk:sizeOf~uspec : {α₀ : Set} → ⦃ inst₁ : SizeOf α₀ ⦄ → {n₂ : Nat} → ⦃ inst₃ : RecursorFixtures:Tag α₀ ⦄ → (rest₄ : RecursorFixtures:Holder α₀) → Eq {Nat} (SizeOf:sizeOf {RecursorFixtures:Holder α₀} ⦃ RecursorFixtures:Holder:~usizeOf~uinst α₀ ⦃ inst₁ ⦄ ⦄ (RecursorFixtures:Holder:mk {α₀} {n₂} ⦃ inst₃ ⦄ rest₄)) (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (SizeOf:sizeOf {Nat} ⦃ instSizeOfNat ⦄ n₂)) (SizeOf:sizeOf {RecursorFixtures:Tag α₀} ⦃ instSizeOfDefault (RecursorFixtures:Tag α₀) ⦄ inst₃)) (SizeOf:sizeOf {RecursorFixtures:Holder α₀} ⦃ RecursorFixtures:Holder:~usizeOf~uinst α₀ ⦃ inst₁ ⦄ ⦄ rest₄))
+  RecursorFixtures:Holder:mk:sizeOf~uspec {α₀} ⦃ inst₁ ⦄ {n₂} ⦃ inst₃ ⦄ rest₄ = Eq:refl {Nat} (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (SizeOf:sizeOf {Nat} ⦃ instSizeOfNat ⦄ n₂)) (SizeOf:sizeOf {RecursorFixtures:Tag α₀} ⦃ instSizeOfDefault (RecursorFixtures:Tag α₀) ⦄ inst₃)) (SizeOf:sizeOf {RecursorFixtures:Holder α₀} ⦃ RecursorFixtures:Holder:~usizeOf~uinst α₀ ⦃ inst₁ ⦄ ⦄ rest₄))
+
+RecursorFixtures:Holder:nil:elim : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → Eq {Nat} (RecursorFixtures:Holder:ctorIdx {α₀} t₂) 0 → motive₁ (RecursorFixtures:Holder:nil {α₀}) → motive₁ t₂
+RecursorFixtures:Holder:nil:elim {α₀} {motive₁} t₂ h₃ nil₄ = RecursorFixtures:Holder:ctorElim {α₀} {motive₁} 0 t₂ (Eq:symm {Nat} {RecursorFixtures:Holder:ctorIdx {α₀} t₂} {0} h₃) (PULift:up {motive₁ (RecursorFixtures:Holder:nil {α₀})} nil₄)
+
+-- theorem
+opaque
+  RecursorFixtures:Holder:nil:sizeOf~uspec : {α₀ : Set} → ⦃ inst₁ : SizeOf α₀ ⦄ → Eq {Nat} (SizeOf:sizeOf {RecursorFixtures:Holder α₀} ⦃ RecursorFixtures:Holder:~usizeOf~uinst α₀ ⦃ inst₁ ⦄ ⦄ (RecursorFixtures:Holder:nil {α₀})) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)
+  RecursorFixtures:Holder:nil:sizeOf~uspec {α₀} ⦃ inst₁ ⦄ = Eq:refl {Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)
+
+RecursorFixtures:Holder:recOn : {α₀ : Set} → {motive₁ : RecursorFixtures:Holder α₀ → Set} → (t₂ : RecursorFixtures:Holder α₀) → motive₁ (RecursorFixtures:Holder:nil {α₀}) → ({n₃ : Nat} → ⦃ inst₄ : RecursorFixtures:Tag α₀ ⦄ → (rest₅ : RecursorFixtures:Holder α₀) → motive₁ rest₅ → motive₁ (RecursorFixtures:Holder:mk {α₀} {n₃} ⦃ inst₄ ⦄ rest₅)) → motive₁ t₂
+RecursorFixtures:Holder:recOn {α₀} {motive₁} t₂ nil₃ mk₄ = RecursorFixtures:Holder:rec {α₀} {motive₁} nil₃ (λ {n₅ : Nat} → λ ⦃ inst₆ : RecursorFixtures:Tag α₀ ⦄ → λ (rest₇ : RecursorFixtures:Holder α₀) → λ (restih₈ : motive₁ rest₇) → mk₄ {n₅} ⦃ inst₆ ⦄ rest₇ restih₈) t₂
+
 RecursorFixtures:Odd:brecOn:go : {motive1₀ : RecursorFixtures:Even → Set} → {motive2₁ : RecursorFixtures:Odd → Set} → (t₂ : RecursorFixtures:Odd) → ((t₃ : RecursorFixtures:Even) → RecursorFixtures:Even:below {motive1₀} {motive2₁} t₃ → motive1₀ t₃) → ((t₃ : RecursorFixtures:Odd) → RecursorFixtures:Odd:below {motive1₀} {motive2₁} t₃ → motive2₁ t₃) → PProd (motive2₁ t₂) (RecursorFixtures:Odd:below {motive1₀} {motive2₁} t₂)
 RecursorFixtures:Odd:brecOn:go {motive1₀} {motive2₁} t₂ F1₃ F2₄ = RecursorFixtures:Odd:rec {λ (t₅ : RecursorFixtures:Even) → PProd (motive1₀ t₅) (RecursorFixtures:Even:below {motive1₀} {motive2₁} t₅)} {λ (t₅ : RecursorFixtures:Odd) → PProd (motive2₁ t₅) (RecursorFixtures:Odd:below {motive1₀} {motive2₁} t₅)} (PProd:mk {motive1₀ RecursorFixtures:Even:zero} {PUnit} (F1₃ RecursorFixtures:Even:zero PUnit:unit) PUnit:unit) (λ (o₅ : RecursorFixtures:Odd) → λ (oih₆ : PProd (motive2₁ o₅) (RecursorFixtures:Odd:below {motive1₀} {motive2₁} o₅)) → PProd:mk {motive1₀ (RecursorFixtures:Even:succ o₅)} {PProd (motive2₁ o₅) (RecursorFixtures:Odd:below {motive1₀} {motive2₁} o₅)} (F1₃ (RecursorFixtures:Even:succ o₅) oih₆) oih₆) (λ (e₅ : RecursorFixtures:Even) → λ (eih₆ : PProd (motive1₀ e₅) (RecursorFixtures:Even:below {motive1₀} {motive2₁} e₅)) → PProd:mk {motive2₁ (RecursorFixtures:Odd:succ e₅)} {PProd (motive1₀ e₅) (RecursorFixtures:Even:below {motive1₀} {motive2₁} e₅)} (F2₄ (RecursorFixtures:Odd:succ e₅) eih₆) eih₆) t₂
 
@@ -1339,6 +1446,30 @@ opaque
   RecursorFixtures:Same:transport~uexample : Eq {Nat} RecursorFixtures:Same:transport~uexample:~ushare:~n1 (OfNat:ofNat {Nat} 7 ⦃ instOfNatNat 7 ⦄)
   RecursorFixtures:Same:transport~uexample = rfl {Nat} {RecursorFixtures:Same:transport~uexample:~ushare:~n1}
 
+RecursorFixtures:Tag:casesOn : {α₀ : Set} → {motive₁ : RecursorFixtures:Tag α₀ → Set} → (t₂ : RecursorFixtures:Tag α₀) → ((tag₃ : Nat) → motive₁ (RecursorFixtures:Tag:mk {α₀} tag₃)) → motive₁ t₂
+RecursorFixtures:Tag:casesOn {α₀} {motive₁} t₂ mk₃ = RecursorFixtures:Tag:rec {α₀} {motive₁} (λ (tag₄ : Nat) → mk₃ tag₄) t₂
+
+RecursorFixtures:Tag:ctorIdx : {α₀ : Set} → RecursorFixtures:Tag α₀ → Nat
+RecursorFixtures:Tag:ctorIdx {α₀} x₁ = 0
+
+RecursorFixtures:Tag:mk:~uflat~uctor : {α₀ : Set} → Nat → RecursorFixtures:Tag α₀
+RecursorFixtures:Tag:mk:~uflat~uctor {α₀} tag₁ = RecursorFixtures:Tag:mk {α₀} tag₁
+
+RecursorFixtures:Tag:noConfusionType : Set → {α₀ : Set} → RecursorFixtures:Tag α₀ → {α₁ : Set} → RecursorFixtures:Tag α₁ → Set
+RecursorFixtures:Tag:noConfusionType P₀ {α₁} t₂ {α₃} t₄ = RecursorFixtures:Tag:casesOn {α₁} {λ (t₅ : RecursorFixtures:Tag α₁) → Set} t₂ (λ (tag₅ : Nat) → RecursorFixtures:Tag:casesOn {α₃} {λ (t₆ : RecursorFixtures:Tag α₃) → Set} t₄ (λ (tag₆ : Nat) → (Eq {Nat} tag₅ tag₆ → P₀) → P₀))
+
+RecursorFixtures:Tag:noConfusion : {P₀ : Set} → {α₁ : Set} → {t₂ : RecursorFixtures:Tag α₁} → {α₃ : Set} → {t₄ : RecursorFixtures:Tag α₃} → Eq {Set} α₁ α₃ → HEq {RecursorFixtures:Tag α₁} t₂ {RecursorFixtures:Tag α₃} t₄ → RecursorFixtures:Tag:noConfusionType P₀ {α₁} t₂ {α₃} t₄
+RecursorFixtures:Tag:noConfusion {P₀} {α₁} {t₂} {α₃} {t₄} eq1₅ eq2₆ = Eq:ndrec {Set} {α₁} {λ (α₇ : Set) → {t₈ : RecursorFixtures:Tag α₇} → HEq {RecursorFixtures:Tag α₁} t₂ {RecursorFixtures:Tag α₇} t₈ → RecursorFixtures:Tag:noConfusionType P₀ {α₁} t₂ {α₇} t₈} (λ {t₇ : RecursorFixtures:Tag α₁} → λ (eq2₈ : HEq {RecursorFixtures:Tag α₁} t₂ {RecursorFixtures:Tag α₁} t₇) → Eq:ndrec {RecursorFixtures:Tag α₁} {t₂} {λ (t₉ : RecursorFixtures:Tag α₁) → RecursorFixtures:Tag:noConfusionType P₀ {α₁} t₂ {α₁} t₉} (RecursorFixtures:Tag:casesOn {α₁} {λ (t₉ : RecursorFixtures:Tag α₁) → RecursorFixtures:Tag:noConfusionType P₀ {α₁} t₉ {α₁} t₉} t₂ (λ (tag₉ : Nat) → λ (k₁₀ : Eq {Nat} tag₉ tag₉ → P₀) → k₁₀ (Eq:refl {Nat} tag₉))) {t₇} (eq~uof~uheq {RecursorFixtures:Tag α₁} {t₂} {t₇} eq2₈)) {α₃} eq1₅ {t₄} eq2₆
+
+RecursorFixtures:Tag:mk:noConfusion : {α₀ : Set} → {P₁ : Set} → {tag₂ : Nat} → {tag₃ : Nat} → Eq {RecursorFixtures:Tag α₀} (RecursorFixtures:Tag:mk {α₀} tag₂) (RecursorFixtures:Tag:mk {α₀} tag₃) → (Eq {Nat} tag₂ tag₃ → P₁) → P₁
+RecursorFixtures:Tag:mk:noConfusion {α₀} {P₁} {tag₂} {tag₃} eq₄ k₅ = id {P₁} (RecursorFixtures:Tag:noConfusion {P₁} {α₀} {RecursorFixtures:Tag:mk {α₀} tag₂} {α₀} {RecursorFixtures:Tag:mk {α₀} tag₃} (Eq:refl {Set} α₀) (heq~uof~ueq {RecursorFixtures:Tag α₀} {RecursorFixtures:Tag:mk {α₀} tag₂} {RecursorFixtures:Tag:mk {α₀} tag₃} eq₄) k₅)
+
+RecursorFixtures:Tag:recOn : {α₀ : Set} → {motive₁ : RecursorFixtures:Tag α₀ → Set} → (t₂ : RecursorFixtures:Tag α₀) → ((tag₃ : Nat) → motive₁ (RecursorFixtures:Tag:mk {α₀} tag₃)) → motive₁ t₂
+RecursorFixtures:Tag:recOn {α₀} {motive₁} t₂ mk₃ = RecursorFixtures:Tag:rec {α₀} {motive₁} mk₃ t₂
+
+RecursorFixtures:Tag:tag : (α₀ : Set) → ⦃ _ : RecursorFixtures:Tag α₀ ⦄ → Nat
+RecursorFixtures:Tag:tag α₀ ⦃ self₁ ⦄ = RecursorFixtures:Tag.tag₁ {α₀} self₁
+
 data RecursorFixtures:Tagged : Nat → Set where
   RecursorFixtures:Tagged:mk : (n₀ : Nat) → (k₁ : Nat) → Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₁ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)) → RecursorFixtures:Tagged n₀
 
@@ -1363,11 +1494,6 @@ RecursorFixtures:Tagged:noConfusionType P₀ {a₁} t₂ {a₃} t₄ = RecursorF
 
 RecursorFixtures:Tagged:noConfusion : {P₀ : Set} → {a₁ : Nat} → {t₂ : RecursorFixtures:Tagged a₁} → {a₃ : Nat} → {t₄ : RecursorFixtures:Tagged a₃} → Eq {Nat} a₁ a₃ → HEq {RecursorFixtures:Tagged a₁} t₂ {RecursorFixtures:Tagged a₃} t₄ → RecursorFixtures:Tagged:noConfusionType P₀ {a₁} t₂ {a₃} t₄
 RecursorFixtures:Tagged:noConfusion {P₀} {a₁} {t₂} {a₃} {t₄} eq1₅ eq2₆ = Eq:ndrec {Nat} {a₁} {λ (a₇ : Nat) → {t₈ : RecursorFixtures:Tagged a₇} → HEq {RecursorFixtures:Tagged a₁} t₂ {RecursorFixtures:Tagged a₇} t₈ → RecursorFixtures:Tagged:noConfusionType P₀ {a₁} t₂ {a₇} t₈} (λ {t₇ : RecursorFixtures:Tagged a₁} → λ (eq2₈ : HEq {RecursorFixtures:Tagged a₁} t₂ {RecursorFixtures:Tagged a₁} t₇) → Eq:ndrec {RecursorFixtures:Tagged a₁} {t₂} {λ (t₉ : RecursorFixtures:Tagged a₁) → RecursorFixtures:Tagged:noConfusionType P₀ {a₁} t₂ {a₁} t₉} (RecursorFixtures:Tagged:casesOn {a₁} {λ (t₉ : RecursorFixtures:Tagged a₁) → RecursorFixtures:Tagged:noConfusionType P₀ {a₁} t₉ {a₁} t₉} t₂ (λ (k₉ : Nat) → λ (v₁₀ : Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₉ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))) → λ (k₁₁ : Eq {Nat} k₉ k₉ → HEq {Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₉ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} v₁₀ {Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₉ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} v₁₀ → P₀) → k₁₁ (Eq:refl {Nat} k₉) (HEq:refl {Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₉ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} v₁₀))) {t₇} (eq~uof~uheq {RecursorFixtures:Tagged a₁} {t₂} {t₇} eq2₈)) {a₃} eq1₅ {t₄} eq2₆
-
--- theorem
-opaque
-  heq~uof~ueq : {α₀ : Set} → {a₁ : α₀} → {a₂ : α₀} → Eq {α₀} a₁ a₂ → HEq {α₀} a₁ {α₀} a₂
-  heq~uof~ueq {α₀} {a₁} {a₂} h₃ = Eq:subst {α₀} {HEq {α₀} a₁ {α₀}} {a₁} {a₂} h₃ (HEq:refl {α₀} a₁)
 
 RecursorFixtures:Tagged:mk:noConfusion : {n₀ : Nat} → {P₁ : Set} → {k₂ : Nat} → {v₃ : Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₂ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} → {k₄ : Nat} → {v₅ : Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} → Eq {RecursorFixtures:Tagged n₀} (RecursorFixtures:Tagged:mk n₀ k₂ v₃) (RecursorFixtures:Tagged:mk n₀ k₄ v₅) → (Eq {Nat} k₂ k₄ → HEq {Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₂ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} v₃ {Fin (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ k₄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄))} v₅ → P₁) → P₁
 RecursorFixtures:Tagged:mk:noConfusion {n₀} {P₁} {k₂} {v₃} {k₄} {v₅} eq₆ k₇ = id {P₁} (RecursorFixtures:Tagged:noConfusion {P₁} {n₀} {RecursorFixtures:Tagged:mk n₀ k₂ v₃} {n₀} {RecursorFixtures:Tagged:mk n₀ k₄ v₅} (Eq:refl {Nat} n₀) (heq~uof~ueq {RecursorFixtures:Tagged n₀} {RecursorFixtures:Tagged:mk n₀ k₂ v₃} {RecursorFixtures:Tagged:mk n₀ k₄ v₅} eq₆) k₇)
