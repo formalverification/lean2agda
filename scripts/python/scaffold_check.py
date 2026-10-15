@@ -44,11 +44,11 @@ Description:
   The listing is deterministic, so a test compares it with an expected
   one; `--messages` adds the first line of each error message.
   `--types-only` checks the data types and records and their recursors
-  alone, with the declarations their types mention, directly or through
-  each other, as postulates of their types: what Agda's positivity and
-  termination checkers see, in a module a fraction of the size, since
-  Agda's time grows faster than a module, and a theorem's proof can be
-  tens of megabytes.  The number of Agda runs
+  alone, with the declarations they mention, directly or through each
+  other, every theorem and opaque constant among them postulated: what
+  Agda's positivity and termination checkers see, in a module a fraction
+  of the size, since Agda's time grows faster than a module, and a
+  theorem's proof can be tens of megabytes.  The number of Agda runs
   and their times go to standard error.
 
 Design Principles:
@@ -288,11 +288,12 @@ def reach(start: frozenset[int], successors: Callable[[int], frozenset[int]]) ->
 def types_only(module: Module) -> Module:
     """The module's data types, records and mutual blocks, their
     recursors, and the declarations they mention, directly or through
-    each other, in the module's order, every value but a recursor's
-    postulated, so that only its signature is mentioning anything."""
+    each other, in the module's order, each opaque block (a theorem or
+    an opaque constant, which Agda never unfolds there) postulated, so
+    that only its signature mentions anything.  Definitions keep their
+    values, since a type may need one to unfold (`outParam`)."""
     starts = frozenset(i for i, item in enumerate(module.items) if item.types or item.label == _RECURSOR)
-    items = tuple(postulated(item) if has_value(item) and i not in starts else item
-                  for i, item in enumerate(module.items))
+    items = tuple(postulated(item) if item.kind == "opaque" else item for item in module.items)
     refs = references(items)
     keep = reach(starts, lambda i: refs[i])
     return Module(module.name, module.header, tuple(item for i, item in enumerate(items) if i in keep))

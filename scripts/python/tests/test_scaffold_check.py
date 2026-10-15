@@ -214,15 +214,16 @@ class TestTypesOnly(unittest.TestCase):
         module = parse_module(RECURSORS).unwrap()
         self.assertEqual([i.names[0] for i in types_only(module).items], ["Nat", "Nat:rec", "Even", "Even:rec"])
 
-    def test_postulates_what_the_types_mention(self) -> None:
+    def test_postulates_the_theorems_the_types_mention(self) -> None:
         module = parse_module(SCAFFOLD.replace(
             "postulate Eq : {α₀ : Set} → α₀ → α₀ → Set",
-            "record Box : Set where\n  constructor Box:mk\n  field\n    unbox₀ : Eq {Nat} two 2\n\n"
+            "record Box : Set where\n  constructor Box:mk\n  field\n    unbox₀ : Eq {Nat} two~uok two~uok\n\n"
             "postulate Eq : {α₀ : Set} → α₀ → α₀ → Set")).unwrap()
         kept = types_only(module)
         self.assertEqual([(i.names[0], i.kind) for i in kept.items],
-                         [("Nat", "data"), ("Box", "record"), ("Eq", "postulate"), ("two", "postulate")])
-        self.assertEqual(kept.items[3].text, "postulate two : Nat")
+                         [("Nat", "data"), ("Box", "record"), ("Eq", "postulate"), ("two", "definition"),
+                          ("two~uok", "postulate")])
+        self.assertEqual(kept.items[4].text, "-- theorem\npostulate two~uok : Eq {Nat} two 2")
 
 
 def chain(n: int) -> tuple[Item, ...]:
