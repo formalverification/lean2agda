@@ -8,10 +8,12 @@ repeated closed subterms into auxiliary definitions, so that the text
 stays near the size of the shared term.  Issue [#17] implements both, in
 `translator/Lean2Agda/Core/Print.lean` and `Core/Share.lean`, and a
 scaffold, `Core/Scaffold.lean`, that tests them with Agda until the
-emitters of [#19] and [#21] exist; [#18] added the inductive types
-([`inductives.md`][inductives]), and [#20] gave the scaffold its rules for
+emitter of [#21] exists; [#18] added the inductive types
+([`inductives.md`][inductives]), [#20] gave the scaffold its rules for
 definitions, theorems, opaque constants and axioms, and the fallback that
-unfolds a theorem when a dependent needs it.  The measurements behind the
+unfolds a theorem when a dependent needs it, and [#19] defined the
+recursors by pattern matching ([`inductives.md`][inductives-recursors],
+Recursors).  The measurements behind the
 choices below are in the dated reports [`printing-blowup`][report] and
 [`opaque-theorems`][report-opaque].
 
@@ -119,6 +121,38 @@ repair turned off, Agda refuses four of that scaffold's types with
 `WrongHidingInLambda`, one of which otherwise checks, and both repaired
 definitions of the printing fixture.
 
+Lean also compares a term that is not a lambda up to binder information:
+`Nat.le.brecOn` passes `@Nat.le.below n motive`, of type
+`{a : Nat} → n.le a → Prop`, as the motive of `Nat.le.rec`, whose type
+asks for `(a : Nat) → n.le a → Prop`.  Agda refuses that with
+`Nat !=< Nat:le n₀ _`, so the printer eta-expands such an argument: when
+the expected type is syntactically a Pi type and the argument is an
+application of a constant or a variable whose own type has a Pi binder of
+another visibility in the same leading positions, it prints
+`λ (a₂ : Nat) → λ (x₃ : Nat:le n₀ a₂) → Nat:le:below {n₀} {motive₁} {a₂} x₃`,
+the binders the expected type's (an eta repair, counted apart from the
+lambda repairs).  The type of an argument headed by anything else would
+need the kernel's `check`, which the printer does not spend on it.  On
+the code before the repair, every golden whose closure holds
+`Nat.le.brecOn` refused it, and `Nat.le_of_ble_eq_true` with the same
+`Nat !=< …`, recursors defined or not; with the repair both check.  The
+printing fixture's `etaRepaired` is the test.
+
+The same expansion applies when the expected type's leading run of
+hidden binders holds an instance binder, visibilities equal or not.
+Checking a term against such a type, Agda inserts the hidden binders and
+then searches for each instance the term takes, and it can find two: the
+binder, and an instance already in scope, such as a record's instance
+field in a class's `recOn` (`LawfulBEq.recOn`, refused on `main` with
+`UnsolvedConstraints`) or, in a recursor's clause, the pattern variable
+for a constructor's instance field (`Std.DTreeMap.Internal.Impl.WF.rec`,
+whose minor premise `alter₈` has a type that begins
+`{x₃ : α₀ → Set} → ⦃ inst₄ : LawfulEqOrd α₀ ⦄ → …`).  The expansion
+passes the binders themselves:
+`λ {x₃} → λ ⦃ inst₄ ⦄ → … → alter₈ {x₃} ⦃ inst₄ ⦄ …`.  The
+printing fixture's `instanceRepaired` and `hiddenInstanceRepaired`, and
+the recursor fixture's `Holder`, are the tests.
+
 ### The precedence table
 
 A binding form (`λ`, a Pi type, an arrow, `let`) extends as far right as
@@ -180,9 +214,12 @@ constructor that is not a record (`String`, a postulate for
 explicitly) it prints through the type's recursor, as every projection
 did before [#18]: `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`,
 where `Tᵢ` is the field's type with each earlier field replaced by its
-projection from `self`, as the kernel types a projection.  That checks
-against a postulated recursor for a field whose type does not mention an
-earlier field, and needs the recursor to compute ([#19]) for the others.
+projection from `self`, as the kernel types a projection.  For a field
+whose type mentions an earlier field, that checks because the recursor
+computes on the constructor ([#19]); the recursor fixture's
+`RecursorFixtures.Tagged.value`, a dependent field of a type whose
+constructor binds its parameter, is the test.  `String`'s recursor stays a
+postulate, and so would such a projection from a `String`.
 The printing fixture's dependent field `PrintFixtures.Dependent.value`,
 which Agda refused printed through the recursor, checks as a field
 projection.
@@ -269,8 +306,12 @@ kind of declaration is emitted, as follows:
    also makes, with an inhabitant of its type as the value) is a
    definition inside an `opaque` block, under `-- opaque constant`: the
    value Lean's kernel never unfolds, kept but never unfolded;
-+  an axiom is a postulate, and so are the recursors and the quotient
-   primitives until [#19] and [#21] emit them.
++  the recursors of each block of inductive types are one definition by
+   pattern matching, under the comment `-- recursor`, whose clauses are
+   the kernel's computation rules ([`inductives.md`][inductives-recursors]);
+   `String`'s recursor is a postulate, as `String` is;
++  an axiom is a postulate, and so are the quotient primitives until [#21]
+   emits them.
 
 Three refinements, as follows:
 
@@ -327,8 +368,9 @@ Agda's time grows faster than the module: 6 s for 0.7 MB, 187 s for
 3.0 MB, and 28 minutes for `real-sqrt-nonneg`'s 7.5 MB, which is one
 reason for [#22]'s one module per Lean module.  Scope-checking does not see
 visibility or precedence errors, which still parse, so the scaffold is also
-type-checked.  Not every declaration can check: the postulated recursors
-withhold the iota reductions that Lean's kernel used.
+type-checked.  Not every declaration can check: until the emitters of
+[#21], [#26], [#27] and [#31] exist, Agda lacks some of the reductions
+and conversions that Lean's kernel used.
 `scripts/python/scaffold_check.py` type-checks a scaffold anyway, running
 Agda on a scratch copy until the rest checks, and at each error does one
 of three things, as follows:
@@ -339,84 +381,89 @@ of three things, as follows:
    `-- theorem, unfolded for D` naming the declaration that needed it,
    and the listing records `unfolded T for D`: this is [#20]'s fallback,
    driven by Agda's own complaint rather than by hand;
-+  otherwise, when Agda refuses a declaration's clause, the declaration
-   becomes a postulate of its type, so that what uses it still checks
-   (`refused value`);
++  otherwise, when Agda refuses a declaration's clause, or its
+   termination checker refuses a recursor block, the declaration becomes
+   a postulate of its type, or one postulate per member of the block, so
+   that what uses it still checks (`refused value`);
 +  when Agda refuses a declaration's type, the declaration and everything
    that refers to it are dropped (`refused type`, `dropped`).
 
-The listing opens with two counts, the declarations that checked (and the
-data types and records among them) and the theorems unfolded, and says of
-an unfolding that it was `in vain` when the declaration it was made for
-was refused or dropped all the same, which the first later event at or
-beyond that declaration decides.  A closure whose every declaration is
-refused (`lcProof` as the root) gives a module with a header and nothing
-else, which Agda and the checker both accept.  The fallback re-emits the
-theorem transparently rather than putting the dependent in an
+Agda runs with its heap bounded, 8G by default (`--heap`), and names each
+declaration as it starts and ends it (`-v tc.decl:5`), so that a run that
+exhausts the heap or the time bound is charged to the declaration it
+named last, as `HeapExhausted` or `Timeout`, and refused as above.
+Without the bound one such run took 23 GB before the system's OOM killer
+stopped it ([`recursors.md`][recursors], Agda's positivity check).
+
+The listing opens with three counts, the declarations that checked (and the
+data types and records among them), the theorems unfolded, and the recursors
+still defined by pattern matching with those the termination checker
+refused, and says of an unfolding that it was `in vain` when the declaration
+it was made for was refused or dropped all the same, which the first later
+event at or beyond that declaration decides.  A closure whose every
+declaration is refused (`lcProof` as the root) gives a module with a header
+and nothing else, which Agda and the checker both accept.  The fallback
+re-emits the theorem transparently rather than putting the dependent in an
 `opaque unfolding T` block, because the dependent is usually a definition,
 which must stay transparent for its own dependents, and a definition inside
 an `unfolding` block is opaque; the count is the same either way.  The
 harness compares the listing with a golden one.
 
-With every value printed, the golden scaffolds stand as follows
-(`values` counts the definitions, theorems and opaque constants printed
-with their values; a value is `behind a refused type` when its declaration
-was dropped with one; a declaration is a declaration of the Agda module,
-a data type or a record with its constructors being one):
+With every value printed and the recursors defined ([#19]), the golden
+scaffolds stand as follows (`values` counts the definitions, theorems and
+opaque constants printed with their values, recursors not among them; a
+value is `behind a refused type` when its declaration was dropped with
+one; a declaration is a declaration of the Agda module, a data type or a
+record with its constructors being one, and a block of recursors one); in
+parentheses, the same on the code before [#19]:
 
 | Scaffold | Declarations | Data types and records | Values | Checked | Refused | Behind a refused type | Theorems | Unfolded |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `list-reverse-reverse` | 34 | 6 | 21 | 17 | 4 | 0 | 10 | 0 |
-| `nat-gcd-succ` | 252 | 23 | 201 | 141 | 49 | 11 | 65 | 0 |
-| `nat-gcd-self` | 320 | 24 | 266 | 182 | 62 | 22 | 103 | 0 |
-| printing fixture | 333 | 41 | 248 | 199 | 49 | 0 | 47 | 0 |
-| `Fixtures.selected` | 29 | 6 | 17 | 15 | 2 | 0 | 0 | 0 |
-| inductives fixture | 77 | 24 | 29 | 27 | 2 | 0 | 1 | 0 |
-| `kinds` | 333 | 41 | 246 | 195 | 51 | 0 | 51 | 2, one in vain |
-| `Init.Core`'s inductive types | 539 | 144 | 246 | 197 | 49 | 0 | 48 | 0 |
+| `list-reverse-reverse` | 34 | 6 | 21 | 21 (17) | 0 (4) | 0 | 10 | 0 |
+| `nat-gcd-succ` | 252 | 23 | 201 | 198 (141) | 3 (49) | 0 (11) | 65 | 0 |
+| `nat-gcd-self` | 320 | 24 | 266 | 261 (182) | 5 (62) | 0 (22) | 103 | 0 |
+| printing fixture | 340 (333) | 41, 40 checked | 255 (248) | 253 (199) | 2 (49) | 0 | 47 | 0 |
+| `Fixtures.selected` | 29 | 6 | 17 | 17 (15) | 0 (2) | 0 | 0 | 0 |
+| inductives fixture | 75 (77) | 24 | 29 | 29 (27) | 0 (2) | 0 | 1 | 0 |
+| `kinds` | 333 | 41, 40 checked | 246 | 244 (195) | 2 (51) | 0 | 51 | 1 (2, one in vain) |
+| recursor fixture | 476 | 40 | 396 | 394 | 2 | 0 | 113 | 0 |
+| `Init.Core`'s inductive types | 537 (539) | 144, 143 checked | 246 | 244 (197) | 2 (49) | 0 | 48 | 0 |
 
-Every type checks but three: the compiled matcher of
-`Nat.zero_lt_of_ne_zero` and, in `nat-gcd-self`, `Nat.modCore.go.eq_1`,
-both of which need `n + 1` to be `Nat.succ n`, that is `Nat.add` to
-compute through `Nat.rec`.  The four matchers of the `Nat.le` lemmas that
-[#18] and [#20] each left to the other check once both are in: `n ≤ m`
-unfolds through the record projection `LE.le₁` and the transparent
-`instLENat` to `Nat.le n m`.  Every refusal is an `UnequalTerms` in which
-a postulate must compute, as follows:
+The printing fixture gained the eta repairs' declarations, and a
+nested or mutual block's recursors are one declaration now.  Every type
+checks but `ByteArray.IsValidUTF8`'s, in the three closures that hold it:
+the compiled matcher of `Nat.zero_lt_of_ne_zero` and
+`Nat.modCore.go.eq_1`, which needed `n + 1` to be `Nat.succ n`, check now
+that `Nat.add` computes through `Nat.rec`.  None of the refusals left is
+a recursor's; they fall into four classes, as follows:
 
-+  a recursor's iota: `Nat.rec` under `Nat.add`, `Nat.ble`, `Nat.beq` and
-   the `brecOn` definitions, `Bool.rec` under `decEq`, `Decidable.rec`
-   under `ite` and `dite`'s lemmas, `PProd.rec` and `List.rec` under the
-   structural-recursion helpers, and `Eq.rec` on `Eq.refl` ([#19]);
++  two proofs of one proposition compared, `Nat.modCore_lt`
+   (`hy₂ != h₃`), `dif_pos` and `dif_neg`, which Lean accepts by
+   definitional proof irrelevance ([#27]);
++  `K`-like reduction of `Eq.rec` on `h : α = α` in `eq_of_heq`, which
+   Agda reduces only on `Eq.refl` and which the normalizer of [#26] is to
+   make explicit;
 +  `Quot.lift` in `funext` ([#21]);
-+  K-like reduction of `Eq.rec` on `h : α = α` in `eq_of_heq`, which
-   under `--type-in-type` does not reduce on a variable and which the
-   normalizer of [#26] is to make explicit.
++  `ByteArray.IsValidUTF8`, refused as `HeapExhausted` with its recursor,
+   `String.ofByteArray` and `String.rec` behind it: Agda's positivity check
+   normalizes its field's type, whose normal form is exponential once
+   Lean's `Nat.ble` computes in unary, the operation table of [#31]
+   ([`recursors.md`][recursors]).
 
-No refusal names a theorem: the fallback fired on none of the corpus and
-inductive scaffolds, and on `kinds` twice, once for the pair written to
-make it fire (`useAlias`, whose argument has type `Q alias` where `Q base`
-is expected, which Lean accepts by proof irrelevance and Agda once `alias`
+The fallback fired once, on `kinds`, for the pair written to make it fire
+(`useAlias`, whose argument has type `Q alias` where `Q base` is
+expected, which Lean accepts by proof irrelevance and Agda once `alias`
 unfolds to `base`; the proposition is an equation, since a pair on `True`
 is identified by Agda without any unfolding once [#18] declares `True` as
 a record, whose eta rule makes any two of its elements equal, as Lean's
-kernel does for a unit-like type) and once in vain, on a `CannotApply`
-error whose message mentioned `heq_of_eq` as an argument of the stuck
-term.  Lean's kernel compares proofs by proof irrelevance before it unfolds a
+kernel does for a unit-like type).  Its unfolding in vain on the code
+before [#19], at a `noConfusion` stuck on a postulated recursor, is gone.
+Lean's kernel compares proofs by proof irrelevance before it unfolds a
 theorem, so a term that relies on a theorem's unfolding is rare by
-construction; the place to expect one is a recursor on a proof, `Acc.rec`
-under well-founded recursion or `Eq.rec` on a proof that must reduce to
-`rfl`, once [#19] makes recursors compute.  On `Init.Core`'s closure
-(1,963 declarations, 1,660 values), the checker ran Agda 320 times in 63
-minutes: 1,344 values check, 312 are refused and 4 stand behind one
-refused type; the fallback fired six times, and once it helped:
-`Quotient.rec` is refused with `Quotient.sound p != Quot.sound p`, which
-Lean accepts by proof irrelevance, and checks once `Quotient.sound`
-unfolds to `Quot.sound`.  Eleven of its refusals are two proof variables
-of one proposition compared (`property₇ != property₈`), which is [#27]'s
-encoding of `Prop` to settle.  The dated report
-[`opaque-theorems`][report-opaque] has the tables, the classes, and the
-same run with the inductive types still postulates.
+construction.  [`recursors.md`][recursors] has `Init.Core`'s whole
+closure, against the run of the dated report
+[`opaque-theorems`][report-opaque], which has the tables and classes of
+the code before.
 
 ## Verification
 
@@ -424,37 +471,40 @@ same run with the inductive types still postulates.
 broke each rule in turn and showed which checks fail:
 
 +  `tests/Printing.lean`: the precedence table, string escapes, clause
-   patterns, binder names, each `Expr` constructor, both repairs, a
-   telescope, qualified names, and the sharing pass's counting on the
-   doubling of 2^20 leaves and its auxiliaries (kernel-checked, owned,
-   printed in linear size);
+   patterns, binder names, each `Expr` constructor, the lambda repairs and
+   the three eta repairs, a telescope, qualified names, and the sharing pass's
+   counting on the doubling of 2^20 leaves and its auxiliaries
+   (kernel-checked, owned, printed in linear size);
 +  `tests/Scaffold.lean`: on the fixture
    `tests/TranslatorTests/Input/Kinds.lean`, the emission of each kind (a
    definition and an instance transparent, a theorem and an opaque
    constant in `opaque` blocks, a `partial` definition and its postulated
-   companion, an axiom and a recursor as postulates, a class as a record),
+   companion, an axiom as a postulate, a class as a record and its
+   recursor by its clause),
    the six refusals with their reasons and their absence from the module,
    the header's count, a closure with nothing to refuse, and the sharing
    pass leaving an `unsafe` declaration alone; also the mutual `partial`
    companions of the printing fixture, and a `String` root's builtin;
 +  `PrintingLexical.agda`, which `tests/Printing.lean` writes: a binder
    built from every Agda keyword and sort name, which Agda checks;
-+  seven scaffolds against golden files in `tests/expected/scaffolds/`,
++  eight scaffolds against golden files in `tests/expected/scaffolds/`,
    scope-checked, and type-checked with `scaffold_check.py` against golden
    listings: the three core-Lean corpus entries, the printing fixture
    (`tests/TranslatorTests/Input/Printing.lean`, which prints every
-   constructor, every visibility and both repairs), `Fixtures.selected`,
-   the inductive types' fixture of [`inductives.md`][inductives], and
-   `kinds`, whose golden `refused.txt` names the six refused declarations
-   and whose golden listing shows the fallback; the scaffold of
-   `Init.Core`'s inductive types, against its listing alone; and the
-   declarations each scaffold's translator refuses, against a golden
-   `refused.txt` where one exists and required to be none otherwise;
+   constructor, every visibility and every repair), `Fixtures.selected`, the
+   inductive types' fixture of [`inductives.md`][inductives], the recursors'
+   fixture of [`recursors.md`][recursors], and `kinds`, whose golden
+   `refused.txt` names the six refused declarations and whose golden listing
+   shows the fallback; the scaffold of `Init.Core`'s inductive types,
+   against its listing alone; and the declarations each scaffold's
+   translator refuses, against a golden `refused.txt` where one exists and
+   required to be none otherwise;
 +  `scripts/python/tests/test_scaffold_check.py`: the checker's parsing
    of every block shape, the fallback's trigger (only a theorem the message
    proper names, never the refused declaration itself), the transparent
-   form, the postulate form, the `in vain` mark, and a run in which the
-   fake Agda names a theorem;
+   form, the postulate form, the `in vain` mark, a run in which the
+   fake Agda names a theorem, and the recursor blocks, termination
+   refusals and heap bound of [`recursors.md`][recursors];
 +  the scaffold of the printing fixture's whole module, mutual `partial`
    definitions included, scope-checked.
 
@@ -497,10 +547,12 @@ It assumes the following of its callers:
 +  [#18] printed projections from records as field projections and
    declared every inductive type, `Nat` included; [#20] made definitions
    transparent and theorems opaque, and refuses `sorryAx` and `unsafe`;
-   [#19] defines the recursors, which `projectionAsRecursor` still uses
-   for the types with one constructor that are not records; [#21] gives
-   `Quot.lift` its rewrite rule.  Each replaces a `postulateItem` case of
-   `scaffoldItem` in `Core/Scaffold.lean`.
+   [#19] defined the recursors by pattern matching (`Core/Recursor.lean`),
+   which `projectionAsRecursor` still uses for the types with one
+   constructor that are not records, and through which those projections
+   now compute; [#21] gives `Quot.lift` its rewrite rule, replacing the
+   last `postulateItem` case of `scaffoldItem` in `Core/Scaffold.lean`
+   that is not an axiom or `String`'s.
 +  The scaffold's golden listings measure that progress: a refusal that
    disappears is an emitter's success, and the listing should be
    regenerated with it.  A refusal that names a theorem is the fallback's,
@@ -515,6 +567,7 @@ It assumes the following of its callers:
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28
+[#31]: https://github.com/formalverification/lean2agda/issues/31
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [report]: ../reports/printing-blowup-2026-10-12.md
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
@@ -522,5 +575,7 @@ It assumes the following of its callers:
 [catalog-irrel]: ../foundations/gap-catalog.md#proof-irrelevance
 [inductives]: inductives.md
 [inductives-projections]: inductives.md#projections
+[inductives-recursors]: inductives.md#recursors
+[recursors]: recursors.md
 [related]: ../related-work.md
 [catalog-let]: ../foundations/gap-catalog.md#projections-and-let

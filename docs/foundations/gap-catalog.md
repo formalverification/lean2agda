@@ -334,7 +334,14 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
 +  **Agda's status**.  Agda's K is a pattern-matching principle, not a
    reduction: a neutral proof `h : x ≡ x` never computes, under any flag.  By
    profile, as follows.
-   +  U: K available by pattern matching (Agda's default).
+   +  U: K available by pattern matching (Agda's default), on which the
+      recursors of `Eq`, `HEq` and the other `K`-like types rely since
+      [#19]: each is defined by its clause on the constructor, with `_`
+      for an index that unification fills in ([`recursors.md`][recursors]).
+      The `K`-like reduction on a variable proof does not follow: Agda
+      reduces `Eq.rec` only on `Eq.refl` (probe `R01bKLike` of
+      [`recursors.md`][recursors]), so `eq_of_heq` and `cast_eq` stay
+      refused until the normalizer ([#26]).
    +  K: available by pattern matching (probe `P05KAccepted`); every K-like
       *reduction* in a Lean term still needs an explicit cast, since Agda will
       not reduce `subst P h x` on a variable `h`.
@@ -414,7 +421,12 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    +  U: the restriction is one of pattern matching, not of universes, so
       `--type-in-type` does not lift it: `P26AccPropU` fails with the same
       `[SplitInProp]` error, which is why lyphyser postulated the `Set`-valued
-      `Acc.rec`.
+      `Acc.rec`.  The translator prints every sort as `Set` under U
+      ([`printing.md`][printing]), so the restriction never arises there:
+      since [#19] every subsingleton eliminator, `Acc.rec` among them, is a
+      definition by pattern matching on a `Set`-valued type, and `Acc.rec`'s
+      call on `h y a` passes the termination checker
+      ([`recursors.md`][recursors]).
    +  K: `Eq`, `HEq`, `Acc`, `And`, `True`, `False` and `Iff` live in `Set` on
       the Agda side (agda-stdlib's `_≡_`, `Acc`, `_×_`, `⊤`, `⊥`), where large
       elimination is ordinary pattern matching; `Acc` in `Set` computes on
@@ -970,7 +982,10 @@ literals**.
    same under `--safe --cubical`.  By profile, as follows.
    +  U: as K, since [#18]: a mutual block is one Agda `mutual` block and a
       nested type is declared directly, its kernel auxiliaries surviving
-      only in its recursors' motives, postulated until [#19].
+      only in its recursors' motives; since [#19] a block's recursors are
+      one `mutual` definition by pattern matching, a nested type's `rec_N`
+      matching on the constructors of `Array` and `List`, which Agda's
+      termination checker accepts ([`recursors.md`][recursors]).
       `Lean.Syntax` checks in `Init.Core`'s closure, and of the 72 nested
       or mutual types in `import Lean`, 62 check, all ten mutual blocks
       among them, while the other ten wait behind definitions that must
@@ -983,8 +998,8 @@ literals**.
    +  CU: as K (probe `P27CubicalInductives`).
 +  **Translation strategy**.  Emit mutual blocks and nested types directly
    ([#18]); the recursors of a nested type have one motive per nested
-   occurrence, which the pattern-matching translation ([#19]) must fold back
-   into one definition; `Lean.Syntax` is the `Init` test case and
+   occurrence, and the pattern-matching translation ([#19]) defines them as
+   one mutual definition; `Lean.Syntax` is the `Init` test case and
    `lists-subset-refl` the corpus one.
 +  **Predecessors**.  lyphyser's README does not discuss them;
    rocq-lean-import's Lean 3 exports had them already encoded; Predicativize
@@ -1027,8 +1042,9 @@ literals**.
       field projection and Lean's projection functions unfold to it, so
       that a dependent field checks; from `String`, a postulate, and from
       a type whose constructor binds a parameter explicitly, it still
-      prints through the recursor, which checks against postulates for a
-      non-dependent field only.  `let` prints as Agda's `let`
+      prints through the recursor, which computes since [#19], so that a
+      dependent field checks there too (`String`'s recursor stays a
+      postulate).  `let` prints as Agda's `let`
       ([`printing.md`][printing], [`inductives.md`][inductives]).
    +  K: projections become applications of the record's projection functions;
       `let` becomes Agda's `let` or, where sharing matters for checking time,
@@ -1306,3 +1322,4 @@ Mathlib's large-eliminating propositions excepted.
     let."
 [printing]: ../translator/printing.md
 [inductives]: ../translator/inductives.md
+[recursors]: ../translator/recursors.md

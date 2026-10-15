@@ -41,12 +41,12 @@ Eta follows Lean's rules, as follows:
    record.  It is declared `no-eta-equality`, so that it has none in Agda
    either (probe `I06bRecursiveRecordEta`, rejected with
    `t != Tree:mk (Tree.label₀ t) (Tree.children₁ t)`), and `pattern`, so
-   that the recursors of [#19] can match on its constructor, which Agda
-   refuses for a record without eta otherwise (probe `I06cNoEtaPattern`,
-   rejected with `[SplitOnNonEtaRecord]`).  Its projections compute on its
-   constructor, as Lean's kernel reduces them (probe `I06RecursiveRecord`).
-   `Init` has no such type, and `import Lean` has 27, all in Lean's own
-   code.
+   that its recursor ([Recursors](#recursors)) can match on its
+   constructor, which Agda refuses for a record without eta otherwise
+   (probe `I06cNoEtaPattern`, rejected with `[SplitOnNonEtaRecord]`).  Its
+   projections compute on its constructor, as Lean's kernel reduces them
+   (probe `I06RecursiveRecord`).  `Init` has no such type, and
+   `import Lean` has 27, all in Lean's own code.
 +  A structure-like type whose constructor binds a parameter explicitly
    becomes a data type with an index, and loses the eta Lean gives it:
    `Lean.Meta.CheckTactic.CheckGoalType` is the one such type in
@@ -149,9 +149,11 @@ refused, checks.
 
 From a type with one constructor that is not a record (`String`, or a type
 whose constructor binds a parameter explicitly), a projection still prints
-through the type's recursor, as [#17] printed every projection.  It checks
-for a field whose type mentions no earlier field, and the others wait for
-the recursors of [#19] to compute.  The printer refuses a projection from
+through the type's recursor, as [#17] printed every projection.  Since
+[#19] that computes, the recursor reducing on the constructor, so a field
+whose type mentions an earlier field checks too: the recursor fixture's
+`RecursorFixtures.Tagged.value`, refused before, is the test.  `String`'s
+recursor stays a postulate.  The printer refuses a projection from
 a recursive such type, whose recursor's minor premise would need the
 induction hypotheses too; `import Lean` has none.
 
@@ -169,8 +171,9 @@ record of a `List`) and checks its positivity through that type's
 definition (probe `I03NestedMutual`).  The kernel's auxiliary mutual types
 for a nested type exist only in its recursors' motives
 (`Lean.Syntax.rec_1` takes motives on `Array Syntax` and `List Syntax`),
-and the recursors stay postulates of their printed types until [#19]
-defines them by mutual pattern matching.
+and the recursors are one definition by mutual pattern matching, whose
+`rec_N` match on the constructors of `Array` and `List`
+([Recursors](#recursors)).
 
 `Init.Core`'s closure has `Lean.Syntax`, nested through `Array` and
 `List`, and no mutual block, and neither has the rest of `Init`.
@@ -270,6 +273,13 @@ lake exe lean2agda --out out Init -- $(cat init.txt)
 python3 ../scripts/python/scaffold_check.py --messages --types-only out/U/Init/WF.agda
 ```
 
+## Recursors
+
+Since [#19] every recursor but `String`'s is defined by pattern matching,
+one clause per kernel rule, and the recursors of a mutual or nested block
+are one `mutual` definition; [`recursors.md`][recursors] gives the
+rules, the probes, the termination counts and what Agda checks with them.
+
 ## Verification
 
 `make test-translator` runs the following:
@@ -303,14 +313,10 @@ one data type.
 
 ## Hand-off to the emitters
 
-+  [#19]: every constructor is an Agda constructor, of a data type or a
-   record, and can be matched on: a record with eta by Agda's translation
-   of record patterns into projections, one without eta through its
-   `pattern` declaration (probe `I06RecursiveRecord`).  The recursors,
-   the nested types' `rec_N` among them, are postulates of their printed
-   types, and so are `casesOn`, `below` and `brecOn`.  A projection from
-   a type with one constructor that is not a record prints through its
-   recursor and computes when the recursor does.
++  [#19] used what this section handed over: every constructor is an Agda
+   constructor that can be matched on, a record with eta by Agda's
+   translation of record patterns into projections, one without eta
+   through its `pattern` declaration; [Recursors](#recursors) says how.
 +  [#20]: the projection functions of records are transparent already;
    the other definitions are postulates, and the refusals above are
    theirs: `instLENat` for the four matchers, and the definitions the
@@ -324,6 +330,7 @@ one data type.
 [#20]: https://github.com/formalverification/lean2agda/issues/20
 [#22]: https://github.com/formalverification/lean2agda/issues/22
 [printing]: printing.md
+[recursors]: recursors.md
 [printing-checks]: printing.md#what-agda-checks
 [probes]: probes/
 [catalog-eta]: ../foundations/gap-catalog.md#structure-eta
