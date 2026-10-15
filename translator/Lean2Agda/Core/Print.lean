@@ -299,9 +299,10 @@ recursor:
 `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`, where `Tᵢ` is the
 field's type with each earlier field `fⱼ` replaced by `proj S j self`,
 exactly as the kernel types a projection.  The motive's universe is not
-printed under U, so the level it is given here is zero.  It checks
-against a postulated recursor for a field whose type mentions no earlier
-field, and needs the recursor to compute (issue M2-5) for the others. -/
+printed under U, so the level it is given here is zero.  A field whose
+type mentions an earlier field checks because the recursor computes on
+the constructor, by its clause (`Recursor.lean`); `String`'s recursor
+stays a postulate, and so do such projections from a `String`. -/
 def projectionAsRecursor (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM Expr := do
   let env := (← read).env
   let some (.inductInfo ind) := env.find? S
@@ -486,6 +487,45 @@ def Clause.render (c : Clause) (name : String) : String :=
 def Clause.ofTerm : AgdaTerm → Clause
   | .lam v x _ b => let c := Clause.ofTerm b; { c with patterns := #[(v, x)] ++ c.patterns }
   | t => { patterns := #[], body := t }
+
+/-- A left-hand-side pattern of a definition by pattern matching: a
+variable, `_` for a position Agda's unifier fills in, the absurd pattern
+`()`, or a constructor applied to patterns, each with its visibility. -/
+inductive Pattern where
+  | var (name : String)
+  | wild
+  | absurd
+  | ctor (name : String) (args : Array (Visibility × Pattern))
+  deriving Inhabited
+
+/-- A pattern in an argument position of the given visibility: an
+explicit constructor pattern with arguments is parenthesized, and every
+other pattern stands as it is or inside its braces. -/
+partial def Pattern.renderArg (v : Visibility) (p : Pattern) : String :=
+  let inner : Pattern → String
+    | .var x => x
+    | .wild => "_"
+    | .absurd => "()"
+    | .ctor c args => args.foldl (fun out (w, a) => out ++ " " ++ a.renderArg w) c
+  match v, p with
+  | .explicit, .ctor _ args => if args.isEmpty then inner p else "(" ++ inner p ++ ")"
+  | .explicit, _ => inner p
+  | .implicit, _ => "{" ++ inner p ++ "}"
+  | .instance, _ => "⦃ " ++ inner p ++ " ⦄"
+
+/-- One clause of a definition by pattern matching. -/
+structure PatternClause where
+  patterns : Array (Visibility × Pattern)
+  body : Option AgdaTerm
+  deriving Inhabited
+
+/-- The clause's line: the name, its patterns, and `= body`, or nothing
+after an absurd pattern. -/
+def PatternClause.render (c : PatternClause) (name : String) : String :=
+  let lhs := c.patterns.foldl (fun out (v, p) => out ++ " " ++ p.renderArg v) name
+  match c.body with
+  | some b => lhs ++ " = " ++ b.render
+  | none => lhs
 
 def runPrint {α : Type} (p : Printer) (m : PrintM α) : Except String (α × PrintCounts) :=
   (m.run p).run {}
