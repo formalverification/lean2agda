@@ -33,6 +33,7 @@ PRINTING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Printing.lea
 (cd "$scratch" && "${AGDA:-agda}" PrintingLexical.agda)
 
 "$lake_cmd" env "$lean_cmd" tests/Inductives.lean
+"$lake_cmd" env "$lean_cmd" tests/Recursors.lean
 "$lake_cmd" env "$lean_cmd" tests/Scaffold.lean
 
 # A scaffold (the profile U module --out writes) must scope-check (the
@@ -70,7 +71,8 @@ check_scaffold nat-gcd-self Init.Data.Nat.Gcd -- Nat.gcd_self
 check_scaffold printing TranslatorTests.Input.Printing -- PrintFixtures.alignedTop \
   PrintFixtures.alignedDeep PrintFixtures.withLet PrintFixtures.redex PrintFixtures.higher \
   PrintFixtures.strict PrintFixtures.pick PrintFixtures.greeting PrintFixtures.large \
-  PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value
+  PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value \
+  PrintFixtures.etaRepaired PrintFixtures.instanceRepaired
 check_scaffold selected TranslatorTests.Input.Consumer -- Fixtures.selected
 check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
   InductiveFixtures.Same InductiveFixtures.Sized InductiveFixtures.Packed InductiveFixtures.Packed.width \
@@ -79,6 +81,7 @@ check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
 check_scaffold kinds TranslatorTests.Input.Kinds
+check_scaffold recursors TranslatorTests.Input.Recursors
 
 # The acceptance criterion of issue M2-4: every inductive type of the
 # closure of Init.Core's declarations is declared and checks.  They are

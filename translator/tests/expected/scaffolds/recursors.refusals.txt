@@ -1,0 +1,6 @@
+# File: translator/tests/expected/scaffolds/recursors.refusals.txt
+checked 440 of 440 declarations, 38 of 38 data types and records
+unfolded 0 of 107 theorems, 0 in vain
+defined 40 of 40 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms eq~uof~uheq | Eq:rec x₆ x₉ != x₆ of type x₄
+refused value UnequalTerms Nat:modCore~ult | hy₂ != h₃ of type Nat:le (Nat:succ (OfNat:ofNat _)) y₁
