@@ -193,18 +193,22 @@ the printer prints the expected visibility.  At the top level the lambdas
 are the leading ones of a definition's value, matched against its type;
 deeper, they are lambdas checked against any other expected type: an
 argument's binder type, a `let`'s type, or a lambda's codomain below the
-top.  A projection prints as a record's field projection, or, from a
-structure-like type that is not a record, through its recursor. -/
+top.  An eta repair is an argument that is not a lambda, checked against
+a Pi type whose visibilities differ from those of its own type, which
+the printer eta-expands.  A projection prints as a record's field
+projection, or, from a structure-like type that is not a record, through
+its recursor. -/
 structure PrintCounts where
   topRepairs : Nat := 0
   deepRepairs : Nat := 0
+  etaRepairs : Nat := 0
   projections : Nat := 0
   fieldProjections : Nat := 0
   deriving BEq, Repr, Inhabited
 
 def PrintCounts.add (a b : PrintCounts) : PrintCounts :=
   { topRepairs := a.topRepairs + b.topRepairs, deepRepairs := a.deepRepairs + b.deepRepairs,
-    projections := a.projections + b.projections,
+    etaRepairs := a.etaRepairs + b.etaRepairs, projections := a.projections + b.projections,
     fieldProjections := a.fieldProjections + b.fieldProjections }
 
 structure Printer where
@@ -334,6 +338,48 @@ def projectionAsRecursor (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM Ex
   let levels := if r.levelParams.length == us.length + 1 then Level.zero :: us else us
   return mkAppN (.const r.name levels) (params ++ #[motive, minor, t])
 
+/-- The type of an application whose head is a constant or a bound
+variable, read from the head's type as `argumentBinders` reads it, or
+none for any other head, whose type only the kernel's `check` infers. -/
+def applicationType (s : Scope) (e : Expr) : PrintM (Option Expr) := do
+  let f := e.getAppFn
+  unless f.isConst || f.isFVar do return none
+  let mut type ← headType s f
+  for a in e.getAppArgs do
+    let some (.forallE _ _ b _) ← asPi s type | return none
+    type := b.instantiate1 a
+  return some type
+
+/-- How many leading binders of `expected`, a Pi type, to eta-expand a
+term of type `actual` by: all of them that `actual` has too, when the
+visibility of any of those differs or the first is an instance binder,
+and none otherwise.  Lean compares terms up to binder information, so
+`@Nat.le.below n motive`, whose index is implicit, is a motive whose
+index is explicit; Agda compares visibilities, and accepts the
+eta-expansion.  Checking a term against an instance binder, Agda inserts
+the binder and then searches for the instance the term takes, which can
+find two (the binder and a record's instance field in scope); the
+expansion passes the binder itself. -/
+partial def etaLength (s : Scope) (expected actual : Expr) : PrintM Nat := do
+  let rec walk (s : Scope) (expected actual : Expr) (k : Nat) (differs : Bool) : PrintM Nat := do
+    let .forallE n d eb ebi := expected.consumeMData | return if differs then k else 0
+    let some (.forallE _ _ ab abi) ← asPi s actual | return if differs then k else 0
+    let (s', _, fv) := s.enter n d ebi
+    walk s' (eb.instantiate1 fv) (ab.instantiate1 fv) (k + 1)
+      (differs || Visibility.ofBinderInfo ebi != Visibility.ofBinderInfo abi ||
+        (k == 0 && ebi == .instImplicit))
+  walk s expected actual 0 false
+
+/-- `λ x₁ … xₖ → e x₁ … xₖ`, the binders those of the first `k` binders
+of `expected`. -/
+def etaExpand (expected e : Expr) (k : Nat) : Expr :=
+  go expected k
+where
+  go : Expr → Nat → Expr
+    | .mdata _ b, j => go b j
+    | .forallE n d b bi, j + 1 => .lam n d (go b j) bi
+    | _, _ => mkAppN e ((List.range k).reverse.toArray.map Expr.bvar)
+
 mutual
 
 partial def printExpr (s : Scope) (e : Expr) : PrintM AgdaTerm := do
@@ -366,13 +412,20 @@ partial def printExpr (s : Scope) (e : Expr) : PrintM AgdaTerm := do
   | .letE n t v b _ => printLet s n t v b none
 
 /-- Print `e` where Agda will check it against `expected`, so that a
-lambda takes the visibility of the expected Pi type. -/
+lambda takes the visibility of the expected Pi type, and a term of a Pi
+type with other visibilities is eta-expanded to a lambda that does. -/
 partial def printAgainst (s : Scope) (e expected : Expr) (top : Bool) : PrintM AgdaTerm := do
   match e with
   | .mdata _ b => printAgainst s b expected top
   | .lam .. => printLambda s e (some expected) top
   | .letE n t v b _ => printLet s n t v b (some expected)
-  | _ => printExpr s e
+  | _ =>
+    if !expected.consumeMData.isForall then return ← printExpr s e
+    let some actual ← applicationType s e | return ← printExpr s e
+    let k ← etaLength s expected actual
+    if k == 0 then return ← printExpr s e
+    modify fun c => { c with etaRepairs := c.etaRepairs + 1 }
+    printLambda s (etaExpand expected e k) (some expected) top
 
 partial def printLambda (s : Scope) (e : Expr) (expected : Option Expr) (top : Bool) :
     PrintM AgdaTerm := do

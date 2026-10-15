@@ -142,6 +142,20 @@ def checkConstructors (env : Environment) : IO Unit := do
   let some info := env.find? ``PrintFixtures.alignedTop | throw (IO.userError "missing")
   let (clause, _) ← IO.ofExcept (p.clause info.type info.value!)
   expectText (clause.render "c") "c {α₀} a₁ = a₁" "top-level repair"
+  -- An eta repair: a constant whose binder is implicit, passed where the
+  -- parameter's is explicit, is eta-expanded with the parameter's binders.
+  let some info := env.find? ``PrintFixtures.etaRepaired | throw (IO.userError "missing")
+  let (clause, counts) ← IO.ofExcept (p.clause info.type info.value!)
+  expectText (clause.render "c")
+    "c = PrintFixtures:applyExplicit (λ (α₀ : Set) → λ (a₁ : α₀) → PrintFixtures:implicitId {α₀} a₁)"
+    "eta repair"
+  require (counts.etaRepairs == 1) s!"eta repairs: {repr counts}"
+  let some info := env.find? ``PrintFixtures.instanceRepaired | throw (IO.userError "missing")
+  let (clause, counts) ← IO.ofExcept (p.clause info.type info.value!)
+  expectText (clause.render "c")
+    "c g₀ = PrintFixtures:applyInstance (λ ⦃ inst₁ : Inhabited Nat ⦄ → g₀ ⦃ inst₁ ⦄)"
+    "eta repair at an instance binder"
+  require (counts.etaRepairs == 1) s!"eta repairs: {repr counts}"
 
 def checkNaming : IO Unit := do
   let owner : Name → Option ModuleName := fun n =>
