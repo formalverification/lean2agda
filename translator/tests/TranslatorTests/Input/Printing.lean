@@ -45,6 +45,12 @@ would answer by searching for the instance; the printer eta-expands it to
 pass the binder itself (an eta repair too). -/
 def instanceRepaired (g : [Inhabited Nat] → Nat) : Nat := applyInstance @g
 
+def applyHidden (f : {n : Nat} → [Inhabited Nat] → Nat) : Nat := @f 0 ⟨0⟩
+
+/-- The same behind an implicit binder: Agda inserts both binders, and
+then searches for the instance. -/
+def hiddenInstanceRepaired (g : {n : Nat} → [Inhabited Nat] → Nat) : Nat := applyHidden @g
+
 def withLet (n : Nat) : Nat :=
   let m := Nat.add n n
   Nat.add m m

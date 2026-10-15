@@ -93,6 +93,24 @@ def Tagged.value {n : Nat} (x : Tagged n) : Fin (x.1 + 1) := x.2
 
 theorem Tagged.value_example : (Tagged.value (.mk 4 2 1)).val = 1 := rfl
 
+class Tag (α : Type) where
+  tag : Nat
+
+instance : Tag Nat := ⟨7⟩
+
+/-- A constructor with an implicit field and an instance field: the
+recursive call passes the minor premise, whose type begins with both,
+and the clause's pattern variable for the instance field is a candidate
+for Agda's instance search. -/
+inductive Holder (α : Type) where
+  | nil : Holder α
+  | mk {n : Nat} [Tag α] (rest : Holder α) : Holder α
+
+noncomputable def Holder.depth (h : Holder Nat) : Nat :=
+  Holder.rec (motive := fun _ => Nat) 0 (fun _ d => d + 1) h
+
+theorem Holder.depth_example : Holder.depth (.mk (n := 1) (.mk (n := 2) .nil)) = 2 := rfl
+
 /-- No constructors. -/
 inductive Void where
 

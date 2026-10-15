@@ -352,23 +352,26 @@ def applicationType (s : Scope) (e : Expr) : PrintM (Option Expr) := do
 
 /-- How many leading binders of `expected`, a Pi type, to eta-expand a
 term of type `actual` by: all of them that `actual` has too, when the
-visibility of any of those differs or the first is an instance binder,
-and none otherwise.  Lean compares terms up to binder information, so
-`@Nat.le.below n motive`, whose index is implicit, is a motive whose
-index is explicit; Agda compares visibilities, and accepts the
-eta-expansion.  Checking a term against an instance binder, Agda inserts
-the binder and then searches for the instance the term takes, which can
-find two (the binder and a record's instance field in scope); the
-expansion passes the binder itself. -/
+visibility of any of those differs or the leading run of hidden binders
+holds an instance binder, and none otherwise.  Lean compares terms up to
+binder information, so `@Nat.le.below n motive`, whose index is
+implicit, is a motive whose index is explicit; Agda compares
+visibilities, and accepts the eta-expansion.  Checking a term against a
+type whose first binders are hidden, Agda inserts those binders and then
+searches for each instance the term takes, which can find two (the
+binder and an instance in scope: a record's instance field, or a
+recursor clause's pattern variable for a constructor's instance field);
+the expansion passes the binders themselves. -/
 partial def etaLength (s : Scope) (expected actual : Expr) : PrintM Nat := do
-  let rec walk (s : Scope) (expected actual : Expr) (k : Nat) (differs : Bool) : PrintM Nat := do
+  let rec walk (s : Scope) (expected actual : Expr) (k : Nat) (hidden differs : Bool) : PrintM Nat := do
     let .forallE n d eb ebi := expected.consumeMData | return if differs then k else 0
     let some (.forallE _ _ ab abi) ← asPi s actual | return if differs then k else 0
     let (s', _, fv) := s.enter n d ebi
-    walk s' (eb.instantiate1 fv) (ab.instantiate1 fv) (k + 1)
+    let hidden := hidden && ebi != .default
+    walk s' (eb.instantiate1 fv) (ab.instantiate1 fv) (k + 1) hidden
       (differs || Visibility.ofBinderInfo ebi != Visibility.ofBinderInfo abi ||
-        (k == 0 && ebi == .instImplicit))
-  walk s expected actual 0 false
+        (hidden && ebi == .instImplicit))
+  walk s expected actual 0 true false
 
 /-- `λ x₁ … xₖ → e x₁ … xₖ`, the binders those of the first `k` binders
 of `expected`. -/

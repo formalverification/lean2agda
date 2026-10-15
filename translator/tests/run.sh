@@ -72,7 +72,7 @@ check_scaffold printing TranslatorTests.Input.Printing -- PrintFixtures.alignedT
   PrintFixtures.alignedDeep PrintFixtures.withLet PrintFixtures.redex PrintFixtures.higher \
   PrintFixtures.strict PrintFixtures.pick PrintFixtures.greeting PrintFixtures.large \
   PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value \
-  PrintFixtures.etaRepaired PrintFixtures.instanceRepaired
+  PrintFixtures.etaRepaired PrintFixtures.instanceRepaired PrintFixtures.hiddenInstanceRepaired
 check_scaffold selected TranslatorTests.Input.Consumer -- Fixtures.selected
 check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
   InductiveFixtures.Same InductiveFixtures.Sized InductiveFixtures.Packed InductiveFixtures.Packed.width \

@@ -156,6 +156,12 @@ def checkConstructors (env : Environment) : IO Unit := do
     "c g₀ = PrintFixtures:applyInstance (λ ⦃ inst₁ : Inhabited Nat ⦄ → g₀ ⦃ inst₁ ⦄)"
     "eta repair at an instance binder"
   require (counts.etaRepairs == 1) s!"eta repairs: {repr counts}"
+  let some info := env.find? ``PrintFixtures.hiddenInstanceRepaired | throw (IO.userError "missing")
+  let (clause, counts) ← IO.ofExcept (p.clause info.type info.value!)
+  expectText (clause.render "c")
+    "c g₀ = PrintFixtures:applyHidden (λ {n₁ : Nat} → λ ⦃ inst₂ : Inhabited Nat ⦄ → g₀ {n₁} ⦃ inst₂ ⦄)"
+    "eta repair at an instance binder behind an implicit one"
+  require (counts.etaRepairs == 1) s!"eta repairs: {repr counts}"
 
 def checkNaming : IO Unit := do
   let owner : Name → Option ModuleName := fun n =>
