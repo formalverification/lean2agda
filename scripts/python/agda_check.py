@@ -41,7 +41,9 @@ Description:
     the tree.  `--listings OUT` writes each module's listing beside its
     path under OUT (`U/Init/Core.checked.txt`) and the sums to
     OUT/checked.txt; `--keep OUT` copies the final tree there, which the
-    default mode can then time without the loop.  `--types-only` keeps
+    default mode can then time without the loop (an OUT holding modules
+    outside the tree is refused, since the next read of it would take
+    them in).  `--types-only` keeps
     in each module what scaffold_check.py's `--types-only` keeps, and
     what any kept declaration of the tree names, in its own module or
     another, directly or not.
@@ -212,9 +214,14 @@ def topological(graph: Mapping[str, frozenset[str]]) -> tuple[str, ...]:
     return order
 
 
+def module_files(root: Path) -> list[Path]:
+    """Every `.agda` file under `root`, outside `_build/`, relative to it."""
+    return sorted(p.relative_to(root) for p in root.rglob("*.agda") if "_build" not in p.relative_to(root).parts)
+
+
 def read_tree(root: Path) -> Result[Tree, str]:
     """Read every module of the tree under `root`, outside `_build/`."""
-    paths = sorted(p for p in root.rglob("*.agda") if "_build" not in p.relative_to(root).parts)
+    paths = [root / p for p in module_files(root)]
     sources = []
     for p in paths:
         text = read_text(p)
@@ -342,31 +349,48 @@ def measured_run(command: Sequence[str], cwd: Path,
     temporary files, kill it at the timeout, and reap it with os.wait4,
     which returns the child's own resource usage.  The result has the
     shapes command_runner gives (errors with "stdout" and "stderr" in
-    their context), so agda_run.classify reads it unchanged."""
+    their context), so agda_run.classify reads it unchanged.
+
+    The timer and the reaping race: the child can exit on its own just as
+    the timer fires.  The child is first waited for with WNOWAIT, which
+    leaves it unreaped, so that its PID stays its own; then, under a lock
+    the timer also takes, it is marked exited, and only then reaped.  So
+    the timer signals only a child not yet reaped, never a reused PID, and
+    a run is a timeout only when that signal is what ended it, as the exit
+    status shows: a child that exited by itself first passes or fails on
+    its own exit code."""
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
         try:
             process = subprocess.Popen(list(command), cwd=cwd, stdout=out, stderr=err)
         except OSError as e:
             return Result.err(PipelineError(ErrorType.COMMAND_FAILED, f"Command not found: {command[0]}",
                                             cause=e)), 0
-        expired = threading.Event()
+        lock = threading.Lock()
+        exited = threading.Event()
+        signalled = threading.Event()
         def kill() -> None:
-            expired.set()
-            process.send_signal(signal.SIGKILL)
+            with lock:
+                if not exited.is_set():
+                    os.kill(process.pid, signal.SIGKILL)
+                    signalled.set()
         timer = threading.Timer(timeout, kill)
         timer.start()
         try:
+            os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT)
+            with lock:
+                exited.set()
             _, status, usage = os.wait4(process.pid, 0)
         finally:
             timer.cancel()
         process.returncode = os.waitstatus_to_exitcode(status)
+        expired = signalled.is_set() and process.returncode == -signal.SIGKILL
         out.seek(0)
         err.seek(0)
         stdout = out.read().decode("utf-8", errors="replace")
         stderr = err.read().decode("utf-8", errors="replace")
     peak = int(usage.ru_maxrss)
     context = {"command": " ".join(command), "stdout": stdout, "stderr": stderr.strip()}
-    if expired.is_set():
+    if expired:
         return Result.err(PipelineError(ErrorType.TIMEOUT, f"Command timed out after {timeout:g} seconds",
                                         context={**context, "timeout": timeout})), peak
     if process.returncode != 0:
@@ -695,6 +719,25 @@ def format_pruned(tree: Tree, pruned: Mapping[str, Pruned], jobs: int, wall: flo
             + "\n".join((head,) + rows) + "\n")
 
 
+def strays(tree: Tree, target: Path) -> list[str]:
+    """The modules under `target` that are not the tree's: copied over,
+    they would join the tree the next read of `target` finds."""
+    own = {Path(s.path) for s in tree.modules.values()}
+    return [str(p) for p in module_files(target) if p not in own] if target.is_dir() else []
+
+
+def keep_target(tree: Tree, target: Path) -> Result[None, str]:
+    """`target` can take the tree: nothing there, or only the tree's own
+    modules, which the copy replaces.  Any other module refuses it, since
+    deleting what a user's directory holds is no checker's business."""
+    found = strays(tree, target)
+    if not found:
+        return Result.ok(None)
+    more = f" and {len(found) - 1} more" if len(found) > 1 else ""
+    return Result.err(f"--keep {target} holds modules outside the tree ({found[0]}{more}); "
+                      "remove them or keep the tree elsewhere")
+
+
 def copy_tree(tree: Tree, source: Path, target: Path) -> Result[None, str]:
     """Copy the tree's modules and its `.agda-lib` file to `target`."""
     try:
@@ -737,11 +780,22 @@ def prune_tree(tree: Tree, root: Path, scratch: Path, runner: MeasuredRunner, cl
 # The command line
 # ---------------------------------------------------------------------------
 
+def positive(text: str) -> int:
+    """An argparse type: a whole number of at least 1."""
+    try:
+        n = int(text)
+    except ValueError:
+        n = 0
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"needs a whole number of at least 1, not {text!r}")
+    return n
+
+
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     """The command line."""
     parser = argparse.ArgumentParser(description="Check an emitted Agda tree in dependency order.")
     parser.add_argument("tree", type=Path, help="the directory lean2agda --out wrote")
-    parser.add_argument("-j", "--jobs", type=int, default=DEFAULT_JOBS,
+    parser.add_argument("-j", "--jobs", type=positive, default=DEFAULT_JOBS,
                         help=f"Agda processes at once (default: {DEFAULT_JOBS})")
     parser.add_argument("--agda", default="agda")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT,
@@ -775,6 +829,10 @@ def main(argv: Sequence[str]) -> int:
         report = check_tree(tree, root, measured_run, real_clock, args.agda, args.jobs, args.timeout, args.heap)
         print(format_json(report) if args.json else format_text(report))
         return exit_status(report)
+    target = keep_target(tree, args.keep) if args.keep else Result.ok(None)
+    if target.is_err:
+        print(f"agda_check: {target.unwrap_err()}", file=sys.stderr)
+        return 1
     with tempfile.TemporaryDirectory(prefix="agda-check-") as scratch:
         copied = copy_tree(tree, root, Path(scratch)).and_then(
             lambda _: restrict_tree(tree, Path(scratch)) if args.types_only else Result.ok(None))

@@ -12,20 +12,23 @@ Description:
 """
 from __future__ import annotations
 
+import argparse
+import os
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_check import (
     Progress, Pruned, Source, Span, assemble, blocked, build_tree, capped, check_tree, dependents,
     execute, exit_status, find_cycle, foreign_names, named, format_summary, format_table, launchable,
-    measured_run, merged, module_run, parse_source, predropped, prune_tree, read_tree, simulate,
-    skipped, sum_counts, topological, types_only_tree, without,
+    keep_target, measured_run, merged, module_run, parse_args, parse_source, positive, predropped,
+    prune_tree, read_tree, simulate, skipped, strays, sum_counts, topological, types_only_tree, without,
 )
 from agda_run import FileRun, Outcome
 from scaffold_check import State, parse_module
@@ -107,6 +110,24 @@ class TestGraph(unittest.TestCase):
             tree = read_tree(root).unwrap()
             self.assertEqual(dict(tree.graph), {"U.A": frozenset(), "U.A.B": frozenset({"U.A"})})
             self.assertTrue(read_tree(root / "U" / "A" / "missing").is_err)
+
+    def test_a_keep_target(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            root, target = Path(d) / "tree", Path(d) / "kept"
+            (root / "U").mkdir(parents=True)
+            (root / "U" / "A.agda").write_text(module_text("U.A"))
+            tree = read_tree(root).unwrap()
+            self.assertTrue(keep_target(tree, target).is_ok)
+            (target / "U").mkdir(parents=True)
+            (target / "U" / "A.agda").write_text("an earlier copy, replaced")
+            (target / "_build" / "U").mkdir(parents=True)
+            (target / "_build" / "U" / "Old.agda").write_text("ignored, as read_tree ignores it")
+            self.assertEqual(strays(tree, target), [])
+            self.assertTrue(keep_target(tree, target).is_ok)
+            (target / "U" / "Stray.agda").write_text(module_text("U.Stray"))
+            self.assertEqual(strays(tree, target), [str(Path("U") / "Stray.agda")])
+            self.assertIn("U/Stray.agda", keep_target(tree, target).unwrap_err())
+            self.assertTrue((target / "U" / "Stray.agda").exists())
 
 
 class TestScheduling(unittest.TestCase):
@@ -193,6 +214,37 @@ class TestMeasuredRuns(unittest.TestCase):
     def test_a_timeout(self) -> None:
         result, _ = measured_run((sys.executable, "-c", "import time; time.sleep(30)"), Path("."), 0.5)
         self.assertEqual(result.unwrap_err().error_type, ErrorType.TIMEOUT)
+
+    def test_the_timer_firing_after_the_child_exits(self) -> None:
+        # The race: the child exits on its own, and the timer fires before
+        # its exit is noted.  Each wait call is made to pause past the
+        # timeout after it returns, the window widened to certainty.
+        real = {name: getattr(os, name) for name in ("waitid", "wait4")}
+        def slow(name: str) -> Callable[..., object]:
+            def call(*args: object) -> object:
+                answer = real[name](*args)
+                time.sleep(1.0)
+                return answer
+            return call
+        try:
+            for name in real:
+                setattr(os, name, slow(name))
+            result, _ = measured_run((sys.executable, "-c", "pass"), Path("."), 0.5)
+        finally:
+            for name, call in real.items():
+                setattr(os, name, call)
+        self.assertTrue(result.is_ok, result)
+
+    def test_a_child_killed_otherwise_is_no_timeout(self) -> None:
+        result, _ = measured_run(("sh", "-c", "kill -9 $$"), Path("."), 60.0)
+        self.assertEqual(result.unwrap_err().message, "Command failed with exit code -9")
+
+    def test_positive_jobs(self) -> None:
+        self.assertEqual(positive("3"), 3)
+        for text in ("0", "-2", "x", ""):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                positive(text)
+        self.assertEqual(parse_args(["-j", "2", "t"]).jobs, 2)
 
     def test_a_missing_command(self) -> None:
         result, peak = measured_run(("no-such-agda-here", "x"), Path("."), 5.0)
