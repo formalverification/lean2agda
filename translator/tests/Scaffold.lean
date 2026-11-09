@@ -15,6 +15,8 @@ refusal listing, where the fallback fires.
 
 open Lean Lean2Agda
 
+namespace ScaffoldTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -101,8 +103,10 @@ def checkCyclesAndBuiltins (env : Environment) : IO Unit := do
   let string ← itemOf s ``String
   require ((string.text.splitOn "BUILTIN STRING").length == 2) "a String root lost its builtin"
 
-#eval show IO Unit from do
+def run : IO Unit := do
   let env ← importEnvironment #[`Init, `TranslatorTests.Input.Kinds, `TranslatorTests.Input.Printing]
   checkKinds env
   checkCyclesAndBuiltins env
   IO.println "scaffold checks: kinds, refusals, unsafe sharing, cycles, and builtins passed"
+
+end ScaffoldTests

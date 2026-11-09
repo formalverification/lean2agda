@@ -177,5 +177,3 @@ def run : IO Unit := do
   IO.println s!"naming checks: {count} distinct samples, {initCount} Init constants, {paths.size} modules"
 
 end NamingTests
-
-#eval NamingTests.run

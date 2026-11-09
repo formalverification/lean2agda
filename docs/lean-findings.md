@@ -44,6 +44,7 @@ entry adds its row here too.
 | LF-9 | S2 | hygienic names printed without escapes fail the name-literal decoder |
 | LF-10 | S2 | `by_cases` makes a proof classical without saying so, `Finset.image` among them |
 | LF-11 | S2 | lean4export gives terms that differ only in binder information one record |
+| LF-14 | S2 | `testDriver` cannot name an executable whose name has a hyphen |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -530,6 +531,34 @@ entry adds its row here too.
    uses as the measure of a term's size, counts subterms up to binder names
    and information.
 
+## LF-14: `testDriver` cannot name an executable whose name has a hyphen
+
++  **Severity**.  S2.  A configuration defect with no effect on what is
+   built or checked; it fails loudly.
++  **Found**.  2026-11-09, while choosing `lake test`'s driver for issue
+   [#25], at Lean v4.33.1 (Lake 5.0.0).
++  **What**.  In `lakefile.toml`, an executable declared as
+   `name = "unit-tests"` builds and runs with `lake exe unit-tests`, but
+   `testDriver = "unit-tests"` fails with "invalid test driver: unknown
+   script, executable, or library 'unit-tests'".  Lake decodes a target's
+   `name` with `stringToLegalOrSimpleName`
+   ([`Load/Toml.lean`, line 447][lake-toml-name]), which falls back to
+   `Name.mkSimple` when `String.toName` gives the anonymous name, as it
+   does for a string that is not an identifier
+   ([`Util/Name.lean`, lines 24 and 25][lake-name]); the test driver is
+   looked up with `driver.toName` alone
+   ([`CLI/Actions.lean`, lines 75 to 87][lake-test-driver]), the anonymous
+   name, which matches nothing.  `testDriver = "«unit-tests»"` works, and
+   so does a name with no hyphen.
++  **Evidence**.  A scratch package with an executable `unit-tests`:
+   `testDriver = "unit-tests"` and `"pkg/unit-tests"` both failed as
+   above, and `"«unit-tests»"` ran the executable.
++  **Upstream**.  Not reported.  The lint driver goes through the same
+   `resolveDriver` and lookup, so it is likely to behave the same; that was
+   not run.
++  **What the project does**.  The test executable is `unittests`, with
+   no hyphen, and `translator/lakefile.toml` says why.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -559,3 +588,7 @@ entry adds its row here too.
 [export-visited]: https://github.com/leanprover/lean4export/blob/v4.33.0/Export.lean#L38
 [export-format]: https://github.com/leanprover/lean4export/blob/v4.33.0/format_ndjson.md
 [expr-eqv]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Lean/Expr.lean#L804-L812
+[#25]: https://github.com/formalverification/lean2agda/issues/25
+[lake-toml-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Load/Toml.lean#L447
+[lake-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Util/Name.lean#L24-L25
+[lake-test-driver]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/CLI/Actions.lean#L75-L87
