@@ -19,11 +19,17 @@ follows:
    writes and writes the atlas's report under `docs/reports/`, checking
    them against `corpus/manifest.json`; run by `make atlas`.
 +  `scaffold_check.py` (issue M2-3): type-checks a profile U scaffold
-   that `lake exe lean2agda --out` writes, turning a refused definition
+   module, turning a refused definition
    into a postulate and dropping a refused type with its dependents until
    the rest checks, and lists the refusals; the translator's harness
    compares the listings with golden ones.
-+  `agda_check.py` (issue M2-8) is planned.
++  `agda_check.py` (issue M2-8): checks the tree of modules that
+   `lake exe lean2agda --out` writes, one Agda process per module in
+   dependency order and several at once, recording each module's time
+   and peak memory; run by `make check-output OUT=DIR`.  With
+   `--refusals` it runs `scaffold_check.py`'s loop on each module
+   instead, against the final text of the modules it imports, which is
+   how the translator's harness checks its golden trees.
 
 `_utils/` is the utilities package, copied from agda-algebras (each
 file's header says from where and what changed): `Result` and
