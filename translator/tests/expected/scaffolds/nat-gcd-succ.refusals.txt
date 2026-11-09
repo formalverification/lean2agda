@@ -1,5 +1,5 @@
 # File: translator/tests/expected/scaffolds/nat-gcd-succ.refusals.txt
-checked 241 of 252 declarations, 23 of 23 data types and records
+checked 243 of 254 declarations, 23 of 23 data types and records
 unfolded 0 of 65 theorems, 0 in vain
 refused value UnequalTerms Bool:noConfusion | (k₄ : P₀) → P₀ !=<
 refused value UnequalTerms Bool:decEq | Bool:rec (Bool:casesOn Bool:true (False → False) False)
@@ -57,7 +57,6 @@ dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:eq~u1
 dropped Nat:gcd~usucc
 refused value UnequalTerms WellFounded:Nat:fix:go:congr~usimp | a₁₀ != Eq:rec a₁₀ (Eq:refl fuel₆) of type
 refused value UnequalTerms Nat:recAux | (PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) n₁) !=
-refused value UnequalTerms funext | Quot:lift (λ f₈ → f₈ x₇) (λ x₈ x₉ h₁₀ → h₁₀ x₇) (Quot:mk eqv₅ f₂)
 refused value UnequalTerms WellFounded:Nat:fix:go~ucongr | Bool:rec False True
 refused value UnequalTerms WellFounded:Nat:fix~ueq | PProd.fst₂ (Nat:brecOn:go (OfNat:ofNat _) Nat:add:~uf) (h₂ x₄) !=
 refused value UnequalTerms ~uprivate:Init:Data:Nat:Gcd:~n0:PSigma:casesOn:~uarg~upusher | ((y₁₂ : α₃) → rel₆ t₁₁ y₁₂ → β₄ y₁₂) → motive₂ t₁₁ != motive₂ t₁₁
