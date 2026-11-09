@@ -94,7 +94,7 @@ from _utils.file_ops import read_text, write_text, ensure_dir_exists
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import Clock, FileRun, Outcome, Runner, check_file, real_clock
 from scaffold_check import (
-    Checked, Event, Item, Module, State, check_module, code, listing, parse_module, reach,
+    Checked, Event, Module, State, check_module, code, listing, parse_module, reach,
     references, types_only,
 )
 
