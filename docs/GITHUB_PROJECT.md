@@ -119,7 +119,7 @@ follows:
 
 | Profile | Agda flags | What stays a parameter | Purpose |
 | --- | --- | --- | --- |
-| U | `--type-in-type`, postulates allowed | nothing (postulated) | scaffolding only; never a deliverable |
+| U | `--type-in-type --rewriting`, postulates allowed | nothing (postulated) | scaffolding only; never a deliverable |
 | K | `--safe` (Agda's default, with K) | `propext`, quotients, `funext`, `Classical.choice` | the faithful target: every rule of Lean's theory has a counterpart |
 | CC | `--safe --cubical-compatible` | as K | the primary deliverable; uses of K must be justified by `isSet` proofs |
 | CU | `--safe --cubical` | `Classical.choice` only, and only in forms consistent with univalence | quotients, `funext` and `propext` become theorems; constructive layer first |
@@ -822,7 +822,7 @@ Measure, for every constant in the pinned Mathlib, the axioms it transitively de
 
 ---
 
-### Issue M1-12: ADR 0001: translation architecture (#12)
+### Issue M1-12: ADR 0001: translation architecture (#12, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `decision`
 
@@ -955,7 +955,7 @@ Print kernel expressions as Agda: bound variables, lambdas and Pi types with Lea
 
 ---
 
-### Issue M2-4: Inductive types and records (#18)
+### Issue M2-4: Inductive types and records (#18, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -997,7 +997,7 @@ Lean's kernel generates one recursor per inductive type with a set of computatio
 
 ---
 
-### Issue M2-6: Definitions, theorems, opaque constants, and axioms (#20)
+### Issue M2-6: Definitions, theorems, opaque constants, and axioms (#20, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -1027,13 +1027,13 @@ Lean's `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` are kernel primitives with a c
 
 ## Tasks
 
-- [ ] `Quot` postulates and the rewrite rule under `--rewriting`.
-- [ ] Corpus `Multiset` entry checks under profile U.
-- [ ] Record, per declaration, whether the rewrite rule fired (the declaration will need M3-5's explicit casts in the safe profiles).
+- [x] `Quot` postulates and the rewrite rule under `--rewriting`.
+- [x] Corpus `Multiset` entry checks under profile U.  Scoped on 2026-11-09 by this issue's pull request: the entry's root `Multiset.map_map` checks with the rewrite rules and is refused without them; the 13 refusals left in its closure are recursor iota (M2-5) and the K-like reduction of `eq_of_heq` (M3-1), not quotients.
+- [x] Record, per declaration, whether the rewrite rule fired (the declaration will need M3-5's explicit casts in the safe profiles).
 
 ## Acceptance criteria
 
-- [ ] The `Multiset` corpus entry and `Init.Core`'s quotient-based lemmas (`funext`) check under profile U.
+- [x] The `Multiset` corpus entry and `Init.Core`'s quotient-based lemmas (`funext`) check under profile U.  Scoped on 2026-11-09 as above: `funext` checks in `Init.Core` and in both gcd closures, and the `Multiset` entry's root checks; its closure's remaining refusals belong to M2-5 and M3-1.
 
 ---
 
