@@ -87,8 +87,8 @@ decides one.
    universe-level parameters are zero, which decides which of its sorts are
    `Prop` and removes `imax`, then compute predicative level annotations by
    constraint solving in the style of Predicativize (§ 3).
-+  **Four target profiles**.  U (`--type-in-type`, scaffolding only), K
-   (`--safe` with Agda's K, the faithful target), CC
++  **Four target profiles**.  U (`--type-in-type --rewriting`, scaffolding
+   only), K (`--safe` with Agda's K, the faithful target), CC
    (`--safe --cubical-compatible`, the primary deliverable) and CU
    (`--safe --cubical`) (§ 4).
 +  **Two layers, computed from the atlas**.  Every constant's exact axiom set
@@ -476,7 +476,7 @@ rule.
 
 | Profile | Agda flags | What stays a parameter | Purpose |
 | --- | --- | --- | --- |
-| U | `--type-in-type`, postulates allowed | nothing (postulated) | scaffolding for Milestone 2; never a deliverable |
+| U | `--type-in-type --rewriting`, postulates allowed | nothing (postulated) | scaffolding for Milestone 2; never a deliverable |
 | K | `--safe` (Agda's default, with K) | `propext`, the quotient primitives, `funext`, `Classical.choice` | the faithful target: every rule of Lean's theory has a counterpart |
 | CC | `--safe --cubical-compatible` | as K | the primary deliverable; each use of K justified by an h-set proof |
 | CU | `--safe --cubical` | `Classical.choice` only, in forms consistent with univalence | the cubical target; quotients, `funext` and `propext` become theorems; constructive layer first |
@@ -484,7 +484,9 @@ rule.
 +  **U prints every sort as `Set` and uses `--type-in-type` alone**, not
    `--prop`, since the specialization of § 3 does not exist yet; it gives up
    definitional proof irrelevance, and its postulates stand in for every value
-   the emitters cannot yet express.
+   the emitters cannot yet express.  [#21] adds `--rewriting`, for the
+   kernel's computation rules of `Quot.lift` and `Quot.ind`, which no safe
+   profile can state as rewrite rules (gap catalog, `quotients`).
 +  **Profile K is the stepping stone to CC**, as the roadmap decided on
    2026-10-04: under Agda's default theory every rule of Lean's has a
    counterpart once the normalizer has made the two eliminated rules explicit,
@@ -1025,7 +1027,7 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 | 3 | Casts before any term is printed, with Lean4Less as the instrument, external and never copied while unlicensed; casts recorded apart from the axioms; the Dedukti route recorded as the alternative; re-implementation over Lean4Lean as the fallback | Proposed ([#26], [#30], [#36], [#14]) | 6.3 percent of `Std`'s constants, 15.5 percent growth; `prfIrrel` a theorem from `propext`; the chain never run; v4.28.0-rc1 against v4.33.1 (§ 2) |
 | 4 | Lean4Less's eliminations of structure-like reduction and unit eta stay off | Proposed ([#26]) | Agda's records have eta; three closures use structure eta at no cost (§ 2) |
 | 5 | Universe levels: specialize by which level parameters are zero, then predicativize with a hook for hand constraints; essential impredicativity reported | Proposed ([#28], [#29]) | rocq-lean-import and lyphyser; Predicativize's Theorem 6.1; refusals 6 to 17 and 7 to 20 without the first step; one essential case in twelve (§ 3) |
-| 6 | Four profiles U, K, CC and CU; U with `--type-in-type` alone; K the stepping stone; CC the primary deliverable; CU constructive layer first | Adopted as targets (roadmap; U in PR [#77]); K [#33], CC [#34] and [#51], CU [#52] | Probes `P05` to `P07`, `P17`, `P19`; sixteen files `--safe`, fourteen CC, two CU, no postulate, no K; Lemma 3.8.5 (§ 4) |
+| 6 | Four profiles U, K, CC and CU; U with `--type-in-type` alone; K the stepping stone; CC the primary deliverable; CU constructive layer first | Adopted as targets (roadmap; U in PR [#77], `--rewriting` by [#21]); K [#33], CC [#34] and [#51], CU [#52] | Probes `P05` to `P07`, `P17`, `P19`; sixteen files `--safe`, fourteen CC, two CU, no postulate, no K; Lemma 3.8.5 (§ 4) |
 | 7 | Two layers from the atlas: T0 and T1 constructive, T2 classical, T3 refused; both `--safe` with the principles as parameters | Adopted as the roadmap's shape; the rules [#37], the parameters [#38] | 14.7, 21.1, 64.2 and under 0.1 percent of Mathlib's constants; three of four T2 statements proved constructively (§ 5) |
 | 8 | The tier is the exact axiom set's; any other axiom is T3; the hatches no axiom shows are atlas fields (`unsafe` and `partial` today, `implemented_by` from [#36]) whose refusal rule is [#37]'s | Adopted for the atlas (PR [#71]); the rule [#37] | 15 axioms at the pin and `native_decide`'s bespoke axioms; 1,837 under-reports, 532 Mathlib tiers wrong by `#print axioms`; 41 T3, all `lcProof` (§ 5) |
 | 9 | `propext` and `Quot.sound` are constructive | Proposed ([#37]) | `funExt`, `hPropExt` and set quotients in the cubical library; two CU files instantiate the records (§ 5) |
