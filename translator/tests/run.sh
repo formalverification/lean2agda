@@ -20,6 +20,13 @@ PRINTING_AGDA_TEST_DIR="$scratch" NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" te
 (cd "$scratch" && "${AGDA:-agda}" PrintingLexical.agda)
 (cd "$scratch" && "${AGDA:-agda}" NamingLexical.agda && "${AGDA:-agda}" NamingImport.agda)
 
+# --version prints VERSION's line, which Lake must carry into the binary
+# when the file changes (the executable's `needs`, in lakefile.toml).
+[[ "$("$lake_cmd" exe lean2agda --version)" == "lean2agda $(cat VERSION)" ]] || {
+  echo "lean2agda --version disagrees with VERSION ($(cat VERSION))" >&2
+  exit 1
+}
+
 NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/NamingAtlasFixture.lean
 "$lake_cmd" exe naming-check-atlas "$scratch/atlas-valid.ndjson" > "$scratch/atlas-check.json"
 grep -F '"constants":5' "$scratch/atlas-check.json" > /dev/null

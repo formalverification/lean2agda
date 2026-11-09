@@ -53,13 +53,23 @@ rev = "v4.33.1"
 [[lean_lib]]
 name = "Lean2Agda"
 
+# The translator's version, which Main.lean reads with `include_str`.
+# Lake tracks no file that `include_str` reads (docs/lean-findings.md,
+# LF-13), so the executable needs this target, whose hash enters the
+# trace of its root module: a change to VERSION rebuilds Main.lean.
+[[input_file]]
+name = "version"
+path = "VERSION"
+text = true
+
 # The root is Main.lean, outside the library, so that the unit tests'
 # executable can import the shell (Lean2Agda.Main) without a second
-# `main`.
+# `main`; the root is also the one module the version input rebuilds.
 [[lean_exe]]
 name = "lean2agda"
 root = "Main"
 supportInterpreter = true
+needs = ["version"]
 
 # Small compiled inputs for translator tests; these import core Lean only.
 [[lean_lib]]
