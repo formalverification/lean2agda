@@ -15,6 +15,10 @@ The deep notes it summarizes stay beside their components:
 [`foundations/gap-catalog.md`][catalog] for the theory,
 [`related-work.md`][related] for the predecessors, and the roadmap,
 [`GITHUB_PROJECT.md`][roadmap], for the issues, which are cited here by number.
+Which file and definition implement each stage built, in what order and on
+what data, is in the module map, [`translator/architecture.md`][map], which a
+test keeps true of the code; this note names stages and issues, and the map
+names files.
 
 ## Terms
 
@@ -336,7 +340,11 @@ make atlas             # the atlas and its report, about three minutes and 7.5 G
 make corpus-check      # Agda on every corpus entry
 make scaffold-corpus   # print and scope-check all twelve scaffolds, about half an hour
 make test              # the Python suite and the translator's semantic and golden tests
+make test-unit         # the translator's Lean unit checks alone: lake test in translator/
 ```
+
+`lake exe lean2agda --version`, in `translator/`, prints the translator's
+version, from `translator/VERSION`; the map says how it is versioned.
 
 ## References
 
@@ -381,6 +389,7 @@ Issues are cited by number; the documents are this repository's.
 [#77]: https://github.com/formalverification/lean2agda/pull/77
 
 [adr]: adr/0001-translation-architecture.md
+[map]: translator/architecture.md
 [loading]: translator/loading.md
 [naming]: translator/naming.md
 [printing]: translator/printing.md
