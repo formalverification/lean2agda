@@ -307,7 +307,9 @@ def quotRule? (n : Name) : Option (String × Expr) :=
 under the comment `-- computation rule`, then its `REWRITE` pragma.  The
 printer gives `Quot.lift` and `Quot.mk` the visibilities of their types,
 so the left-hand side is the term the scaffold prints wherever Lean's
-kernel would reduce. -/
+kernel would reduce.  The rule's type refers to `Eq`, which the closure
+always declares: `directDependencies` gives every quotient primitive all
+four, and `Quot.lift`'s type mentions `Eq`. -/
 def ruleItem (p : Printer) (name : String) (type : Expr) : Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type type
   return ({ provides := #[name], references := t.constants,

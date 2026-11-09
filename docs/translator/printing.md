@@ -151,8 +151,8 @@ checks the table on 28 cases.
 Every sort prints as `Set`, `Prop` and `imax u v` included, and the
 scaffold's one option about sorts is `--type-in-type` (its other,
 `--rewriting`, is for the quotient's computation rules, below).  lyphyser's
-output adds
-`--prop` and prints `Prop` for `Sort 0` ([`related-work.md`][related]),
+output adds `--prop` and prints `Prop` for `Sort 0`
+([`related-work.md`][related]),
 but Agda's `Prop` and `Set` are different sorts, and a Lean constant whose
 universe parameter is instantiated at zero then receives a `Prop` where its
 printed type has `Set`.  Measured on the scaffolds of `nat-gcd-succ` and

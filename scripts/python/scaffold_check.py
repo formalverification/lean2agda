@@ -8,8 +8,9 @@ Description:
 
   Agda stops at the first error in a module, and a scaffold holds
   hundreds of declarations, some of which cannot check until the
-  emitter of issue M2-5 supplies the definitional unfolding they need.  The checker therefore runs Agda on a scratch copy of the
-  module repeatedly, and at each error does one of three things.  When
+  emitter of issue M2-5 supplies the definitional unfolding they need.
+  The checker therefore runs Agda on a scratch copy of the module
+  repeatedly, and at each error does one of three things.  When
   the error's message names a theorem, which the scaffold keeps in an
   `opaque` block, the theorem is re-emitted as a transparent
   definition, so that what needed it to unfold can see its value: the
