@@ -219,7 +219,12 @@ class TestMeasuredRuns(unittest.TestCase):
         # The race: the child exits on its own, and the timer fires before
         # its exit is noted.  Each wait call is made to pause past the
         # timeout after it returns, the window widened to certainty.
+        # The timer must signal nothing it no longer owns: a kill of a
+        # reaped PID raises ProcessLookupError in the timer's thread (or,
+        # with the PID reused, kills another process).
         real = {name: getattr(os, name) for name in ("waitid", "wait4")}
+        raised: list[BaseException | None] = []
+        hook = threading.excepthook
         def slow(name: str) -> Callable[..., object]:
             def call(*args: object) -> object:
                 answer = real[name](*args)
@@ -227,13 +232,16 @@ class TestMeasuredRuns(unittest.TestCase):
                 return answer
             return call
         try:
+            threading.excepthook = lambda e: raised.append(e.exc_value)
             for name in real:
                 setattr(os, name, slow(name))
             result, _ = measured_run((sys.executable, "-c", "pass"), Path("."), 0.5)
         finally:
             for name, call in real.items():
                 setattr(os, name, call)
+            threading.excepthook = hook
         self.assertTrue(result.is_ok, result)
+        self.assertEqual(raised, [])
 
     def test_a_child_killed_otherwise_is_no_timeout(self) -> None:
         result, _ = measured_run(("sh", "-c", "kill -9 $$"), Path("."), 60.0)
