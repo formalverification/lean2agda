@@ -822,7 +822,7 @@ Measure, for every constant in the pinned Mathlib, the axioms it transitively de
 
 ---
 
-### Issue M1-12: ADR 0001: translation architecture (#12)
+### Issue M1-12: ADR 0001: translation architecture (#12, closed)
 
 **Labels:** `documentation`, `milestone-1-foundations`, `decision`
 
@@ -955,7 +955,7 @@ Print kernel expressions as Agda: bound variables, lambdas and Pi types with Lea
 
 ---
 
-### Issue M2-4: Inductive types and records (#18)
+### Issue M2-4: Inductive types and records (#18, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -997,7 +997,7 @@ Lean's kernel generates one recursor per inductive type with a set of computatio
 
 ---
 
-### Issue M2-6: Definitions, theorems, opaque constants, and axioms (#20)
+### Issue M2-6: Definitions, theorems, opaque constants, and axioms (#20, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -1027,9 +1027,9 @@ Lean's `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` are kernel primitives with a c
 
 ## Tasks
 
-- [ ] `Quot` postulates and the rewrite rule under `--rewriting`.
+- [x] `Quot` postulates and the rewrite rule under `--rewriting`.
 - [ ] Corpus `Multiset` entry checks under profile U.
-- [ ] Record, per declaration, whether the rewrite rule fired (the declaration will need M3-5's explicit casts in the safe profiles).
+- [x] Record, per declaration, whether the rewrite rule fired (the declaration will need M3-5's explicit casts in the safe profiles).
 
 ## Acceptance criteria
 
