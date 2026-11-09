@@ -641,7 +641,9 @@ class TestCheckModule(unittest.TestCase):
             return Result.err(PipelineError(ErrorType.COMMAND_FAILED, "exit 42", context={"stdout": output}))
 
         with tempfile.TemporaryDirectory() as scratch:
-            self.assertTrue(check_module(runner, lambda: 0.0, "agda", module, 60.0, Path(scratch)).is_err)
+            outcome = check_module(runner, lambda: 0.0, "agda", module, 60.0, Path(scratch))
+        self.assertTrue(outcome.is_err)
+        self.assertIn("cannot place", outcome.unwrap_err().message)
 
     def test_unfolds_a_theorem_the_message_names(self) -> None:
         checked, seen = self.run_module([
