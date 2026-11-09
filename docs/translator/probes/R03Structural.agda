@@ -12,7 +12,7 @@ data List (α₀ : Set) : Set where
   List:cons : (head₁ : α₀) → (tail₂ : List α₀) → List α₀
 
 -- Acc: the recursive field is a function, and the recursor's call on
--- `h₅ y₆ hy₇` is structural, as Agda's termination checker counts it.
+-- `h₅ y₆ a₇` is structural, as Agda's termination checker counts it.
 data Acc {α₀ : Set} (r₁ : α₀ → α₀ → Set) : α₀ → Set where
   Acc:intro : (x₂ : α₀) → (h₃ : (y₃ : α₀) → r₁ y₃ x₂ → Acc {α₀} r₁ y₃) → Acc {α₀} r₁ x₂
 

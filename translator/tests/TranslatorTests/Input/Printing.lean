@@ -3,14 +3,13 @@ File: translator/tests/TranslatorTests/Input/Printing.lean
 -/
 
 /-!
-Declarations for the printer's tests.  Each value but one needs no
-definitional unfolding to type-check, so that Agda can check it against
-the postulates of the scaffold: together they print every expression
-constructor, every binder visibility, the three kinds of binder repair,
-and a term the sharing pass shrinks from exponential to linear size.
-`PrintFixtures.Dependent.value` is the exception, a projection whose
-field type depends on an earlier field, which Agda refuses until records
-compute (`docs/translator/printing.md`).  `evenP` and `oddP` give the
+Declarations for the printer's tests: together they print every
+expression constructor, every binder visibility, the eta repairs of
+arguments whose binders Agda would see differently, and a term the
+sharing pass shrinks from exponential to linear size.
+`PrintFixtures.Dependent.value` is a projection whose field type depends
+on an earlier field, which prints as a record's field projection
+(`docs/translator/printing.md`).  `evenP` and `oddP` give the
 scaffold the one kind of cycle Lean's kernel accepts, between the unsafe
 `_unsafe_rec` companions of mutual `partial` definitions.
 -/

@@ -148,8 +148,9 @@ field in a class's `recOn` (`LawfulBEq.recOn`, refused on `main` with
 for a constructor's instance field (`Std.DTreeMap.Internal.Impl.WF.rec`,
 whose minor premise `alter₈` has a type that begins
 `{x₃ : α₀ → Set} → ⦃ inst₄ : LawfulEqOrd α₀ ⦄ → …`).  The expansion
-passes the binders themselves:
-`λ {x₃} → λ ⦃ inst₄ ⦄ → … → alter₈ {x₃} ⦃ inst₄ ⦄ …`.  The
+passes the binders themselves, typed:
+`λ {x₃ : α₀ → Set} → λ ⦃ inst₄ : LawfulEqOrd α₀ ⦄ → … →
+alter₈ {x₃} ⦃ inst₄ ⦄ …`.  The
 printing fixture's `instanceRepaired` and `hiddenInstanceRepaired`, and
 the recursor fixture's `Holder`, are the tests.
 
@@ -219,7 +220,7 @@ whose type mentions an earlier field, that checks because the recursor
 computes on the constructor ([#19]); the recursor fixture's
 `RecursorFixtures.Tagged.value`, a dependent field of a type whose
 constructor binds its parameter, is the test.  `String`'s recursor stays a
-postulate, and so would such a projection from a `String`.
+postulate, so such a projection from a `String` does not compute.
 The printing fixture's dependent field `PrintFixtures.Dependent.value`,
 which Agda refused printed through the recursor, checks as a field
 projection.
@@ -388,12 +389,31 @@ of three things, as follows:
 +  when Agda refuses a declaration's type, the declaration and everything
    that refers to it are dropped (`refused type`, `dropped`).
 
-Agda runs with its heap bounded, 8G by default (`--heap`), and names each
-declaration as it starts and ends it (`-v tc.decl:5`), so that a run that
-exhausts the heap or the time bound is charged to the declaration it
-named last, as `HeapExhausted` or `Timeout`, and refused as above.
-Without the bound one such run took 23 GB before the system's OOM killer
-stopped it ([`recursors.md`][recursors], Agda's positivity check).
+Agda runs with its heap bounded, 8G by default (`--heap`; a `-M` on the
+command line, which wins over `GHCRTS`), and a run that exhausts the heap
+is charged to the declaration Agda died in, as `HeapExhausted`, and
+refused as above.  Without the bound one such run took 23 GB before the
+system's OOM killer stopped it ([`recursors.md`][recursors], Agda's
+positivity check).  To know which declaration that is, Agda runs with
+`-v tc.decl:5`, which in 2.8.0 prints `Checking X.` and `Checked X.`
+around each data type, record and function definition and prints nothing
+for a postulate or a type signature, which Agda checks before it names
+the definition.  So the checker's copy of the module puts a marker
+definition, `scaffold-check-mark-<n> : Set₁`, before each declaration,
+and reads the last name a run printed as follows:
+
++  a marker's: Agda died in the type of the declaration after it, a
+   postulate or a definition's signature, and the type is refused;
++  a declaration's: Agda died in it, in a definition's clauses (the value
+   is refused) or in a data type's or record's positivity check, which
+   runs after its `Checked` line (the type is refused).
+
+Charging the declaration named last without the markers refused innocent
+declarations: on a probe whose blowup was in a signature, five of them,
+one per run, while the culprit was only dropped with them (2026-11-09).  A
+run past the time bound (`--timeout`, 600 s by default, the whole run's)
+is an error that names the declaration in progress, since the bound is no
+one declaration's.
 
 The listing opens with three counts, the declarations that checked (and the
 data types and records among them), the theorems unfolded, and the recursors
@@ -412,9 +432,10 @@ harness compares the listing with a golden one.
 With every value printed and the recursors defined ([#19]), the golden
 scaffolds stand as follows (`values` counts the definitions, theorems and
 opaque constants printed with their values, recursors not among them; a
-value is `behind a refused type` when its declaration was dropped with
-one; a declaration is a declaration of the Agda module, a data type or a
-record with its constructors being one, and a block of recursors one); in
+value is `behind a refused type` when its own type was refused or its
+declaration was dropped with one; a declaration is a declaration of the
+Agda module, a data type or a record with its constructors being one, and
+a block of recursors one); in
 parentheses, the same on the code before [#19]:
 
 | Scaffold | Declarations | Data types and records | Values | Checked | Refused | Behind a refused type | Theorems | Unfolded |
@@ -426,7 +447,7 @@ parentheses, the same on the code before [#19]:
 | `Fixtures.selected` | 29 | 6 | 17 | 17 (15) | 0 (2) | 0 | 0 | 0 |
 | inductives fixture | 75 (77) | 24 | 29 | 29 (27) | 0 (2) | 0 | 1 | 0 |
 | `kinds` | 333 | 41, 40 checked | 246 | 244 (195) | 2 (51) | 0 | 51 | 1 (2, one in vain) |
-| recursor fixture | 476 | 40 | 396 | 394 | 2 | 0 | 113 | 0 |
+| recursor fixture | 638 | 42 | 554 | 552 | 2 | 0 | 122 | 0 |
 | `Init.Core`'s inductive types | 537 (539) | 144, 143 checked | 246 | 244 (197) | 2 (49) | 0 | 48 | 0 |
 
 The printing fixture gained the eta repairs' declarations, and a

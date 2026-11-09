@@ -331,6 +331,6 @@ one data type.
 [#22]: https://github.com/formalverification/lean2agda/issues/22
 [printing]: printing.md
 [recursors]: recursors.md
-[printing-checks]: printing.md#what-agda-checks
+[printing-checks]: printing.md#what-agda-checks-and-the-fallback
 [probes]: probes/
 [catalog-eta]: ../foundations/gap-catalog.md#structure-eta

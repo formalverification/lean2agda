@@ -54,10 +54,10 @@ def profileUOptions : String := "{-# OPTIONS --type-in-type #-}"
 /-- One declaration of a module: the identifiers it declares, those its
 text refers to, and its text.  A declaration with a value also carries
 its fallback, the references and text of a postulate of its type.  A
-structural one, a recursor block defined by pattern matching, refers to
-itself through recursive calls on its constructors' fields, which Agda's
-termination checker judges, so that `breakCycles` does not count such a
-reference as a cycle. -/
+structural one is a recursor block defined by pattern matching, whose
+recursion on its constructors' fields Agda's termination checker judges:
+its references leave out the block's own names (`recursorDecl`), and
+`breakCycles` would not count a reference to itself as a cycle either. -/
 structure ScaffoldItem where
   provides : Array String
   references : Array String

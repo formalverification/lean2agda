@@ -5,7 +5,8 @@ module R01Promoted where
 -- Eq and HEq with Lean's promoted parameter `a` an Agda index.  The
 -- recursor binds `a` as a variable pattern, Lean's parameter, and the
 -- constructor's argument and the indices as `_`, which Agda's unifier
--- fills in (K is on, as Agda's default).
+-- fills in.  That needs no K: the file checks under --without-K and
+-- --cubical-compatible too (2026-11-09).
 data Eq {α₀ : Set} : α₀ → α₀ → Set where
   Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
 

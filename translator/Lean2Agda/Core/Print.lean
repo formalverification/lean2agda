@@ -194,8 +194,9 @@ are the leading ones of a definition's value, matched against its type;
 deeper, they are lambdas checked against any other expected type: an
 argument's binder type, a `let`'s type, or a lambda's codomain below the
 top.  An eta repair is an argument that is not a lambda, checked against
-a Pi type whose visibilities differ from those of its own type, which
-the printer eta-expands.  A projection prints as a record's field
+a Pi type whose visibilities differ from those of its own type, or whose
+leading hidden binders hold an instance binder, which the printer
+eta-expands.  A projection prints as a record's field
 projection, or, from a structure-like type that is not a record, through
 its recursor. -/
 structure PrintCounts where
@@ -416,7 +417,9 @@ partial def printExpr (s : Scope) (e : Expr) : PrintM AgdaTerm := do
 
 /-- Print `e` where Agda will check it against `expected`, so that a
 lambda takes the visibility of the expected Pi type, and a term of a Pi
-type with other visibilities is eta-expanded to a lambda that does. -/
+type with other visibilities, or checked against one whose leading hidden
+binders hold an instance binder, is eta-expanded to a lambda that has the
+expected type's binders. -/
 partial def printAgainst (s : Scope) (e expected : Expr) (top : Bool) : PrintM AgdaTerm := do
   match e with
   | .mdata _ b => printAgainst s b expected top

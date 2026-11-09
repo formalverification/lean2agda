@@ -10,6 +10,8 @@ kernel computes it, and the scaffold ([`printing.md`][printing], The
 scaffold) declares it so.  The probes `R01` to `R04` under
 [`probes/`][probes] settled the shape, run with Agda 2.8.0 on 2026-10-13
 from their committed paths; each file's first line records its outcome.
+`R05`, of 2026-11-09, is the smallest form of the positivity check's cost
+that the last section describes.
 The types the recursors eliminate are [`inductives.md`][inductives]'s.
 
 ## The clause shape
@@ -34,14 +36,16 @@ clause, as follows:
 
 ```agda
 Nat:rec {motive₀} zero₁ succ₂ Nat:zero = zero₁
-Nat:rec {motive₀} zero₁ succ₂ (Nat:succ n₃) = succ₂ n₃ (Nat:rec {motive₀}
-zero₁ succ₂ n₃)
+Nat:rec {motive₀} zero₁ succ₂ (Nat:succ n₃) =
+  succ₂ n₃ (Nat:rec {motive₀} zero₁ succ₂ n₃)
 Eq:rec {α₀} {a₁} {motive₂} refl₃ {_} (Eq:refl _) = refl₃
 ```
 
 `Eq`'s `a` is Lean's parameter and Agda's index: the recursor binds it as
 `{a₁}`, and unification identifies the constructor's `_` and the index's
-with it, under Agda's default K (probe `R01Promoted`).  A minor premise's
+with it.  That is matching with a free endpoint, which needs no K: probe
+`R01Promoted` checks under `--without-K` and under `--cubical-compatible`
+too (2026-11-09).  A minor premise's
 induction hypothesis comes out of the rule as the recursor called on the
 recursive field, `Nat:rec … n₃`, or for a field of function type under a
 lambda, `λ y₇ a₈ → Acc:rec … (h₆ y₇ a₈)`; Agda's termination checker
@@ -54,7 +58,13 @@ with `p.1` for a variable `p`, and does not equate
 `And.rec (motive := fun _ => Nat) (fun _ _ => 5) h` with `5` (a scratch
 probe on 2026-10-15).  Agda does it for propositions too, which can only
 make it accept more.  A recursive record is matched through its `pattern`
-declaration, like a data type.
+declaration, like a data type.  So is a structure-like type that Agda
+receives as a data type, because its constructor binds a parameter Agda
+keeps as an index (the fixture's `Tagged`): its recursor reduces on a
+constructor and not on a variable, where Lean's kernel eta-expands the
+major premise first, so `Tagged.rec f x = f x.1 x.2` holds by `rfl` in
+Lean and is refused in Agda (a scratch probe on 2026-11-09; the gap
+catalog's `structure-eta` entry records the lost eta).
 
 Lean's `K`-like reduction does not carry over: Lean reduces `Eq.rec` on
 any proof of `a = a`, Agda only on `Eq.refl` (probe `R01bKLike`, rejected
@@ -77,17 +87,18 @@ matches `Array:mk toList₁₀` and calls `rec_2` on the list, whose
 checker accepts the cycle through the record's pattern (probe
 `R02Nested`, which computes through all three).  The item provides every
 recursor of its block and refers to the constructors it matches, so that
-`orderItems` places it after their types; it is marked structural, so that
-`breakCycles`, which postulates a definition that refers to itself, leaves
-the recursion to the termination checker.  `scaffold_check.py` reads a
-block's names from its signature lines and, when Agda refuses a clause,
-postulates every member.
+`orderItems` places it after their types.  Its references leave out its
+own names, so that `breakCycles`, which postulates a definition that
+refers to itself, leaves the recursion to the termination checker; the
+item is also marked structural, which would exempt such a reference.
+`scaffold_check.py` reads a block's names from its signature lines and,
+when Agda refuses a clause, postulates every member.
 
 ## Termination
 
 Agda reports refused recursion as `TerminationIssue` at a definition's
-first line, its signature or the `mutual` keyword (probe
-`R04NotStructural`); the checker then postulates the item under
+first line: its signature (probe `R04NotStructural`) or, for a block, the
+`mutual` keyword; the checker then postulates the item under
 `-- recursor, refused by the termination checker` and counts it on its
 listing's third line:
 
@@ -118,7 +129,10 @@ blocks, 50 recursors in all, the largest of 21
 (`Lean.Meta.Grind.Arith.Cutsat`); 14 nested types' blocks (`Lean.Json`,
 `Lean.MessageData`, `Lean.Elab.InfoTree` and others) stand behind types
 that exhausted the heap (`ByteArray.IsValidUTF8`, `Lean.Meta.Cache`,
-`Lean.Server.RpcObjectStore`, `Std.DHashMap.Internal.List.HashesTo`), the
+`Lean.Server.RpcObjectStore`, `Std.DHashMap.Internal.List.HashesTo`, each
+charged as the declaration Agda named last, before the checker placed an
+exhaustion exactly; that charge is right for a positivity check, which
+runs after the type's `Checked` line, as `ByteArray.IsValidUTF8`'s does), the
 cost of the next section, which also refused four of the `UInt`
 conversions' values.  The first run of this measurement refused
 `Std.DTreeMap.Internal.Impl.WF.rec`'s clauses with `UnsolvedConstraints`:
@@ -138,31 +152,38 @@ lines 576 and 621), and once the recursors compute, the full normal form
 of some of Lean's compiled definitions is exponential.  A structural
 recursion that `brecOn` runs on a literal while matching on a variable,
 `Nat.ble 20 v`, sticks at the matcher with its `below` table twice in
-every level, so that a record whose field mentions `v % 8` checks in
-290 MB and one that mentions `v % 16` exhausts 2 GB (Lean's `Nat.mod`
-compares through `Nat.ble`).  `ByteArray.IsValidUTF8`, whose field
-mentions `List.utf8Encode m`, ran Agda out of memory in each of the four
-closures here that hold it, once to 23 GB before the Linux kernel's OOM
-killer stopped it.  Lean's
-kernel never normalizes a type to check it, and computes `Nat.ble`,
-`Nat.mod` and the rest on literals with GMP.  Agda-native definitions of
-`Nat.ble` and `Nat.beq` alone do not help, since `Nat.div` and `Nat.mod`
-unfold through well-founded recursion with fuel; the fix is the operation
-table of [#31], each accelerated operation an Agda definition that is
-stuck on a variable.  Until then `scaffold_check.py` bounds Agda's heap
-(8G by default) and charges a run that exhausts it to the declaration
-Agda named last: `ByteArray.IsValidUTF8` is refused as a type wherever it
-appears, with its recursor, `String.ofByteArray` and `String.rec` behind
-it, and in `Init.Core`'s closure 70 values more.
+every level, so that a record whose field mentions `v % 8` checks at a
+peak of 98 MB, one that mentions `v % 12` at 699 MB, and one that
+mentions `v % 16` exhausts a 2 GB heap in about 30 s (probe `R05PositivityMod`,
+measured 2026-11-09; Lean's `Nat.mod` compares through `Nat.ble`).
+`ByteArray.IsValidUTF8`, whose field mentions `List.utf8Encode m`, ran
+Agda out of memory wherever it was checked before the heap bound existed,
+once to 23 GB before the Linux kernel's OOM killer stopped it, and with
+the bound it is refused in all six scaffolds here that hold it: three
+goldens, `Init.Core`'s closure and both type scaffolds.  Lean's kernel
+never normalizes a type to check it, and computes `Nat.ble`, `Nat.mod`
+and the rest on literals with GMP.  Agda-native definitions of `Nat.ble`
+and `Nat.beq` alone do not help, since `Nat.div` and `Nat.mod` unfold
+through structural recursion on a fuel argument, `Nat.brecOn` as in
+`Nat.ble`; the fix is the operation table of [#31], each accelerated
+operation an Agda definition that is stuck on a variable.  Until then
+`scaffold_check.py` bounds Agda's heap (8G by default) and charges a run
+that exhausts it to the declaration Agda died in (its section of
+[`printing.md`][printing-checks] says how it knows):
+`ByteArray.IsValidUTF8` is refused as a type wherever it appears, with
+its recursor, `String.ofByteArray` and `String.rec` behind it, and in
+`Init.Core`'s closure 70 values more.
 
 ## What Agda checks
 
 The golden scaffolds and their counts, before and after, are in
 [`printing.md`][printing-checks]'s table: every recursor of every golden is
-defined, none is refused by the termination checker, and the values that
+defined but `ByteArray.IsValidUTF8.rec`, dropped with its type in the three
+goldens that hold it, none is refused by the termination checker, and the
+values that
 check rise from 17, 141 and 182 to 21 of 21, 198 of 201 and 261 of 266 in
 the three corpus closures, with nothing left behind a refused type there.
-The recursor fixture checks 394 of its 396 values, each fixture theorem
+The recursor fixture checks 552 of its 554 values, each fixture theorem
 among them; its two refusals are `eq_of_heq` and `Nat.modCore_lt` from the
 closure.  The compiled matcher of `Nat.zero_lt_of_ne_zero` and
 `Nat.modCore.go.eq_1`, which needed `n + 1` to be `Nat.succ n`, check, and
@@ -181,14 +202,16 @@ after (2026-10-15), against the [`opaque-theorems`][report-opaque] report's
 
 | `Init.Core`'s closure | Declarations | Values | Checked | Refused | Behind a refused type | Types refused | Unfolded | Recursors defined |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| before [#19] | 1,963 | 1,660 | 1,344 | 312 | 4 | 1 | 6, five in vain | 0 of 147 |
+| before [#19] | 1,963 | 1,660 | 1,344 | 312 | 4 | 1 | 6, five in vain | 0 of 146 |
 | after | 1,961 | 1,660 | 1,563 | 23 | 74 | 2 | 7, four in vain | 145 of 146 |
 
 The 147 recursors are 145 inductive types' and `Lean.Syntax`'s two
 `rec_N`; `String.rec` stays a postulate, and `ByteArray.IsValidUTF8.rec`
-is dropped with its type, so 145 are defined, all of them accepted by the
-termination checker.  The 23 refusals fall into the classes of the
-goldens: 15 comparisons of two proofs of one proposition (`Subtype.eq`,
+is dropped with its type, so 145 of the 146 the listing counts (all but
+`String.rec`) are defined, all of them accepted by the termination
+checker.  The 23 refused values, with the refused type of `apply_eqRec`,
+fall into the classes of the goldens: 15 comparisons of two proofs of one
+proposition (`Subtype.eq`,
 `Subtype.ext`, `Subtype.eta`, `Subtype.mk.injEq`,
 `Subtype.instDecidableEq`'s proof, `Char.ext`, `Char.mk.injEq`,
 `Fin.eq_of_val_eq`, `Fin.mk.injEq`, `proof_irrel`,
@@ -206,12 +229,11 @@ rules), [#31]'s.
 The fallback fired seven times.  Three unfoldings helped: `Quotient.sound`
 for `Quotient.rec`, as before, and `Eq.symm` and `Nat.eq_of_beq_eq_true`
 for `DoResultPRBC.noConfusion`, which the recursors made reachable.  Four
-were in vain, at quotient refusals.  None was under well-founded recursion:
-`WellFounded.Nat.fix` is fuel-based at the pin ([gap catalog][catalog-literals]),
-its recursion `Nat.rec` on the fuel, so no proof had to reduce to
-`Acc.intro`, and `Acc.rec`, defined with the others, computed on nothing a
-check needed.
-
+were in vain, at quotient refusals.  None was under well-founded
+recursion, which `Init.Core`'s closure does not contain: `Acc` and
+`WellFounded.Nat.fix` are declared in `Init.WF`, which `Init.Core` does not
+import.  (At the pin `WellFounded.Nat.fix` is fuel-based in any case, its
+recursion `Nat.rec` on the fuel; [gap catalog][catalog-literals].)
 
 ## Verification
 
@@ -245,8 +267,11 @@ check needed.
    member, a refused signature dropped, the termination refusal at a
    block's first line, the listing's third line, a block of postulates,
    `--types-only` keeping the recursors and postulating the theorems they
-   mention, the heap bound and the charge of an exhausted run to the
-   declaration Agda named last.
+   mention, the heap bound, and the charge of an exhausted run to the
+   declaration Agda died in, through the markers: a blowup in a
+   postulate, in a definition's signature, in its clauses and in a type's
+   positivity check, played by a fake Agda that names declarations as
+   Agda 2.8.0 does, and a run past the time bound, which is an error.
 
 Each new check failed on the code before this change, run in a scratch
 copy of `main` at `37e7feb`: 14 of the 15 new or changed tests of

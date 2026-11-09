@@ -334,10 +334,12 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
 +  **Agda's status**.  Agda's K is a pattern-matching principle, not a
    reduction: a neutral proof `h : x ≡ x` never computes, under any flag.  By
    profile, as follows.
-   +  U: K available by pattern matching (Agda's default), on which the
-      recursors of `Eq`, `HEq` and the other `K`-like types rely since
-      [#19]: each is defined by its clause on the constructor, with `_`
-      for an index that unification fills in ([`recursors.md`][recursors]).
+   +  U: K available by pattern matching (Agda's default), which the
+      recursors of `Eq`, `HEq` and the other `K`-like types, defined since
+      [#19], do not need: each is defined by its clause on the constructor,
+      with `_` for an index that unification fills in without K (probe
+      `R01Promoted` of [`recursors.md`][recursors] checks under
+      `--without-K` and `--cubical-compatible` too).
       The `K`-like reduction on a variable proof does not follow: Agda
       reduces `Eq.rec` only on `Eq.refl` (probe `R01bKLike` of
       [`recursors.md`][recursors]), so `eq_of_heq` and `cast_eq` stay
@@ -986,10 +988,14 @@ literals**.
       one `mutual` definition by pattern matching, a nested type's `rec_N`
       matching on the constructors of `Array` and `List`, which Agda's
       termination checker accepts ([`recursors.md`][recursors]).
-      `Lean.Syntax` checks in `Init.Core`'s closure, and of the 72 nested
-      or mutual types in `import Lean`, 62 check, all ten mutual blocks
-      among them, while the other ten wait behind definitions that must
-      unfold ([#20]); no type Lean accepts was refused for positivity, and
+      `Lean.Syntax` checks in `Init.Core`'s closure.  Of the 72 nested or
+      mutual types in `import Lean`, 62 checked before [#19], all ten
+      mutual blocks among them, the other ten waiting behind definitions
+      that had to unfold ([#20]); with the recursors defined, all ten
+      mutual blocks and their recursor blocks check, and 14 nested types'
+      blocks stand behind types that exhaust Agda's heap
+      ([`recursors.md`][recursors]).  No type Lean accepts was refused for
+      positivity, and
       an unsafe one, which Lean does not check, is declared after
       `NO_POSITIVITY_CHECK` ([`inductives.md`][inductives]).
    +  K: both forms are native; a mutual family of propositions is a mutual

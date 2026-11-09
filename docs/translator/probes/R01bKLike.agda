@@ -5,7 +5,9 @@ module R01bKLike where
 -- Eq and HEq with Lean's promoted parameter `a` an Agda index.  The
 -- recursor binds `a` as a variable pattern, Lean's parameter, and the
 -- constructor's argument and the indices as `_`, which Agda's unifier
--- fills in (K is on, as Agda's default).
+-- fills in; K is on, Agda's default, though the clause does not need it,
+-- and the `K`-like reduction on a variable proof below fails under any
+-- flag.
 data Eq {α₀ : Set} : α₀ → α₀ → Set where
   Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
 
