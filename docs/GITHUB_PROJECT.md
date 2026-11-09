@@ -1028,12 +1028,12 @@ Lean's `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` are kernel primitives with a c
 ## Tasks
 
 - [x] `Quot` postulates and the rewrite rule under `--rewriting`.
-- [ ] Corpus `Multiset` entry checks under profile U.
+- [x] Corpus `Multiset` entry checks under profile U.  Scoped on 2026-11-09 by this issue's pull request: the entry's root `Multiset.map_map` checks with the rewrite rules and is refused without them; the 13 refusals left in its closure are recursor iota (M2-5) and the K-like reduction of `eq_of_heq` (M3-1), not quotients.
 - [x] Record, per declaration, whether the rewrite rule fired (the declaration will need M3-5's explicit casts in the safe profiles).
 
 ## Acceptance criteria
 
-- [ ] The `Multiset` corpus entry and `Init.Core`'s quotient-based lemmas (`funext`) check under profile U.
+- [x] The `Multiset` corpus entry and `Init.Core`'s quotient-based lemmas (`funext`) check under profile U.  Scoped on 2026-11-09 as above: `funext` checks in `Init.Core` and in both gcd closures, and the `Multiset` entry's root checks; its closure's remaining refusals belong to M2-5 and M3-1.
 
 ---
 
