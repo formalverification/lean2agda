@@ -27,7 +27,9 @@ following:
    does not define;
 +  a relative link of this document that names no file.
 
-A pull request that adds a module adds its row here; one that renames a
+The same script checks that every tracked Lean, Python and shell file of
+the repository opens with a `File:` header naming its own path.  A pull
+request that adds a module adds its row here; one that renames a
 definition the pass order names renames it here.
 
 ## Terms

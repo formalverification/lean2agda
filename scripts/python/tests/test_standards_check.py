@@ -5,7 +5,8 @@ Description:
   Tests of standards_check.py: each pure function on small texts built
   here, and then the checks themselves on the repository, so that the
   suite fails when the module map, docs/translator/architecture.md, falls
-  behind the tree, or when translator/VERSION and CHANGELOG.md disagree.
+  behind the tree, when a file's `File:` header is missing or names
+  another path, or when translator/VERSION and CHANGELOG.md disagree.
 """
 from __future__ import annotations
 
@@ -24,6 +25,8 @@ from standards_check import (
     definition_rows,
     defines,
     effect_problems,
+    header_problem,
+    header_problems,
     is_rule,
     lean_code,
     link_problems,
@@ -200,6 +203,30 @@ class TestMapChecks(unittest.TestCase):
             f"translator/C.lean: no row in {MAP_PATH}"))
 
 
+class TestHeaders(unittest.TestCase):
+    def test_a_correct_header(self) -> None:
+        self.assertIsNone(header_problem("a/b.lean", "/-\nFile: a/b.lean\n-/\n"))
+        self.assertIsNone(header_problem("t.sh", "#!/usr/bin/env bash\n# File: t.sh\n"))
+
+    def test_no_header(self) -> None:
+        self.assertEqual(header_problem("a.py", '"""\nNothing here.\n"""\n'),
+                         "a.py: no File: header in its first 5 lines")
+
+    def test_a_header_too_late(self) -> None:
+        self.assertEqual(header_problem("a.py", "\n" * 5 + "File: a.py\n"),
+                         "a.py: no File: header in its first 5 lines")
+
+    def test_a_header_naming_another_path(self) -> None:
+        self.assertEqual(header_problem("a/new.py", '"""\nFile: a/old.py\n"""\n'),
+                         "a/new.py: its File: header names a/old.py")
+
+    def test_header_problems_checks_lean_python_and_shell_only(self) -> None:
+        sources = {"a.lean": "", "b.md": "", "c.sh": "# File: c.sh\n", "d.py": "File: e.py"}
+        self.assertEqual(header_problems(sources), (
+            "a.lean: no File: header in its first 5 lines",
+            "d.py: its File: header names e.py"))
+
+
 class TestVersion(unittest.TestCase):
     CHANGELOG: str = "# Changelog\n\n## 0.2.0\n\n+  b\n\n## 0.1.0\n\n+  a\n"
 
@@ -222,8 +249,8 @@ class TestVersion(unittest.TestCase):
 
 class TestTheRepository(unittest.TestCase):
     """The checks on the tree this file sits in.  A failure names each
-    problem: a module without its row in the map, a stale row, or a
-    version the changelog does not name."""
+    problem: a module without its row in the map, a stale row, a header,
+    or a version the changelog does not name."""
 
     def test_the_tree_meets_the_standards(self) -> None:
         result = check_tree(ROOT)

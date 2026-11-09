@@ -4,8 +4,9 @@ File: scripts/python/standards_check.py
 Description:
   Check the translator's engineering standards (issue M2-11) against the
   tree: that the module map, docs/translator/architecture.md, describes
-  every file it must and only files that exist, and that the
-  translator's version and the changelog agree.
+  every file it must and only files that exist; that every tracked Lean,
+  Python and shell file opens with a `File:` header naming its own path;
+  and that the translator's version and the changelog agree.
 
     python3 scripts/python/standards_check.py [ROOT]
 
@@ -78,6 +79,10 @@ EFFECT_MONADS: tuple[str, ...] = (
 )
 
 HEADER_SUFFIXES: tuple[str, ...] = (".lean", ".py", ".sh")
+
+# A `File:` header sits on one of a file's first lines: after the `/-` of
+# a Lean comment, the `"""` of a Python docstring, or a shell's `#!` line.
+HEADER_LINES: int = 5
 
 
 @dataclass(frozen=True)
@@ -341,6 +346,23 @@ def map_problems(document: str, tracked: tuple[str, ...], sources: Mapping[str, 
             + link_problems(relative_links(document), MAP_PATH, exists))
 
 
+def header_problem(path: str, source: str) -> Optional[str]:
+    """A file whose first lines carry no `File:` header naming its path."""
+    found = re.findall(r"File:\s*(\S+)", "\n".join(source.splitlines()[:HEADER_LINES]))
+    if not found:
+        return f"{path}: no File: header in its first {HEADER_LINES} lines"
+    if found[0] != path:
+        return f"{path}: its File: header names {found[0]}"
+    return None
+
+
+def header_problems(sources: Mapping[str, str]) -> tuple[str, ...]:
+    """Every tracked Lean, Python and shell file without a correct header."""
+    return tuple(p for p in (header_problem(path, sources[path])
+                             for path in sorted(sources) if path.endswith(HEADER_SUFFIXES))
+                 if p is not None)
+
+
 _VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
 
@@ -388,7 +410,8 @@ def named_paths(document: str) -> tuple[str, ...]:
 
 
 def check_tree(root: Path) -> Result[tuple[str, ...], PipelineError]:
-    """Every problem of the map and the version in the tree at root."""
+    """Every problem of the map, the headers and the version in the tree
+    at root."""
     def with_texts(tracked: tuple[str, ...], texts: list[str]) -> Result[tuple[str, ...], PipelineError]:
         document, version, changelog = texts
         wanted = tuple(sorted(set(p for p in tracked if p.endswith(HEADER_SUFFIXES))
@@ -396,6 +419,7 @@ def check_tree(root: Path) -> Result[tuple[str, ...], PipelineError]:
         exists: Callable[[str], bool] = lambda p: (root / p).exists()
         return read_sources(root, wanted).map(
             lambda sources: map_problems(document, tracked, sources, exists)
+            + header_problems({p: t for p, t in sources.items() if p in tracked})
             + version_problems(version, changelog))
     return tracked_files(root).and_then(lambda tracked: sequence_results(
         [read_text(root / p) for p in (MAP_PATH, VERSION_PATH, CHANGELOG_PATH)]).and_then(
