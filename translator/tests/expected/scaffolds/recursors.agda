@@ -1,6 +1,6 @@
 -- File: translator/tests/expected/scaffolds/recursors.agda
 {-# OPTIONS --type-in-type #-}
--- lean2agda, profile U: the scaffold of the closure of RecursorFixtures:Doc RecursorFixtures:Doc:~usizeOf~u1 RecursorFixtures:Doc:~usizeOf~u2 RecursorFixtures:Doc:~usizeOf~u2~ueq RecursorFixtures:Doc:~usizeOf~u3 and 211 more
+-- lean2agda, profile U: the scaffold of the closure of RecursorFixtures:Doc RecursorFixtures:Doc:~usizeOf~u1 RecursorFixtures:Doc:~usizeOf~u2 RecursorFixtures:Doc:~usizeOf~u2~ueq RecursorFixtures:Doc:~usizeOf~u3 and 251 more
 module U.TranslatorTests.Input.Recursors where
 
 record Add (α₀ : Set) : Set where
@@ -1005,6 +1005,25 @@ PULift:rec {α₀} {motive₁} up₂ (PULift:up down₃) = up₂ down₃
 PULift:down : {α₀ : Set} → PULift α₀ → α₀
 PULift:down {α₀} self₁ = PULift.down₁ {α₀} self₁
 
+record Prod (α₀ : Set) (β₁ : Set) : Set where
+  constructor Prod:mk
+  field
+    fst₂ : α₀
+    snd₃ : β₁
+
+-- recursor
+Prod:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : Prod α₀ β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁) → motive₂ (Prod:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : Prod α₀ β₁) → motive₂ t₃
+Prod:rec {α₀} {β₁} {motive₂} mk₃ (Prod:mk fst₄ snd₅) = mk₃ fst₄ snd₅
+
+Prod:~usizeOf~u1 : {α₀ : Set} → {β₁ : Set} → ⦃ _ : SizeOf α₀ ⦄ → ⦃ _ : SizeOf β₁ ⦄ → Prod α₀ β₁ → Nat
+Prod:~usizeOf~u1 {α₀} {β₁} ⦃ inst₂ ⦄ ⦃ inst₃ ⦄ t₄ = Prod:rec {α₀} {β₁} {λ (t₅ : Prod α₀ β₁) → Nat} (λ (fst₅ : α₀) → λ (snd₆ : β₁) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (SizeOf:sizeOf {α₀} ⦃ inst₂ ⦄ fst₅)) (SizeOf:sizeOf {β₁} ⦃ inst₃ ⦄ snd₆)) t₄
+
+Prod:~usizeOf~uinst : (α₀ : Set) → (β₁ : Set) → ⦃ _ : SizeOf α₀ ⦄ → ⦃ _ : SizeOf β₁ ⦄ → SizeOf (Prod α₀ β₁)
+Prod:~usizeOf~uinst α₀ β₁ ⦃ inst₂ ⦄ ⦃ inst₃ ⦄ = SizeOf:mk {Prod α₀ β₁} (λ (m₄ : Prod α₀ β₁) → Prod:~usizeOf~u1 {α₀} {β₁} ⦃ inst₂ ⦄ ⦃ inst₃ ⦄ m₄)
+
+Prod:casesOn : {α₀ : Set} → {β₁ : Set} → {motive₂ : Prod α₀ β₁ → Set} → (t₃ : Prod α₀ β₁) → ((fst₄ : α₀) → (snd₅ : β₁) → motive₂ (Prod:mk {α₀} {β₁} fst₄ snd₅)) → motive₂ t₃
+Prod:casesOn {α₀} {β₁} {motive₂} t₃ mk₄ = Prod:rec {α₀} {β₁} {motive₂} (λ (fst₅ : α₀) → λ (snd₆ : β₁) → mk₄ fst₅ snd₆) t₃
+
 data RecursorFixtures:Doc : Set where
   RecursorFixtures:Doc:text : Nat → RecursorFixtures:Doc
   RecursorFixtures:Doc:block : Array RecursorFixtures:Doc → RecursorFixtures:Doc
@@ -1776,3 +1795,501 @@ RecursorFixtures:Void:noConfusion {P₀} {t₁} {t₂} eq₃ = Eq:ndrec {Recurso
 
 RecursorFixtures:Void:recOn : (motive₀ : RecursorFixtures:Void → Set) → (t₁ : RecursorFixtures:Void) → motive₀ t₁
 RecursorFixtures:Void:recOn motive₀ t₁ = RecursorFixtures:Void:rec motive₀ t₁
+
+RecursorFixtures:Wide:rec~u2:~ushare:~n1 : Set
+RecursorFixtures:Wide:rec~u2:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:rec~u1:~ushare:~n1 : Set
+RecursorFixtures:Wide:rec~u1:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:rec:~ushare:~n1 : Set
+RecursorFixtures:Wide:rec:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+data RecursorFixtures:Wide : Set where
+  RecursorFixtures:Wide:leaf : RecursorFixtures:Wide
+  RecursorFixtures:Wide:node : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → RecursorFixtures:Wide
+
+RecursorFixtures:Wide:rec:~ushare:~n2 : Set
+RecursorFixtures:Wide:rec:~ushare:~n2 = Prod RecursorFixtures:Wide:rec:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:rec:~ushare:~n3 : Set
+RecursorFixtures:Wide:rec:~ushare:~n3 = List RecursorFixtures:Wide:rec:~ushare:~n2
+
+RecursorFixtures:Wide:rec~u1:~ushare:~n2 : Set
+RecursorFixtures:Wide:rec~u1:~ushare:~n2 = Prod RecursorFixtures:Wide:rec~u1:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:rec~u1:~ushare:~n3 : Set
+RecursorFixtures:Wide:rec~u1:~ushare:~n3 = List RecursorFixtures:Wide:rec~u1:~ushare:~n2
+
+RecursorFixtures:Wide:rec~u2:~ushare:~n2 : Set
+RecursorFixtures:Wide:rec~u2:~ushare:~n2 = Prod RecursorFixtures:Wide:rec~u2:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:rec~u2:~ushare:~n3 : Set
+RecursorFixtures:Wide:rec~u2:~ushare:~n3 = List RecursorFixtures:Wide:rec~u2:~ushare:~n2
+
+-- recursor
+mutual
+  RecursorFixtures:Wide:rec : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:rec:~ushare:~n3 → Set} → {motive3₂ : RecursorFixtures:Wide:rec:~ushare:~n2 → Set} → motive1₀ RecursorFixtures:Wide:leaf → ((xs₃ : RecursorFixtures:Wide:rec:~ushare:~n3) → motive2₁ xs₃ → motive1₀ (RecursorFixtures:Wide:node xs₃)) → motive2₁ (List:nil {RecursorFixtures:Wide:rec:~ushare:~n2}) → ((head₃ : RecursorFixtures:Wide:rec:~ushare:~n2) → (tail₄ : RecursorFixtures:Wide:rec:~ushare:~n3) → motive3₂ head₃ → motive2₁ tail₄ → motive2₁ (List:cons {RecursorFixtures:Wide:rec:~ushare:~n2} head₃ tail₄)) → ((fst₃ : RecursorFixtures:Wide:rec:~ushare:~n1) → (snd₄ : RecursorFixtures:Wide) → motive1₀ snd₄ → motive3₂ (Prod:mk {RecursorFixtures:Wide:rec:~ushare:~n1} {RecursorFixtures:Wide} fst₃ snd₄)) → (t₃ : RecursorFixtures:Wide) → motive1₀ t₃
+  RecursorFixtures:Wide:rec~u1 : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:rec~u1:~ushare:~n3 → Set} → {motive3₂ : RecursorFixtures:Wide:rec~u1:~ushare:~n2 → Set} → motive1₀ RecursorFixtures:Wide:leaf → ((xs₃ : RecursorFixtures:Wide:rec~u1:~ushare:~n3) → motive2₁ xs₃ → motive1₀ (RecursorFixtures:Wide:node xs₃)) → motive2₁ (List:nil {RecursorFixtures:Wide:rec~u1:~ushare:~n2}) → ((head₃ : RecursorFixtures:Wide:rec~u1:~ushare:~n2) → (tail₄ : RecursorFixtures:Wide:rec~u1:~ushare:~n3) → motive3₂ head₃ → motive2₁ tail₄ → motive2₁ (List:cons {RecursorFixtures:Wide:rec~u1:~ushare:~n2} head₃ tail₄)) → ((fst₃ : RecursorFixtures:Wide:rec~u1:~ushare:~n1) → (snd₄ : RecursorFixtures:Wide) → motive1₀ snd₄ → motive3₂ (Prod:mk {RecursorFixtures:Wide:rec~u1:~ushare:~n1} {RecursorFixtures:Wide} fst₃ snd₄)) → (t₃ : RecursorFixtures:Wide:rec~u1:~ushare:~n3) → motive2₁ t₃
+  RecursorFixtures:Wide:rec~u2 : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:rec~u2:~ushare:~n3 → Set} → {motive3₂ : RecursorFixtures:Wide:rec~u2:~ushare:~n2 → Set} → motive1₀ RecursorFixtures:Wide:leaf → ((xs₃ : RecursorFixtures:Wide:rec~u2:~ushare:~n3) → motive2₁ xs₃ → motive1₀ (RecursorFixtures:Wide:node xs₃)) → motive2₁ (List:nil {RecursorFixtures:Wide:rec~u2:~ushare:~n2}) → ((head₃ : RecursorFixtures:Wide:rec~u2:~ushare:~n2) → (tail₄ : RecursorFixtures:Wide:rec~u2:~ushare:~n3) → motive3₂ head₃ → motive2₁ tail₄ → motive2₁ (List:cons {RecursorFixtures:Wide:rec~u2:~ushare:~n2} head₃ tail₄)) → ((fst₃ : RecursorFixtures:Wide:rec~u2:~ushare:~n1) → (snd₄ : RecursorFixtures:Wide) → motive1₀ snd₄ → motive3₂ (Prod:mk {RecursorFixtures:Wide:rec~u2:~ushare:~n1} {RecursorFixtures:Wide} fst₃ snd₄)) → (t₃ : RecursorFixtures:Wide:rec~u2:~ushare:~n2) → motive3₂ t₃
+  RecursorFixtures:Wide:rec {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ RecursorFixtures:Wide:leaf = leaf₃
+  RecursorFixtures:Wide:rec {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ (RecursorFixtures:Wide:node xs₈) = node₄ xs₈ (RecursorFixtures:Wide:rec~u1 {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ xs₈)
+  RecursorFixtures:Wide:rec~u1 {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ List:nil = nil₅
+  RecursorFixtures:Wide:rec~u1 {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ (List:cons head₈ tail₉) = cons₆ head₈ tail₉ (RecursorFixtures:Wide:rec~u2 {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ head₈) (RecursorFixtures:Wide:rec~u1 {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ tail₉)
+  RecursorFixtures:Wide:rec~u2 {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ (Prod:mk fst₈ snd₉) = mk₇ fst₈ snd₉ (RecursorFixtures:Wide:rec {motive1₀} {motive2₁} {motive3₂} leaf₃ node₄ nil₅ cons₆ mk₇ snd₉)
+
+RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n1 : Set
+RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n2 : Set
+RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n2 = Prod RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n3 : Set
+RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n3 = List RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n2
+
+RecursorFixtures:Wide:~usizeOf~u1 : RecursorFixtures:Wide → Nat
+RecursorFixtures:Wide:~usizeOf~u1 t₀ = RecursorFixtures:Wide:rec {λ (t₁ : RecursorFixtures:Wide) → Nat} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n3) → Nat} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n2) → Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (xs₁ : RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n3) → λ (xsih₂ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) xsih₂) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (head₁ : RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n2) → λ (tail₂ : RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n3) → λ (headih₃ : Nat) → λ (tailih₄ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) headih₃) tailih₄) (λ (fst₁ : RecursorFixtures:Wide:~usizeOf~u1:~ushare:~n1) → λ (snd₂ : RecursorFixtures:Wide) → λ (sndih₃ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) sndih₃) t₀
+
+RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n1 : Set
+RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n2 : Set
+RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n2 = Prod RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n3 : Set
+RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n3 = List RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n2
+
+RecursorFixtures:Wide:~usizeOf~u2 : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n3 → Nat
+RecursorFixtures:Wide:~usizeOf~u2 t₀ = RecursorFixtures:Wide:rec~u1 {λ (t₁ : RecursorFixtures:Wide) → Nat} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n3) → Nat} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n2) → Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (xs₁ : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n3) → λ (xsih₂ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) xsih₂) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (head₁ : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n2) → λ (tail₂ : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n3) → λ (headih₃ : Nat) → λ (tailih₄ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) headih₃) tailih₄) (λ (fst₁ : RecursorFixtures:Wide:~usizeOf~u2:~ushare:~n1) → λ (snd₂ : RecursorFixtures:Wide) → λ (sndih₃ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) sndih₃) t₀
+
+RecursorFixtures:Wide:~usizeOf~uinst : SizeOf RecursorFixtures:Wide
+RecursorFixtures:Wide:~usizeOf~uinst = SizeOf:mk {RecursorFixtures:Wide} (λ (m₀ : RecursorFixtures:Wide) → RecursorFixtures:Wide:~usizeOf~u1 m₀)
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n1 : Set
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2 : Set
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2 = Prod RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n3 : Set
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n3 = List RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n4 : SizeOf (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n4 = Prod:~usizeOf~uinst RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n1 RecursorFixtures:Wide ⦃ instSizeOfDefault RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n1 ⦄ ⦃ RecursorFixtures:Wide:~usizeOf~uinst ⦄
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → Nat
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 = SizeOf:sizeOf {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n3} ⦃ List:~usizeOf~uinst RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2 ⦃ RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n4 ⦄ ⦄
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n6 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → Nat
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n6 = SizeOf:sizeOf {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2} ⦃ RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n4 ⦄
+
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n7 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n7 = List:cons {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2}
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:~usizeOf~u2~ueq : (x₀ : RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n3) → Eq {Nat} (RecursorFixtures:Wide:~usizeOf~u2 x₀) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 x₀)
+  RecursorFixtures:Wide:~usizeOf~u2~ueq x₀ = List:rec {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n3) → Eq {Nat} (RecursorFixtures:Wide:~usizeOf~u2 t₁) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 t₁)} (Eq:refl {Nat} (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 (List:nil {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2}))) (λ (head₁ : RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2) → λ (tail₂ : RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n3) → λ (tailih₃ : Eq {Nat} (RecursorFixtures:Wide:~usizeOf~u2 tail₂) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 tail₂)) → Eq:trans {Nat} {Nat:add (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n6 head₁)) (RecursorFixtures:Wide:~usizeOf~u2 tail₂)} {Nat:add (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n6 head₁)) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 tail₂)} {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n7 head₁ tail₂)} (congrArg {Nat} {Nat} {RecursorFixtures:Wide:~usizeOf~u2 tail₂} {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 tail₂} (Nat:add (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n6 head₁))) tailih₃) (Eq:symm {Nat} {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n7 head₁ tail₂)} {HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n6 head₁)) (RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n5 tail₂)} (List:cons:sizeOf~uspec {RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n2} ⦃ RecursorFixtures:Wide:~usizeOf~u2~ueq:~ushare:~n4 ⦄ head₁ tail₂))) x₀
+
+RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n1 : Set
+RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n2 : Set
+RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n2 = Prod RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n3 : Set
+RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n3 = List RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n2
+
+RecursorFixtures:Wide:~usizeOf~u3 : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n2 → Nat
+RecursorFixtures:Wide:~usizeOf~u3 t₀ = RecursorFixtures:Wide:rec~u2 {λ (t₁ : RecursorFixtures:Wide) → Nat} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n3) → Nat} {λ (t₁ : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n2) → Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (xs₁ : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n3) → λ (xsih₂ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) xsih₂) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (head₁ : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n2) → λ (tail₂ : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n3) → λ (headih₃ : Nat) → λ (tailih₄ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) headih₃) tailih₄) (λ (fst₁ : RecursorFixtures:Wide:~usizeOf~u3:~ushare:~n1) → λ (snd₂ : RecursorFixtures:Wide) → λ (sndih₃ : Nat) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) sndih₃) t₀
+
+RecursorFixtures:Wide:below:~ushare:~n1 : Set
+RecursorFixtures:Wide:below:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:below:~ushare:~n2 : Set
+RecursorFixtures:Wide:below:~ushare:~n2 = Prod RecursorFixtures:Wide:below:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:below:~ushare:~n3 : Set
+RecursorFixtures:Wide:below:~ushare:~n3 = List RecursorFixtures:Wide:below:~ushare:~n2
+
+RecursorFixtures:Wide:below:~ushare:~n4 : Set
+RecursorFixtures:Wide:below:~ushare:~n4 = RecursorFixtures:Wide:below:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:below:~ushare:~n5 : Set
+RecursorFixtures:Wide:below:~ushare:~n5 = RecursorFixtures:Wide:below:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:below : {_ : RecursorFixtures:Wide → Set} → {_ : RecursorFixtures:Wide:below:~ushare:~n4} → {_ : RecursorFixtures:Wide:below:~ushare:~n5} → RecursorFixtures:Wide → Set
+RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₃ = RecursorFixtures:Wide:rec {λ (t₄ : RecursorFixtures:Wide) → Set} {λ (t₄ : RecursorFixtures:Wide:below:~ushare:~n3) → Set} {λ (t₄ : RecursorFixtures:Wide:below:~ushare:~n2) → Set} PUnit (λ (xs₄ : RecursorFixtures:Wide:below:~ushare:~n3) → λ (xsih₅ : Set) → PProd (motive2₁ xs₄) xsih₅) PUnit (λ (head₄ : RecursorFixtures:Wide:below:~ushare:~n2) → λ (tail₅ : RecursorFixtures:Wide:below:~ushare:~n3) → λ (headih₆ : Set) → λ (tailih₇ : Set) → PProd (PProd (motive3₂ head₄) headih₆) (PProd (motive2₁ tail₅) tailih₇)) (λ (fst₄ : RecursorFixtures:Wide:below:~ushare:~n1) → λ (snd₅ : RecursorFixtures:Wide) → λ (sndih₆ : Set) → PProd (motive1₀ snd₅) sndih₆) t₃
+
+RecursorFixtures:Wide:below~u1:~ushare:~n1 : Set
+RecursorFixtures:Wide:below~u1:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:below~u1:~ushare:~n2 : Set
+RecursorFixtures:Wide:below~u1:~ushare:~n2 = Prod RecursorFixtures:Wide:below~u1:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:below~u1:~ushare:~n3 : Set
+RecursorFixtures:Wide:below~u1:~ushare:~n3 = List RecursorFixtures:Wide:below~u1:~ushare:~n2
+
+RecursorFixtures:Wide:below~u1:~ushare:~n4 : Set
+RecursorFixtures:Wide:below~u1:~ushare:~n4 = RecursorFixtures:Wide:below~u1:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:below~u1:~ushare:~n5 : Set
+RecursorFixtures:Wide:below~u1:~ushare:~n5 = RecursorFixtures:Wide:below~u1:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:below~u1 : {_ : RecursorFixtures:Wide → Set} → {_ : RecursorFixtures:Wide:below~u1:~ushare:~n4} → {_ : RecursorFixtures:Wide:below~u1:~ushare:~n5} → RecursorFixtures:Wide:below~u1:~ushare:~n3 → Set
+RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₃ = RecursorFixtures:Wide:rec~u1 {λ (t₄ : RecursorFixtures:Wide) → Set} {λ (t₄ : RecursorFixtures:Wide:below~u1:~ushare:~n3) → Set} {λ (t₄ : RecursorFixtures:Wide:below~u1:~ushare:~n2) → Set} PUnit (λ (xs₄ : RecursorFixtures:Wide:below~u1:~ushare:~n3) → λ (xsih₅ : Set) → PProd (motive2₁ xs₄) xsih₅) PUnit (λ (head₄ : RecursorFixtures:Wide:below~u1:~ushare:~n2) → λ (tail₅ : RecursorFixtures:Wide:below~u1:~ushare:~n3) → λ (headih₆ : Set) → λ (tailih₇ : Set) → PProd (PProd (motive3₂ head₄) headih₆) (PProd (motive2₁ tail₅) tailih₇)) (λ (fst₄ : RecursorFixtures:Wide:below~u1:~ushare:~n1) → λ (snd₅ : RecursorFixtures:Wide) → λ (sndih₆ : Set) → PProd (motive1₀ snd₅) sndih₆) t₃
+
+RecursorFixtures:Wide:below~u2:~ushare:~n1 : Set
+RecursorFixtures:Wide:below~u2:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:below~u2:~ushare:~n2 : Set
+RecursorFixtures:Wide:below~u2:~ushare:~n2 = Prod RecursorFixtures:Wide:below~u2:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:below~u2:~ushare:~n3 : Set
+RecursorFixtures:Wide:below~u2:~ushare:~n3 = List RecursorFixtures:Wide:below~u2:~ushare:~n2
+
+RecursorFixtures:Wide:below~u2:~ushare:~n4 : Set
+RecursorFixtures:Wide:below~u2:~ushare:~n4 = RecursorFixtures:Wide:below~u2:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:below~u2:~ushare:~n5 : Set
+RecursorFixtures:Wide:below~u2:~ushare:~n5 = RecursorFixtures:Wide:below~u2:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:below~u2 : {_ : RecursorFixtures:Wide → Set} → {_ : RecursorFixtures:Wide:below~u2:~ushare:~n4} → {_ : RecursorFixtures:Wide:below~u2:~ushare:~n5} → RecursorFixtures:Wide:below~u2:~ushare:~n2 → Set
+RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₃ = RecursorFixtures:Wide:rec~u2 {λ (t₄ : RecursorFixtures:Wide) → Set} {λ (t₄ : RecursorFixtures:Wide:below~u2:~ushare:~n3) → Set} {λ (t₄ : RecursorFixtures:Wide:below~u2:~ushare:~n2) → Set} PUnit (λ (xs₄ : RecursorFixtures:Wide:below~u2:~ushare:~n3) → λ (xsih₅ : Set) → PProd (motive2₁ xs₄) xsih₅) PUnit (λ (head₄ : RecursorFixtures:Wide:below~u2:~ushare:~n2) → λ (tail₅ : RecursorFixtures:Wide:below~u2:~ushare:~n3) → λ (headih₆ : Set) → λ (tailih₇ : Set) → PProd (PProd (motive3₂ head₄) headih₆) (PProd (motive2₁ tail₅) tailih₇)) (λ (fst₄ : RecursorFixtures:Wide:below~u2:~ushare:~n1) → λ (snd₅ : RecursorFixtures:Wide) → λ (sndih₆ : Set) → PProd (motive1₀ snd₅) sndih₆) t₃
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn:go:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn:go:~ushare:~n2 = Prod RecursorFixtures:Wide:brecOn:go:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn:go:~ushare:~n3 = List RecursorFixtures:Wide:brecOn:go:~ushare:~n2
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn:go:~ushare:~n4 = RecursorFixtures:Wide:brecOn:go:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n5 : Set
+RecursorFixtures:Wide:brecOn:go:~ushare:~n5 = RecursorFixtures:Wide:brecOn:go:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n6 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn:go:~ushare:~n6 = List:nil {RecursorFixtures:Wide:brecOn:go:~ushare:~n2}
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n7 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn:go:~ushare:~n7 = List:cons {RecursorFixtures:Wide:brecOn:go:~ushare:~n2}
+
+RecursorFixtures:Wide:brecOn:go:~ushare:~n8 : (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) → RecursorFixtures:Wide → Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+RecursorFixtures:Wide:brecOn:go:~ushare:~n8 = Prod:mk {RecursorFixtures:Wide:brecOn:go:~ushare:~n1} {RecursorFixtures:Wide}
+
+RecursorFixtures:Wide:brecOn:go : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn:go:~ushare:~n4} → {motive3₂ : RecursorFixtures:Wide:brecOn:go:~ushare:~n5} → (t₃ : RecursorFixtures:Wide) → ((t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn:go:~ushare:~n3) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₄ → motive2₁ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn:go:~ushare:~n2) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₄ → motive3₂ t₄) → PProd (motive1₀ t₃) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₃)
+RecursorFixtures:Wide:brecOn:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = RecursorFixtures:Wide:rec {λ (t₇ : RecursorFixtures:Wide) → PProd (motive1₀ t₇) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₇)} {λ (t₇ : RecursorFixtures:Wide:brecOn:go:~ushare:~n3) → PProd (motive2₁ t₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₇)} {λ (t₇ : RecursorFixtures:Wide:brecOn:go:~ushare:~n2) → PProd (motive3₂ t₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₇)} (PProd:mk {motive1₀ RecursorFixtures:Wide:leaf} {PUnit} (F1₄ RecursorFixtures:Wide:leaf PUnit:unit) PUnit:unit) (λ (xs₇ : RecursorFixtures:Wide:brecOn:go:~ushare:~n3) → λ (xsih₈ : PProd (motive2₁ xs₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} xs₇)) → PProd:mk {motive1₀ (RecursorFixtures:Wide:node xs₇)} {PProd (motive2₁ xs₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} xs₇)} (F1₄ (RecursorFixtures:Wide:node xs₇) xsih₈) xsih₈) (PProd:mk {motive2₁ RecursorFixtures:Wide:brecOn:go:~ushare:~n6} {PUnit} (F2₅ RecursorFixtures:Wide:brecOn:go:~ushare:~n6 PUnit:unit) PUnit:unit) (λ (head₇ : RecursorFixtures:Wide:brecOn:go:~ushare:~n2) → λ (tail₈ : RecursorFixtures:Wide:brecOn:go:~ushare:~n3) → λ (headih₉ : PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)) → λ (tailih₁₀ : PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)) → PProd:mk {motive2₁ (RecursorFixtures:Wide:brecOn:go:~ushare:~n7 head₇ tail₈)} {PProd (PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)) (PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈))} (F2₅ (RecursorFixtures:Wide:brecOn:go:~ushare:~n7 head₇ tail₈) (PProd:mk {PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)} {PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)} headih₉ tailih₁₀)) (PProd:mk {PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)} {PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)} headih₉ tailih₁₀)) (λ (fst₇ : RecursorFixtures:Wide:brecOn:go:~ushare:~n1) → λ (snd₈ : RecursorFixtures:Wide) → λ (sndih₉ : PProd (motive1₀ snd₈) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} snd₈)) → PProd:mk {motive3₂ (RecursorFixtures:Wide:brecOn:go:~ushare:~n8 fst₇ snd₈)} {PProd (motive1₀ snd₈) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} snd₈)} (F3₆ (RecursorFixtures:Wide:brecOn:go:~ushare:~n8 fst₇ snd₈) sndih₉) sndih₉) t₃
+
+RecursorFixtures:Wide:brecOn:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn:~ushare:~n1 = Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn:~ushare:~n2 = List RecursorFixtures:Wide:brecOn:~ushare:~n1
+
+RecursorFixtures:Wide:brecOn:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn:~ushare:~n3 = RecursorFixtures:Wide:brecOn:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn:~ushare:~n4 = RecursorFixtures:Wide:brecOn:~ushare:~n1 → Set
+
+RecursorFixtures:Wide:brecOn : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn:~ushare:~n3} → {motive3₂ : RecursorFixtures:Wide:brecOn:~ushare:~n4} → (t₃ : RecursorFixtures:Wide) → ((t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn:~ushare:~n2) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₄ → motive2₁ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn:~ushare:~n1) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₄ → motive3₂ t₄) → motive1₀ t₃
+RecursorFixtures:Wide:brecOn {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = PProd.fst₂ {motive1₀ t₃} {RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₃} (RecursorFixtures:Wide:brecOn:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆)
+
+RecursorFixtures:Wide:casesOn:~ushare:~n1 : Set
+RecursorFixtures:Wide:casesOn:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:casesOn:~ushare:~n2 : Set
+RecursorFixtures:Wide:casesOn:~ushare:~n2 = Prod RecursorFixtures:Wide:casesOn:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:casesOn:~ushare:~n3 : Set
+RecursorFixtures:Wide:casesOn:~ushare:~n3 = List RecursorFixtures:Wide:casesOn:~ushare:~n2
+
+RecursorFixtures:Wide:casesOn : {motive1₀ : RecursorFixtures:Wide → Set} → (t₁ : RecursorFixtures:Wide) → motive1₀ RecursorFixtures:Wide:leaf → ((xs₂ : RecursorFixtures:Wide:casesOn:~ushare:~n3) → motive1₀ (RecursorFixtures:Wide:node xs₂)) → motive1₀ t₁
+RecursorFixtures:Wide:casesOn {motive1₀} t₁ leaf₂ node₃ = RecursorFixtures:Wide:rec {motive1₀} {λ (t₄ : RecursorFixtures:Wide:casesOn:~ushare:~n3) → PUnit} {λ (t₄ : RecursorFixtures:Wide:casesOn:~ushare:~n2) → PUnit} leaf₂ (λ (xs₄ : RecursorFixtures:Wide:casesOn:~ushare:~n3) → λ (xsih₅ : PUnit) → node₃ xs₄) PUnit:unit (λ (head₄ : RecursorFixtures:Wide:casesOn:~ushare:~n2) → λ (tail₅ : RecursorFixtures:Wide:casesOn:~ushare:~n3) → λ (headih₆ : PUnit) → λ (tailih₇ : PUnit) → PUnit:unit) (λ (fst₄ : RecursorFixtures:Wide:casesOn:~ushare:~n1) → λ (snd₅ : RecursorFixtures:Wide) → λ (sndih₆ : motive1₀ snd₅) → PUnit:unit) t₁
+
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n1 = Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n2 = List RecursorFixtures:Wide:brecOn:eq:~ushare:~n1
+
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n3 = RecursorFixtures:Wide:brecOn:eq:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn:eq:~ushare:~n4 = RecursorFixtures:Wide:brecOn:eq:~ushare:~n1 → Set
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:brecOn:eq : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn:eq:~ushare:~n3} → {motive3₂ : RecursorFixtures:Wide:brecOn:eq:~ushare:~n4} → (t₃ : RecursorFixtures:Wide) → (F1₄ : (t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → (F2₅ : (t₅ : RecursorFixtures:Wide:brecOn:eq:~ushare:~n2) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₅ → motive2₁ t₅) → (F3₆ : (t₆ : RecursorFixtures:Wide:brecOn:eq:~ushare:~n1) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₆ → motive3₂ t₆) → Eq {motive1₀ t₃} (RecursorFixtures:Wide:brecOn {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆) (F1₄ t₃ (PProd.snd₃ {motive1₀ t₃} {RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₃} (RecursorFixtures:Wide:brecOn:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆)))
+  RecursorFixtures:Wide:brecOn:eq {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = RecursorFixtures:Wide:casesOn {λ (x₇ : RecursorFixtures:Wide) → Eq {motive1₀ x₇} (RecursorFixtures:Wide:brecOn {motive1₀} {motive2₁} {motive3₂} x₇ F1₄ F2₅ F3₆) (F1₄ x₇ (PProd.snd₃ {motive1₀ x₇} {RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} x₇} (RecursorFixtures:Wide:brecOn:go {motive1₀} {motive2₁} {motive3₂} x₇ F1₄ F2₅ F3₆)))} t₃ (Eq:refl {motive1₀ RecursorFixtures:Wide:leaf} (RecursorFixtures:Wide:brecOn {motive1₀} {motive2₁} {motive3₂} RecursorFixtures:Wide:leaf F1₄ F2₅ F3₆)) (λ (xs₇ : RecursorFixtures:Wide:brecOn:eq:~ushare:~n2) → Eq:refl {motive1₀ (RecursorFixtures:Wide:node xs₇)} (RecursorFixtures:Wide:brecOn {motive1₀} {motive2₁} {motive3₂} (RecursorFixtures:Wide:node xs₇) F1₄ F2₅ F3₆))
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2 = Prod RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3 = List RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n4 = RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n5 : Set
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n5 = RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n6 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n6 = List:nil {RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2}
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n7 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n7 = List:cons {RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2}
+
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n8 : (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) → RecursorFixtures:Wide → Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n8 = Prod:mk {RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n1} {RecursorFixtures:Wide}
+
+RecursorFixtures:Wide:brecOn~u1:go : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n4} → {motive3₂ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n5} → (t₃ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3) → ((t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₄ → motive2₁ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₄ → motive3₂ t₄) → PProd (motive2₁ t₃) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₃)
+RecursorFixtures:Wide:brecOn~u1:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = RecursorFixtures:Wide:rec~u1 {λ (t₇ : RecursorFixtures:Wide) → PProd (motive1₀ t₇) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₇)} {λ (t₇ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3) → PProd (motive2₁ t₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₇)} {λ (t₇ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2) → PProd (motive3₂ t₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₇)} (PProd:mk {motive1₀ RecursorFixtures:Wide:leaf} {PUnit} (F1₄ RecursorFixtures:Wide:leaf PUnit:unit) PUnit:unit) (λ (xs₇ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3) → λ (xsih₈ : PProd (motive2₁ xs₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} xs₇)) → PProd:mk {motive1₀ (RecursorFixtures:Wide:node xs₇)} {PProd (motive2₁ xs₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} xs₇)} (F1₄ (RecursorFixtures:Wide:node xs₇) xsih₈) xsih₈) (PProd:mk {motive2₁ RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n6} {PUnit} (F2₅ RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n6 PUnit:unit) PUnit:unit) (λ (head₇ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n2) → λ (tail₈ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n3) → λ (headih₉ : PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)) → λ (tailih₁₀ : PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)) → PProd:mk {motive2₁ (RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n7 head₇ tail₈)} {PProd (PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)) (PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈))} (F2₅ (RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n7 head₇ tail₈) (PProd:mk {PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)} {PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)} headih₉ tailih₁₀)) (PProd:mk {PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)} {PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)} headih₉ tailih₁₀)) (λ (fst₇ : RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n1) → λ (snd₈ : RecursorFixtures:Wide) → λ (sndih₉ : PProd (motive1₀ snd₈) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} snd₈)) → PProd:mk {motive3₂ (RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n8 fst₇ snd₈)} {PProd (motive1₀ snd₈) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} snd₈)} (F3₆ (RecursorFixtures:Wide:brecOn~u1:go:~ushare:~n8 fst₇ snd₈) sndih₉) sndih₉) t₃
+
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n1 = Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n2 = List RecursorFixtures:Wide:brecOn~u1:~ushare:~n1
+
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n3 = RecursorFixtures:Wide:brecOn~u1:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn~u1:~ushare:~n4 = RecursorFixtures:Wide:brecOn~u1:~ushare:~n1 → Set
+
+RecursorFixtures:Wide:brecOn~u1 : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn~u1:~ushare:~n3} → {motive3₂ : RecursorFixtures:Wide:brecOn~u1:~ushare:~n4} → (t₃ : RecursorFixtures:Wide:brecOn~u1:~ushare:~n2) → ((t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u1:~ushare:~n2) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₄ → motive2₁ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u1:~ushare:~n1) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₄ → motive3₂ t₄) → motive2₁ t₃
+RecursorFixtures:Wide:brecOn~u1 {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = PProd.fst₂ {motive2₁ t₃} {RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₃} (RecursorFixtures:Wide:brecOn~u1:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆)
+
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1 = Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2 = List RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1
+
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n3 = RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n4 = RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1 → Set
+
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n5 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n5 = List:nil {RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1}
+
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n6 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n6 = List:cons {RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1}
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:brecOn~u1:eq : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n3} → {motive3₂ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n4} → (t₃ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2) → (F1₄ : (t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → (F2₅ : (t₅ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₅ → motive2₁ t₅) → (F3₆ : (t₆ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₆ → motive3₂ t₆) → Eq {motive2₁ t₃} (RecursorFixtures:Wide:brecOn~u1 {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆) (F2₅ t₃ (PProd.snd₃ {motive2₁ t₃} {RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₃} (RecursorFixtures:Wide:brecOn~u1:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆)))
+  RecursorFixtures:Wide:brecOn~u1:eq {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = List:casesOn {RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1} {λ (x₇ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2) → Eq {motive2₁ x₇} (RecursorFixtures:Wide:brecOn~u1 {motive1₀} {motive2₁} {motive3₂} x₇ F1₄ F2₅ F3₆) (F2₅ x₇ (PProd.snd₃ {motive2₁ x₇} {RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} x₇} (RecursorFixtures:Wide:brecOn~u1:go {motive1₀} {motive2₁} {motive3₂} x₇ F1₄ F2₅ F3₆)))} t₃ (Eq:refl {motive2₁ RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n5} (RecursorFixtures:Wide:brecOn~u1 {motive1₀} {motive2₁} {motive3₂} RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n5 F1₄ F2₅ F3₆)) (λ (head₇ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n1) → λ (tail₈ : RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n2) → Eq:refl {motive2₁ (RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n6 head₇ tail₈)} (RecursorFixtures:Wide:brecOn~u1 {motive1₀} {motive2₁} {motive3₂} (RecursorFixtures:Wide:brecOn~u1:eq:~ushare:~n6 head₇ tail₈) F1₄ F2₅ F3₆))
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2 = Prod RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3 = List RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n4 = RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n5 : Set
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n5 = RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n6 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n6 = List:nil {RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2}
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n7 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n7 = List:cons {RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2}
+
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n8 : (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) → RecursorFixtures:Wide → Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n8 = Prod:mk {RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n1} {RecursorFixtures:Wide}
+
+RecursorFixtures:Wide:brecOn~u2:go : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n4} → {motive3₂ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n5} → (t₃ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2) → ((t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₄ → motive2₁ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₄ → motive3₂ t₄) → PProd (motive3₂ t₃) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₃)
+RecursorFixtures:Wide:brecOn~u2:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = RecursorFixtures:Wide:rec~u2 {λ (t₇ : RecursorFixtures:Wide) → PProd (motive1₀ t₇) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₇)} {λ (t₇ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3) → PProd (motive2₁ t₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₇)} {λ (t₇ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2) → PProd (motive3₂ t₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₇)} (PProd:mk {motive1₀ RecursorFixtures:Wide:leaf} {PUnit} (F1₄ RecursorFixtures:Wide:leaf PUnit:unit) PUnit:unit) (λ (xs₇ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3) → λ (xsih₈ : PProd (motive2₁ xs₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} xs₇)) → PProd:mk {motive1₀ (RecursorFixtures:Wide:node xs₇)} {PProd (motive2₁ xs₇) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} xs₇)} (F1₄ (RecursorFixtures:Wide:node xs₇) xsih₈) xsih₈) (PProd:mk {motive2₁ RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n6} {PUnit} (F2₅ RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n6 PUnit:unit) PUnit:unit) (λ (head₇ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n2) → λ (tail₈ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n3) → λ (headih₉ : PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)) → λ (tailih₁₀ : PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)) → PProd:mk {motive2₁ (RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n7 head₇ tail₈)} {PProd (PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)) (PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈))} (F2₅ (RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n7 head₇ tail₈) (PProd:mk {PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)} {PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)} headih₉ tailih₁₀)) (PProd:mk {PProd (motive3₂ head₇) (RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} head₇)} {PProd (motive2₁ tail₈) (RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} tail₈)} headih₉ tailih₁₀)) (λ (fst₇ : RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n1) → λ (snd₈ : RecursorFixtures:Wide) → λ (sndih₉ : PProd (motive1₀ snd₈) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} snd₈)) → PProd:mk {motive3₂ (RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n8 fst₇ snd₈)} {PProd (motive1₀ snd₈) (RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} snd₈)} (F3₆ (RecursorFixtures:Wide:brecOn~u2:go:~ushare:~n8 fst₇ snd₈) sndih₉) sndih₉) t₃
+
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n1 = Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n2 = List RecursorFixtures:Wide:brecOn~u2:~ushare:~n1
+
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n3 = RecursorFixtures:Wide:brecOn~u2:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn~u2:~ushare:~n4 = RecursorFixtures:Wide:brecOn~u2:~ushare:~n1 → Set
+
+RecursorFixtures:Wide:brecOn~u2 : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn~u2:~ushare:~n3} → {motive3₂ : RecursorFixtures:Wide:brecOn~u2:~ushare:~n4} → (t₃ : RecursorFixtures:Wide:brecOn~u2:~ushare:~n1) → ((t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u2:~ushare:~n2) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₄ → motive2₁ t₄) → ((t₄ : RecursorFixtures:Wide:brecOn~u2:~ushare:~n1) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₄ → motive3₂ t₄) → motive3₂ t₃
+RecursorFixtures:Wide:brecOn~u2 {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = PProd.fst₂ {motive3₂ t₃} {RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₃} (RecursorFixtures:Wide:brecOn~u2:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆)
+
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n1 : Set
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2 : Set
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2 = Prod RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n3 : Set
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n3 = List RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2
+
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n4 : Set
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n4 = RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n5 : Set
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n5 = RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n6 : (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) → RecursorFixtures:Wide → Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n6 = Prod:mk {RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n1} {RecursorFixtures:Wide}
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:brecOn~u2:eq : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n4} → {motive3₂ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n5} → (t₃ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2) → (F1₄ : (t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:below {motive1₀} {motive2₁} {motive3₂} t₄ → motive1₀ t₄) → (F2₅ : (t₅ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n3) → RecursorFixtures:Wide:below~u1 {motive1₀} {motive2₁} {motive3₂} t₅ → motive2₁ t₅) → (F3₆ : (t₆ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2) → RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₆ → motive3₂ t₆) → Eq {motive3₂ t₃} (RecursorFixtures:Wide:brecOn~u2 {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆) (F3₆ t₃ (PProd.snd₃ {motive3₂ t₃} {RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} t₃} (RecursorFixtures:Wide:brecOn~u2:go {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆)))
+  RecursorFixtures:Wide:brecOn~u2:eq {motive1₀} {motive2₁} {motive3₂} t₃ F1₄ F2₅ F3₆ = Prod:casesOn {RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n1} {RecursorFixtures:Wide} {λ (x₇ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n2) → Eq {motive3₂ x₇} (RecursorFixtures:Wide:brecOn~u2 {motive1₀} {motive2₁} {motive3₂} x₇ F1₄ F2₅ F3₆) (F3₆ x₇ (PProd.snd₃ {motive3₂ x₇} {RecursorFixtures:Wide:below~u2 {motive1₀} {motive2₁} {motive3₂} x₇} (RecursorFixtures:Wide:brecOn~u2:go {motive1₀} {motive2₁} {motive3₂} x₇ F1₄ F2₅ F3₆)))} t₃ (λ (fst₇ : RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n1) → λ (snd₈ : RecursorFixtures:Wide) → Eq:refl {motive3₂ (RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n6 fst₇ snd₈)} (RecursorFixtures:Wide:brecOn~u2 {motive1₀} {motive2₁} {motive3₂} (RecursorFixtures:Wide:brecOn~u2:eq:~ushare:~n6 fst₇ snd₈) F1₄ F2₅ F3₆))
+
+RecursorFixtures:Wide:ctorElimType : {_ : RecursorFixtures:Wide → Set} → Nat → Set
+RecursorFixtures:Wide:ctorElimType {motive1₀} ctorIdx₁ = cond {Set} (Nat:ble ctorIdx₁ 0) (PULift (motive1₀ RecursorFixtures:Wide:leaf)) (PULift ((xs₂ : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)) → motive1₀ (RecursorFixtures:Wide:node xs₂)))
+
+RecursorFixtures:Wide:ctorIdx : RecursorFixtures:Wide → Nat
+RecursorFixtures:Wide:ctorIdx x₀ = RecursorFixtures:Wide:casesOn {λ (x₁ : RecursorFixtures:Wide) → Nat} x₀ 0 (λ (xs₁ : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)) → 1)
+
+RecursorFixtures:Wide:ctorElim:~ushare:~n1 : Set
+RecursorFixtures:Wide:ctorElim:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:ctorElim : {motive1₀ : RecursorFixtures:Wide → Set} → (ctorIdx₁ : Nat) → (t₂ : RecursorFixtures:Wide) → Eq {Nat} ctorIdx₁ (RecursorFixtures:Wide:ctorIdx t₂) → RecursorFixtures:Wide:ctorElimType {motive1₀} ctorIdx₁ → motive1₀ t₂
+RecursorFixtures:Wide:ctorElim {motive1₀} ctorIdx₁ t₂ h₃ k₄ = RecursorFixtures:Wide:casesOn {λ (t₅ : RecursorFixtures:Wide) → Eq {Nat} ctorIdx₁ (RecursorFixtures:Wide:ctorIdx t₅) → motive1₀ t₅} t₂ (λ (h₅ : Eq {Nat} ctorIdx₁ 0) → PULift:down {motive1₀ RecursorFixtures:Wide:leaf} (Eq:ndrec {Nat} {ctorIdx₁} {RecursorFixtures:Wide:ctorElimType {motive1₀}} k₄ {0} h₅)) (λ (xs₅ : RecursorFixtures:Wide:ctorElim:~ushare:~n1) → λ (h₆ : Eq {Nat} ctorIdx₁ 1) → PULift:down {(xs₇ : RecursorFixtures:Wide:ctorElim:~ushare:~n1) → motive1₀ (RecursorFixtures:Wide:node xs₇)} (Eq:ndrec {Nat} {ctorIdx₁} {RecursorFixtures:Wide:ctorElimType {motive1₀}} k₄ {1} h₆) xs₅) h₃
+
+RecursorFixtures:Wide:isLeaf:match~u1:~ushare:~n1 : Set
+RecursorFixtures:Wide:isLeaf:match~u1:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:isLeaf:match~u1 : (motive₀ : RecursorFixtures:Wide → Set) → (x₁ : RecursorFixtures:Wide) → (Unit → motive₀ RecursorFixtures:Wide:leaf) → ((xs₂ : RecursorFixtures:Wide:isLeaf:match~u1:~ushare:~n1) → motive₀ (RecursorFixtures:Wide:node xs₂)) → motive₀ x₁
+RecursorFixtures:Wide:isLeaf:match~u1 motive₀ x₁ h1₂ h2₃ = RecursorFixtures:Wide:casesOn {λ (x₄ : RecursorFixtures:Wide) → motive₀ x₄} x₁ (h1₂ Unit:unit) (λ (xs₄ : RecursorFixtures:Wide:isLeaf:match~u1:~ushare:~n1) → h2₃ xs₄)
+
+RecursorFixtures:Wide:isLeaf : RecursorFixtures:Wide → Bool
+RecursorFixtures:Wide:isLeaf x₀ = RecursorFixtures:Wide:isLeaf:match~u1 (λ (x₁ : RecursorFixtures:Wide) → Bool) x₀ (λ (x₁ : Unit) → Bool:true) (λ (xs₁ : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)) → Bool:false)
+
+RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n1 : Set
+RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n2 : Set
+RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n2 = Prod RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n3 : Bool
+RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n3 = RecursorFixtures:Wide:isLeaf (RecursorFixtures:Wide:node (List:cons {RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n2} (Prod:mk {RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n1} {RecursorFixtures:Wide} (λ (x₀ : Nat) → λ (x₁ : Nat) → λ (x₂ : Nat) → λ (x₃ : Nat) → λ (x₄ : Nat) → λ (x₅ : Nat) → λ (x₆ : Nat) → λ (x₇ : Nat) → λ (x₈ : Nat) → λ (x₉ : Nat) → λ (x₁₀ : Nat) → λ (x₁₁ : Nat) → λ (x₁₂ : Nat) → λ (x₁₃ : Nat) → λ (x₁₄ : Nat) → λ (x₁₅ : Nat) → OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) RecursorFixtures:Wide:leaf) (List:nil {RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n2})))
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:isLeaf~uexample : Eq {Bool} RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n3 Bool:false
+  RecursorFixtures:Wide:isLeaf~uexample = rfl {Bool} {RecursorFixtures:Wide:isLeaf~uexample:~ushare:~n3}
+
+RecursorFixtures:Wide:leaf:elim : {motive1₀ : RecursorFixtures:Wide → Set} → (t₁ : RecursorFixtures:Wide) → Eq {Nat} (RecursorFixtures:Wide:ctorIdx t₁) 0 → motive1₀ RecursorFixtures:Wide:leaf → motive1₀ t₁
+RecursorFixtures:Wide:leaf:elim {motive1₀} t₁ h₂ leaf₃ = RecursorFixtures:Wide:ctorElim {motive1₀} 0 t₁ (Eq:symm {Nat} {RecursorFixtures:Wide:ctorIdx t₁} {0} h₂) (PULift:up {motive1₀ RecursorFixtures:Wide:leaf} leaf₃)
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:leaf:sizeOf~uspec : Eq {Nat} (SizeOf:sizeOf {RecursorFixtures:Wide} ⦃ RecursorFixtures:Wide:~usizeOf~uinst ⦄ RecursorFixtures:Wide:leaf) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)
+  RecursorFixtures:Wide:leaf:sizeOf~uspec = Eq:refl {Nat} (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)
+
+RecursorFixtures:Wide:noConfusionType:~ushare:~n1 : Set
+RecursorFixtures:Wide:noConfusionType:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:noConfusionType : Set → RecursorFixtures:Wide → RecursorFixtures:Wide → Set
+RecursorFixtures:Wide:noConfusionType P₀ t₁ t₂ = RecursorFixtures:Wide:casesOn {λ (t₃ : RecursorFixtures:Wide) → Set} t₁ (RecursorFixtures:Wide:casesOn {λ (t₃ : RecursorFixtures:Wide) → Set} t₂ (P₀ → P₀) (λ (xs₃ : RecursorFixtures:Wide:noConfusionType:~ushare:~n1) → P₀)) (λ (xs₃ : RecursorFixtures:Wide:noConfusionType:~ushare:~n1) → RecursorFixtures:Wide:casesOn {λ (t₄ : RecursorFixtures:Wide) → Set} t₂ P₀ (λ (xs₄ : RecursorFixtures:Wide:noConfusionType:~ushare:~n1) → (Eq {RecursorFixtures:Wide:noConfusionType:~ushare:~n1} xs₃ xs₄ → P₀) → P₀))
+
+RecursorFixtures:Wide:noConfusion:~ushare:~n1 : Set
+RecursorFixtures:Wide:noConfusion:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:noConfusion : {P₀ : Set} → {t₁ : RecursorFixtures:Wide} → {t₂ : RecursorFixtures:Wide} → Eq {RecursorFixtures:Wide} t₁ t₂ → RecursorFixtures:Wide:noConfusionType P₀ t₁ t₂
+RecursorFixtures:Wide:noConfusion {P₀} {t₁} {t₂} eq₃ = Eq:ndrec {RecursorFixtures:Wide} {t₁} {λ (t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:noConfusionType P₀ t₁ t₄} (RecursorFixtures:Wide:casesOn {λ (t₄ : RecursorFixtures:Wide) → RecursorFixtures:Wide:noConfusionType P₀ t₄ t₄} t₁ (λ (k₄ : P₀) → k₄) (λ (xs₄ : RecursorFixtures:Wide:noConfusion:~ushare:~n1) → λ (k₅ : Eq {RecursorFixtures:Wide:noConfusion:~ushare:~n1} xs₄ xs₄ → P₀) → k₅ (Eq:refl {RecursorFixtures:Wide:noConfusion:~ushare:~n1} xs₄))) {t₂} eq₃
+
+RecursorFixtures:Wide:node:elim:~ushare:~n1 : Set
+RecursorFixtures:Wide:node:elim:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:node:elim : {motive1₀ : RecursorFixtures:Wide → Set} → (t₁ : RecursorFixtures:Wide) → Eq {Nat} (RecursorFixtures:Wide:ctorIdx t₁) 1 → ((xs₂ : RecursorFixtures:Wide:node:elim:~ushare:~n1) → motive1₀ (RecursorFixtures:Wide:node xs₂)) → motive1₀ t₁
+RecursorFixtures:Wide:node:elim {motive1₀} t₁ h₂ node₃ = RecursorFixtures:Wide:ctorElim {motive1₀} 1 t₁ (Eq:symm {Nat} {RecursorFixtures:Wide:ctorIdx t₁} {1} h₂) (PULift:up {(xs₄ : RecursorFixtures:Wide:node:elim:~ushare:~n1) → motive1₀ (RecursorFixtures:Wide:node xs₄)} node₃)
+
+RecursorFixtures:Wide:node:noConfusion:~ushare:~n1 : Set
+RecursorFixtures:Wide:node:noConfusion:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:node:noConfusion:~ushare:~n2 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → Set
+RecursorFixtures:Wide:node:noConfusion:~ushare:~n2 = Eq {RecursorFixtures:Wide:node:noConfusion:~ushare:~n1}
+
+RecursorFixtures:Wide:node:noConfusion : {P₀ : Set} → {xs₁ : RecursorFixtures:Wide:node:noConfusion:~ushare:~n1} → {xs₂ : RecursorFixtures:Wide:node:noConfusion:~ushare:~n1} → Eq {RecursorFixtures:Wide} (RecursorFixtures:Wide:node xs₁) (RecursorFixtures:Wide:node xs₂) → (RecursorFixtures:Wide:node:noConfusion:~ushare:~n2 xs₁ xs₂ → P₀) → P₀
+RecursorFixtures:Wide:node:noConfusion {P₀} {xs₁} {xs₂} eq₃ k₄ = id {P₀} (RecursorFixtures:Wide:noConfusion {P₀} {RecursorFixtures:Wide:node xs₁} {RecursorFixtures:Wide:node xs₂} eq₃ k₄)
+
+RecursorFixtures:Wide:node:inj:~ushare:~n1 : Set
+RecursorFixtures:Wide:node:inj:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:node:inj:~ushare:~n2 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → Set
+RecursorFixtures:Wide:node:inj:~ushare:~n2 = Eq {RecursorFixtures:Wide:node:inj:~ushare:~n1}
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:node:inj : {xs₀ : RecursorFixtures:Wide:node:inj:~ushare:~n1} → {xs₁ : RecursorFixtures:Wide:node:inj:~ushare:~n1} → Eq {RecursorFixtures:Wide} (RecursorFixtures:Wide:node xs₀) (RecursorFixtures:Wide:node xs₁) → RecursorFixtures:Wide:node:inj:~ushare:~n2 xs₀ xs₁
+  RecursorFixtures:Wide:node:inj {xs₀} {xs₁} x₂ = RecursorFixtures:Wide:node:noConfusion {RecursorFixtures:Wide:node:inj:~ushare:~n2 xs₀ xs₁} {xs₀} {xs₁} x₂ (λ (xseq₃ : RecursorFixtures:Wide:node:inj:~ushare:~n2 xs₀ xs₁) → xseq₃)
+
+RecursorFixtures:Wide:node:injEq:~ushare:~n1 : Set
+RecursorFixtures:Wide:node:injEq:~ushare:~n1 = List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+
+RecursorFixtures:Wide:node:injEq:~ushare:~n2 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → Set
+RecursorFixtures:Wide:node:injEq:~ushare:~n2 = Eq {RecursorFixtures:Wide:node:injEq:~ushare:~n1}
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:node:injEq : (xs₀ : RecursorFixtures:Wide:node:injEq:~ushare:~n1) → (xs₁ : RecursorFixtures:Wide:node:injEq:~ushare:~n1) → Eq {Set} (Eq {RecursorFixtures:Wide} (RecursorFixtures:Wide:node xs₀) (RecursorFixtures:Wide:node xs₁)) (RecursorFixtures:Wide:node:injEq:~ushare:~n2 xs₀ xs₁)
+  RecursorFixtures:Wide:node:injEq xs₀ xs₁ = Eq:propIntro {Eq {RecursorFixtures:Wide} (RecursorFixtures:Wide:node xs₀) (RecursorFixtures:Wide:node xs₁)} {RecursorFixtures:Wide:node:injEq:~ushare:~n2 xs₀ xs₁} (RecursorFixtures:Wide:node:inj {xs₀} {xs₁}) (Eq:ndrec {RecursorFixtures:Wide:node:injEq:~ushare:~n1} {xs₀} {λ (xs₂ : RecursorFixtures:Wide:node:injEq:~ushare:~n1) → Eq {RecursorFixtures:Wide} (RecursorFixtures:Wide:node xs₀) (RecursorFixtures:Wide:node xs₂)} (Eq:refl {RecursorFixtures:Wide} (RecursorFixtures:Wide:node xs₀)) {xs₁})
+
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n1 : Set
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n2 : Set
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n2 = Prod RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n3 : Set
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n3 = List RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n2
+
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n4 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → Nat
+RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n4 = SizeOf:sizeOf {RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n3} ⦃ List:~usizeOf~uinst RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n2 ⦃ Prod:~usizeOf~uinst RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n1 RecursorFixtures:Wide ⦃ instSizeOfDefault RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n1 ⦄ ⦃ RecursorFixtures:Wide:~usizeOf~uinst ⦄ ⦄ ⦄
+
+-- theorem
+opaque
+  RecursorFixtures:Wide:node:sizeOf~uspec : (xs₀ : RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n3) → Eq {Nat} (SizeOf:sizeOf {RecursorFixtures:Wide} ⦃ RecursorFixtures:Wide:~usizeOf~uinst ⦄ (RecursorFixtures:Wide:node xs₀)) (HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n4 xs₀))
+  RecursorFixtures:Wide:node:sizeOf~uspec xs₀ = congrArg {Nat} {Nat} {RecursorFixtures:Wide:~usizeOf~u2 xs₀} {RecursorFixtures:Wide:node:sizeOf~uspec:~ushare:~n4 xs₀} (Nat:add (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)) (RecursorFixtures:Wide:~usizeOf~u2~ueq xs₀)
+
+RecursorFixtures:Wide:recOn:~ushare:~n1 : Set
+RecursorFixtures:Wide:recOn:~ushare:~n1 = Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat
+
+RecursorFixtures:Wide:recOn:~ushare:~n2 : Set
+RecursorFixtures:Wide:recOn:~ushare:~n2 = Prod RecursorFixtures:Wide:recOn:~ushare:~n1 RecursorFixtures:Wide
+
+RecursorFixtures:Wide:recOn:~ushare:~n3 : Set
+RecursorFixtures:Wide:recOn:~ushare:~n3 = List RecursorFixtures:Wide:recOn:~ushare:~n2
+
+RecursorFixtures:Wide:recOn:~ushare:~n4 : Set
+RecursorFixtures:Wide:recOn:~ushare:~n4 = RecursorFixtures:Wide:recOn:~ushare:~n3 → Set
+
+RecursorFixtures:Wide:recOn:~ushare:~n5 : Set
+RecursorFixtures:Wide:recOn:~ushare:~n5 = RecursorFixtures:Wide:recOn:~ushare:~n2 → Set
+
+RecursorFixtures:Wide:recOn:~ushare:~n6 : List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:recOn:~ushare:~n6 = List:nil {RecursorFixtures:Wide:recOn:~ushare:~n2}
+
+RecursorFixtures:Wide:recOn:~ushare:~n7 : Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide) → List (Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide)
+RecursorFixtures:Wide:recOn:~ushare:~n7 = List:cons {RecursorFixtures:Wide:recOn:~ushare:~n2}
+
+RecursorFixtures:Wide:recOn:~ushare:~n8 : (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) → RecursorFixtures:Wide → Prod (Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat) RecursorFixtures:Wide
+RecursorFixtures:Wide:recOn:~ushare:~n8 = Prod:mk {RecursorFixtures:Wide:recOn:~ushare:~n1} {RecursorFixtures:Wide}
+
+RecursorFixtures:Wide:recOn : {motive1₀ : RecursorFixtures:Wide → Set} → {motive2₁ : RecursorFixtures:Wide:recOn:~ushare:~n4} → {motive3₂ : RecursorFixtures:Wide:recOn:~ushare:~n5} → (t₃ : RecursorFixtures:Wide) → motive1₀ RecursorFixtures:Wide:leaf → ((xs₄ : RecursorFixtures:Wide:recOn:~ushare:~n3) → motive2₁ xs₄ → motive1₀ (RecursorFixtures:Wide:node xs₄)) → motive2₁ RecursorFixtures:Wide:recOn:~ushare:~n6 → ((head₄ : RecursorFixtures:Wide:recOn:~ushare:~n2) → (tail₅ : RecursorFixtures:Wide:recOn:~ushare:~n3) → motive3₂ head₄ → motive2₁ tail₅ → motive2₁ (RecursorFixtures:Wide:recOn:~ushare:~n7 head₄ tail₅)) → ((fst₄ : RecursorFixtures:Wide:recOn:~ushare:~n1) → (snd₅ : RecursorFixtures:Wide) → motive1₀ snd₅ → motive3₂ (RecursorFixtures:Wide:recOn:~ushare:~n8 fst₄ snd₅)) → motive1₀ t₃
+RecursorFixtures:Wide:recOn {motive1₀} {motive2₁} {motive3₂} t₃ leaf₄ node₅ nil₆ cons₇ mk₈ = RecursorFixtures:Wide:rec {motive1₀} {motive2₁} {motive3₂} leaf₄ node₅ nil₆ cons₇ mk₈ t₃
