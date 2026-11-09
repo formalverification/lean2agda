@@ -8,9 +8,8 @@ import Lean2Agda.Core.Share
 # The profile U scaffold
 
 One Agda module per closure, the test of the printer and the emitters
-until issues M2-5 and M2-7 emit recursors and quotients.  It declares
-every constant of the closure that it does not refuse, by kind, as
-follows:
+until issue M2-5 emits recursors.  It declares every constant of the
+closure that it does not refuse, by kind, as follows:
 
 +  the inductive types, each block of them one declaration
    (`Inductive.lean`): a record for each structure-like type and a data
@@ -29,7 +28,11 @@ follows:
 +  one of Lean's opaque constants (`opaqueInfo`, a `partial` definition
    among them) inside an `opaque` block with its value, which is what
    Lean's kernel has: a value it never unfolds;
-+  an axiom, a recursor and a quotient primitive as a postulate.
++  an axiom, a recursor and a quotient primitive as a postulate, with
+   the kernel's computation rules of `Quot.lift` and `Quot.ind` after
+   their postulates as rewrite rules (issue M2-7): a postulate of the
+   equation, over `Eq`, which `Inductive.lean` declares the rewrite
+   relation, followed by its `REWRITE` pragma.
 
 It refuses `sorryAx`, every `unsafe` declaration, and whatever depends on
 one of those, and names each with its reason (`Scaffold.refused`,
@@ -46,7 +49,9 @@ namespace Lean2Agda
 
 open Lean
 
-def profileUOptions : String := "{-# OPTIONS --type-in-type #-}"
+/-- Profile U's options: every sort is `Set`, and the quotient's
+computation rules are rewrite rules. -/
+def profileUOptions : String := "{-# OPTIONS --type-in-type --rewriting #-}"
 
 /-- One declaration of a module: the identifiers it declares, those its
 text refers to, and its text.  A declaration with a value also carries
@@ -245,6 +250,69 @@ def stringItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem 
   let (item, counts) ← postulateItem p decl
   return ({ item with text := item.text ++ s!"\{-# BUILTIN STRING {agdaIdent ``String} #-}\n" }, counts)
 
+/-! ## The quotient's computation rules -/
+
+/-- `∀ (x₁ : T₁) … (xₙ : Tₙ), body`, the binders outermost first, where a
+free variable whose identifier is a binder's name stands for that binder
+in the types after it and in the body. -/
+def forallOver (binders : List (Name × Expr × BinderInfo)) (body : Expr) : Expr :=
+  binders.foldr (fun (x, t, bi) b => .forallE x t (b.abstract #[.fvar ⟨x⟩]) bi) body
+
+/-- `Quot.lift f h (Quot.mk r a) = f a`, over `Quot.lift`'s binders
+`{α} {r} {β} (f) (h)` and `(a : α)`: the statement of Lean's
+`Quot.liftBeta`, built here because a closure can hold `Quot` without it
+(`init_quot` is in `Init.Prelude`, the theorem in `Init.Core`). -/
+def quotLiftRuleType : Expr :=
+  let u := Level.param `u
+  let v := Level.param `v
+  let x (n : Name) : Expr := .fvar ⟨n⟩
+  let rel := forallOver [(`a, x `α, .default), (`b, x `α, .default)] (.sort .zero)
+  let respects := forallOver [(`a, x `α, .default), (`b, x `α, .default),
+      (`p, mkApp2 (x `r) (x `a) (x `b), .default)]
+    (mkApp3 (.const ``Eq [v]) (x `β) (.app (x `f) (x `a)) (.app (x `f) (x `b)))
+  forallOver [(`α, .sort u, .implicit), (`r, rel, .implicit), (`β, .sort v, .implicit),
+      (`f, forallOver [(`a, x `α, .default)] (x `β), .default), (`h, respects, .default),
+      (`a, x `α, .default)]
+    (mkApp3 (.const ``Eq [v]) (x `β)
+      (mkAppN (.const ``Quot.lift [u, v])
+        #[x `α, x `r, x `β, x `f, x `h, mkApp3 (.const ``Quot.mk [u]) (x `α) (x `r) (x `a)])
+      (.app (x `f) (x `a)))
+
+/-- `Quot.ind mk (Quot.mk r a) = mk a`, over `Quot.ind`'s binders
+`{α} {r} {β} (mk)` and `(a : α)`: the statement of Lean's
+`Quot.indBeta`. -/
+def quotIndRuleType : Expr :=
+  let u := Level.param `u
+  let x (n : Name) : Expr := .fvar ⟨n⟩
+  let rel := forallOver [(`a, x `α, .default), (`b, x `α, .default)] (.sort .zero)
+  let quotMk (a : Expr) : Expr := mkApp3 (.const ``Quot.mk [u]) (x `α) (x `r) a
+  let motive := forallOver [(`q, mkApp2 (.const ``Quot [u]) (x `α) (x `r), .default)] (.sort .zero)
+  forallOver [(`α, .sort u, .implicit), (`r, rel, .implicit), (`β, motive, .implicit),
+      (`mk, forallOver [(`a, x `α, .default)] (.app (x `β) (quotMk (x `a))), .default),
+      (`a, x `α, .default)]
+    (mkApp3 (.const ``Eq [.zero]) (.app (x `β) (quotMk (x `a)))
+      (mkAppN (.const ``Quot.ind [u]) #[x `α, x `r, x `β, x `mk, quotMk (x `a)])
+      (.app (x `mk) (x `a)))
+
+/-- The computation rule that follows a quotient primitive's postulate,
+for `Quot.lift` and `Quot.ind`: its identifier, the primitive's with
+`-β` appended, which no `agdaIdent` can produce (it escapes both
+characters), and its type. -/
+def quotRule? (n : Name) : Option (String × Expr) :=
+  if n == ``Quot.lift then some (agdaIdent n ++ "-β", quotLiftRuleType)
+  else if n == ``Quot.ind then some (agdaIdent n ++ "-β", quotIndRuleType)
+  else none
+
+/-- A computation rule as a rewrite rule: a postulate of its equation,
+under the comment `-- computation rule`, then its `REWRITE` pragma.  The
+printer gives `Quot.lift` and `Quot.mk` the visibilities of their types,
+so the left-hand side is the term the scaffold prints wherever Lean's
+kernel would reduce. -/
+def ruleItem (p : Printer) (name : String) (type : Expr) : Except String (ScaffoldItem × PrintCounts) := do
+  let (t, counts) ← p.type type
+  return ({ provides := #[name], references := t.constants,
+            text := s!"-- computation rule\npostulate {name} : {t.render}\n\{-# REWRITE {name} #-}\n" }, counts)
+
 /-- A block of inductive types as one item, declaring its types and
 constructors. -/
 def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : InductiveVal) :
@@ -275,7 +343,9 @@ def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration) (decl : D
 Its path is the one its names sidecar has, from the source module of the
 closure's first root.  An auxiliary definition appears when something the
 scaffold prints uses it; a refused declaration does not appear, nor do
-its auxiliaries. -/
+its auxiliaries.  The computation rules of `Quot.lift` and `Quot.ind`
+follow their postulates, which `orderItems` keeps after `Quot.mk` and
+`Eq` too. -/
 def scaffold (env : Environment) (root : Root) (closure : Closure) : Except String Scaffold := do
   let env ← addAuxiliaries env closure
   let some first := closure.roots[0]? | throw "the closure has no roots"
@@ -295,6 +365,10 @@ def scaffold (env : Environment) (root : Root) (closure : Closure) : Except Stri
   for decl in kept do
     unless decl.auxiliary && !needed.contains decl.name do
       if let some (item, c) ← scaffoldItem p byName decl then
+        items := items.push item
+        counts := counts.add c
+      if let some (name, type) := quotRule? decl.name then
+        let (item, c) ← ruleItem p name type
         items := items.push item
         counts := counts.add c
   return { path := agdaModule root module, items := ← orderItems (breakCycles items), counts,
