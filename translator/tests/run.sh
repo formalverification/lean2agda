@@ -169,6 +169,16 @@ expect_failure 2 '--split needs a natural number' --split x Init
 expect_failure 2 '--split needs a natural number' --split
 expect_failure 1 'unknown declaration' Init.Data.Nat.Gcd -- DoesNotExist
 expect_failure 1 'DoesNotExist' DoesNotExist
+# An --out directory holding a module this closure does not emit is
+# refused before anything is written: a check of it would read the stray
+# module as part of the tree.
+printf 'module U.Stray where\n' > "$scratch/module-selection/U/Stray.agda"
+rm "$scratch/module-selection/closure.txt"
+expect_failure 1 'holds modules this closure does not emit' \
+  --out "$scratch/module-selection" TranslatorTests.Input.Printing
+[[ ! -e "$scratch/module-selection/closure.txt" ]]
+rm "$scratch/module-selection/U/Stray.agda"
+"$lake_cmd" exe lean2agda --out "$scratch/module-selection" TranslatorTests.Input.Printing > /dev/null
 
 "$lake_cmd" exe lean2agda --help > "$scratch/help.txt"
 grep -F 'usage: lean2agda' "$scratch/help.txt" > /dev/null

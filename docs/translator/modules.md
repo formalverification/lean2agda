@@ -123,6 +123,14 @@ At the output root `lean2agda --out` writes, as follows:
    a Lean module whose path would be `U.Everything` stops the translator
    with an error.
 
+A `DIR` that already holds a module this run does not write (one an
+earlier, larger closure left) stops the translator before it writes
+anything, since the driver reads every `.agda` file under `DIR` as part
+of the tree; the translator deletes nothing there.  Running the same
+closure into the same `DIR` again overwrites it.  Stale interfaces under
+`DIR/_build` need no such care: Agda rechecks a module whose source or
+imports changed.
+
 ## The driver
 
 `scripts/python/agda_check.py DIR` reads the tree from its files (each
@@ -197,7 +205,9 @@ scheduler stays in one place.
 +  `--listings OUT` writes each module's listing beside its path
    (`OUT/U/Init/Core.checked.txt`) and the sums of their count lines to
    `OUT/checked.txt`; `--keep OUT` copies the final tree, which the
-   default mode can then check and time without the loop; `--types-only`
+   default mode can then check and time without the loop (an `OUT`
+   holding a module outside the tree is refused before the loop starts,
+   for the same reason as the translator's `DIR`); `--types-only`
    restricts each module as `scaffold_check.py --types-only` does, keeping
    too whatever a kept declaration of another module names.
 
