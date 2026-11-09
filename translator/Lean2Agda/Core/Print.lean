@@ -153,6 +153,22 @@ def Naming.qualified (root : Root) (owner : Name → Option ModuleName) : Naming
     | some m => ".".intercalate (agdaModule root m) ++ "." ++ agdaIdent n
     | none => agdaIdent n⟩
 
+/-- The constants a printed term refers to, as `naming` prints them, in
+order of first occurrence, and `Nat` or `String` when the term holds a
+literal of that type: a literal needs the type's builtin, which only a
+module that imports the type's module, directly or not, has. -/
+def AgdaTerm.references (naming : Naming) (t : AgdaTerm) : Array String :=
+  let add (acc : Array String) (n : String) := if acc.contains n then acc else acc.push n
+  (literals t #[]).foldl add t.constants
+where
+  literals : AgdaTerm → Array String → Array String
+    | .nat _, acc => if acc.contains (naming.constant ``Nat) then acc else acc.push (naming.constant ``Nat)
+    | .str _, acc => if acc.contains (naming.constant ``String) then acc else acc.push (naming.constant ``String)
+    | .app f _ a, acc => literals a (literals f acc)
+    | .lam _ _ ty b, acc | .pi _ _ ty b, acc => literals b (literals ty acc)
+    | .letE _ ty v b, acc => literals b (literals v (literals ty acc))
+    | _, acc => acc
+
 /-- Subscript decimal digits, `₀` to `₉`. -/
 def subscript (n : Nat) : String :=
   (toString n).map fun d => Char.ofNat (0x2080 + (d.toNat - '0'.toNat))

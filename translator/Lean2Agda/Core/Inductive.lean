@@ -166,7 +166,7 @@ def inductiveDecl (p : Printer) (members : Array InductiveMember) : Except Strin
     else lines
   let provides := members.foldl (fun acc m =>
     (acc.push (agdaIdent m.type.name)) ++ m.ctors.map (agdaIdent ·.name)) #[]
-  let references := terms.foldl (fun acc t => t.constants.foldl (fun acc n =>
+  let references := terms.foldl (fun acc t => (t.references p.naming).foldl (fun acc n =>
     if acc.contains n || provides.contains n then acc else acc.push n) acc) #[]
   return { lines, provides, references, counts }
 
