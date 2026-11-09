@@ -1,0 +1,4 @@
+checked 45 of 45 declarations, 13 of 13 data types and records
+unfolded 0 of 0 theorems, 0 in vain
+refused value UnequalTerms Nat:add:~uf | (Nat:rec PUnit (λ n₂ → PProd (Nat → Nat)) (Nat:succ b₄)) !=<
+refused value UnequalTerms Nat:brecOn:go | PUnit !=< Nat:rec PUnit (λ n₂ → PProd (motive₀ n₂)) Nat:zero of

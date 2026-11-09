@@ -1,0 +1,12 @@
+checked 5 of 14 declarations, 0 of 0 data types and records
+unfolded 0 of 6 theorems, 0 in vain
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:~uproof~u1
+dropped Nat:gcd:~uunary
+dropped Nat:gcd
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:eq~udef:~ushare:~n3
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:eq~udef:~ushare:~n4
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:~uunary:eq~udef
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:eq~udef
+dropped ~uprivate:Init:Data:Nat:Gcd:~n0:Nat:gcd:eq~u1
+dropped Nat:gcd~usucc
+refused value UnequalTerms ~uprivate:Init:Data:Nat:Gcd:~n0:PSigma:casesOn:~uarg~upusher | ((y₁₂ : α₃) → rel₆ t₁₁ y₁₂ → β₄ y₁₂) → motive₂ t₁₁ != motive₂ t₁₁

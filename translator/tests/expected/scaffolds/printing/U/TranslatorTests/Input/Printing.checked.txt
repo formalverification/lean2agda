@@ -1,0 +1,2 @@
+checked 25 of 25 declarations, 2 of 2 data types and records
+unfolded 0 of 0 theorems, 0 in vain

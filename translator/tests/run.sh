@@ -34,66 +34,81 @@ PRINTING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Printing.lea
 
 "$lake_cmd" env "$lean_cmd" tests/Inductives.lean
 "$lake_cmd" env "$lean_cmd" tests/Scaffold.lean
+"$lake_cmd" env "$lean_cmd" tests/Modules.lean
 
-# A scaffold (the profile U module --out writes) must scope-check (the
-# acceptance criterion of issue M2-3) and type-check except for the
-# refusals its golden listing names, which also counts the theorems the
-# fallback unfolded; check_scaffold also compares the module with its
-# golden file, and the declarations the translator refuses with the
-# golden refused.txt, or requires them to be none.
-check_refusals() {
-  local name=$1 file relative
+# A scaffold is a tree of modules, one per Lean module of the closure
+# (issue M2-8).  check_listings runs scaffold_check's refusal loop over a
+# tree with agda_check.py, module by module in dependency order, so that
+# each module type-checks except for the refusals its listing names,
+# which also counts the theorems the fallback unfolded; check_tree also
+# compares the modules, the library file and the declarations the
+# translator refuses (refusals.txt, when there are any) with the golden
+# tree tests/expected/scaffolds/NAME/, beside the listings.  With KEEP
+# set, the loop's final tree is copied there.
+jobs=${AGDA_JOBS:-4}
+check_listings() {
+  local name=$1 out="$scratch/scaffold-$1" actual="$scratch/actual-$1"
   shift
-  "$lake_cmd" exe lean2agda --out "$scratch/scaffold-$name" "$@" > /dev/null
-  file=$(find "$scratch/scaffold-$name" -name '*.agda')
-  relative=${file#"$scratch/scaffold-$name/"}
-  (cd "$scratch/scaffold-$name" && "${AGDA:-agda}" --only-scope-checking "$relative" > /dev/null)
-  python3 ../scripts/python/scaffold_check.py --agda "${AGDA:-agda}" --messages "$file" \
-    > "$scratch/refusals-$name.txt"
-  tail -n +2 "tests/expected/scaffolds/$name.refusals.txt" | diff -u - "$scratch/refusals-$name.txt"
+  "$lake_cmd" exe lean2agda --out "$out" "$@" > /dev/null
+  mkdir -p "$actual"
+  python3 ../scripts/python/agda_check.py --refusals --messages --agda "${AGDA:-agda}" -j "$jobs" \
+    --listings "$actual" ${KEEP:+--keep "$KEEP"} "$out" > /dev/null
 }
 
-check_scaffold() {
-  local name=$1
-  check_refusals "$@"
-  tail -n +2 "tests/expected/scaffolds/$name.agda" | diff -u - "$(find "$scratch/scaffold-$name" -name '*.agda')"
-  if [[ -f "tests/expected/scaffolds/$name.refused.txt" ]]; then
-    tail -n +2 "tests/expected/scaffolds/$name.refused.txt" | diff -u - "$scratch/scaffold-$name/refusals.txt"
-  else
-    [[ ! -s "$scratch/scaffold-$name/refusals.txt" ]]
-  fi
+check_tree() {
+  local name=$1 out="$scratch/scaffold-$1" actual="$scratch/actual-$1"
+  check_listings "$@"
+  (cd "$out" && find . -name '*.agda' -not -path './_build/*' -exec cp --parents -t "$actual" {} +)
+  cp "$out"/*.agda-lib "$actual/"
+  if [[ -s "$out/refusals.txt" ]]; then cp "$out/refusals.txt" "$actual/"; fi
+  diff -r "tests/expected/scaffolds/$name" "$actual"
 }
 
-check_scaffold list-reverse-reverse Init.Data.List.Lemmas -- List.reverse_reverse
-check_scaffold nat-gcd-succ Init.Data.Nat.Gcd -- Nat.gcd_succ
-check_scaffold nat-gcd-self Init.Data.Nat.Gcd -- Nat.gcd_self
-check_scaffold printing TranslatorTests.Input.Printing -- PrintFixtures.alignedTop \
+check_tree list-reverse-reverse Init.Data.List.Lemmas -- List.reverse_reverse
+check_tree nat-gcd-succ Init.Data.Nat.Gcd -- Nat.gcd_succ
+check_tree nat-gcd-self Init.Data.Nat.Gcd -- Nat.gcd_self
+check_tree printing TranslatorTests.Input.Printing -- PrintFixtures.alignedTop \
   PrintFixtures.alignedDeep PrintFixtures.withLet PrintFixtures.redex PrintFixtures.higher \
   PrintFixtures.strict PrintFixtures.pick PrintFixtures.greeting PrintFixtures.large \
   PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value
-check_scaffold selected TranslatorTests.Input.Consumer -- Fixtures.selected
-check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
+KEEP="$scratch/kept-selected" check_tree selected TranslatorTests.Input.Consumer -- Fixtures.selected
+check_tree inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
   InductiveFixtures.Same InductiveFixtures.Sized InductiveFixtures.Packed InductiveFixtures.Packed.width \
   InductiveFixtures.Packed.measured InductiveFixtures.Packed.value InductiveFixtures.Packed.fits \
   InductiveFixtures.Token InductiveFixtures.Rose InductiveFixtures.Rose.label InductiveFixtures.Rose.children \
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
-check_scaffold kinds TranslatorTests.Input.Kinds
+check_tree kinds TranslatorTests.Input.Kinds
+
+# The driver of issue M2-8 (make check-output): the final tree of the
+# loop over `selected` checks module by module, as it is.
+python3 ../scripts/python/agda_check.py --agda "${AGDA:-agda}" -j "$jobs" "$scratch/kept-selected" > /dev/null
+
+# A split changes no outcome: nat-gcd-self's tree cut into parts of at
+# most 60 KB checks exactly what the uncut tree checks, so that what a
+# part drops is dropped from the later parts that open it.
+"$lake_cmd" exe lean2agda --split 60000 --out "$scratch/split" Init.Data.Nat.Gcd -- Nat.gcd_self > /dev/null
+find "$scratch/split" -path '*~p2.agda' | grep -q .
+python3 ../scripts/python/agda_check.py --refusals --agda "${AGDA:-agda}" -j "$jobs" \
+  --listings "$scratch/split-listed" "$scratch/split" > /dev/null
+diff -u tests/expected/scaffolds/nat-gcd-self/checked.txt "$scratch/split-listed/checked.txt"
 
 # The acceptance criterion of issue M2-4: every inductive type of the
 # closure of Init.Core's declarations is declared and checks.  They are
 # the roots, so the definitions and theorems their types need stay
-# postulates; the listing counts the data types and records.
+# postulates; the listings count the data types and records, and only
+# they are compared.
 INDUCTIVE_CLOSURE=Init.Core "$lake_cmd" env "$lean_cmd" scripts/InductiveTypes.lean \
   > "$scratch/init-core-inductives.txt"
 mapfile -t init_core_inductives < "$scratch/init-core-inductives.txt"
-check_refusals init-core-inductives Init.Core -- "${init_core_inductives[@]}"
+check_listings init-core-inductives Init.Core -- "${init_core_inductives[@]}"
+diff -r tests/expected/scaffolds/init-core-inductives "$scratch/actual-init-core-inductives"
 
 # Every declaration of a module, mutual partial definitions included,
-# makes a scaffold that scope-checks.
+# makes a tree that the refusal loop gets through.
 "$lake_cmd" exe lean2agda --out "$scratch/module-selection" TranslatorTests.Input.Printing > /dev/null
-(cd "$scratch/module-selection" && "${AGDA:-agda}" --only-scope-checking \
-  U/TranslatorTests/Input/Printing.agda > /dev/null)
+python3 ../scripts/python/agda_check.py --refusals --agda "${AGDA:-agda}" -j "$jobs" \
+  "$scratch/module-selection" > /dev/null
 
 NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Naming.lean
 "$lake_cmd" env "$lean_cmd" tests/NamingGolden.lean > "$scratch/naming-init.txt"
@@ -150,6 +165,8 @@ expect_failure 2 '--root needs a Lean name' --root
 expect_failure 2 '--root needs a Lean name' --root --stats Init
 expect_failure 2 '--share needs a natural number' --share x Init
 expect_failure 2 '--share needs a natural number' --share
+expect_failure 2 '--split needs a natural number' --split x Init
+expect_failure 2 '--split needs a natural number' --split
 expect_failure 1 'unknown declaration' Init.Data.Nat.Gcd -- DoesNotExist
 expect_failure 1 'DoesNotExist' DoesNotExist
 

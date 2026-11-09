@@ -1,0 +1,10 @@
+checked 13 of 15 declarations, 0 of 0 data types and records
+unfolded 0 of 6 theorems, 0 in vain
+refused value UnequalTerms Nat:casesAuxOn | (U.Init.Prelude.PProd.fst₂
+refused value UnequalTerms Nat:eq~uzero~uor~upos | U.Init.Prelude.PProd.fst₂
+refused value UnequalTerms Nat:le~uof~ult~uadd~uone | U.Init.Prelude.PProd.fst₂
+refused type UnequalTerms ~uprivate:Init:Data:Nat:Basic:~n0:Nat:zero~ult~uof~une~uzero:match~u1~u1 | (U.Init.Prelude.Nat:succ a₃) !=
+dropped Nat:zero~ult~uof~une~uzero
+refused value UnequalTerms Nat:recAux | (U.Init.Prelude.PProd.fst₂
+refused value UnequalTerms Nat:sub~uzero | U.Init.Prelude.PProd.fst₂
+refused value UnequalTerms Nat:sub~uself:~uf | (U.Init.Prelude.Nat:rec U.Init.Prelude.PUnit

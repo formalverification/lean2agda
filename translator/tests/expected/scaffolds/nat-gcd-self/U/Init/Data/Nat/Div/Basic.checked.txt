@@ -1,0 +1,11 @@
+checked 9 of 15 declarations, 0 of 0 data types and records
+unfolded 0 of 9 theorems, 0 in vain
+refused type UnequalTerms Nat:modCore:go:eq~u1 | (U.Init.Prelude.Nat:succ fuel2₃) !=
+dropped Nat:modCore~ueq
+dropped Nat:modCore~ueq~umod
+dropped Nat:mod~ueq
+dropped Nat:mod~ueq~usub~umod
+dropped Nat:mod~uself
+refused value UnequalTerms ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:modCore:go:fuel~ucongr:~uf | U.Init.Prelude.Bool:rec U.Init.Prelude.False U.Init.Prelude.True
+refused value UnequalTerms Nat:mod:eq~u2 | U.Init.Prelude.Nat:rec (U.Init.Prelude.OfNat:ofNat _)
+refused value UnequalTerms Nat:zero~umod | U.Init.Prelude.Nat:rec (U.Init.Prelude.OfNat:ofNat _)

@@ -1,0 +1,5 @@
+checked 21 of 21 declarations, 1 of 1 data types and records
+unfolded 1 of 2 theorems, 0 in vain
+refused value UnequalTerms KindFixtures:Marker:noConfusion | (k₁₀ : U.Init.Prelude.HEq mark₉ mark₉ → P₀) → P₀ !=<
+refused value CannotApply KindFixtures:Marker:mk:noConfusion | Expression used as function but does not have function type:
+unfolded UnequalTerms KindFixtures:alias for KindFixtures:useAlias | KindFixtures:alias != KindFixtures:base of type

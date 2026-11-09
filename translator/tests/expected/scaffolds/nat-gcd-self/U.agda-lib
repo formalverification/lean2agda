@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of Nat:gcd~uself
+name: U
+include: .
