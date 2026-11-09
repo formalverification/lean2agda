@@ -17,18 +17,24 @@ choices below are in the dated reports [`printing-blowup`][report] and
 
 ## Command line
 
-`--out DIR` now also writes the scaffold, an Agda module holding the whole
-closure, at the path of its first root's names sidecar
-([`naming.md`][naming]), and `refusals.txt`, one line per declaration the
-scaffold refuses (below).  For example, the following writes
-`out/U/Init/Data/Nat/Gcd.agda` beside `out/U/Init/Data/Nat/Gcd.names.ndjson`:
+`--out DIR` now also writes the scaffold as a tree of Agda modules
+([#22], [`modules.md`][modules]): one module per Lean module of the
+closure, each at the path of its names sidecar ([`naming.md`][naming]),
+with the library file `U.agda-lib`, a `libraries` file naming it, the
+module `U.Everything` importing every module, and `refusals.txt`, one line
+per declaration the scaffold refuses (below).  For example, the following
+writes `out/U/Init/Prelude.agda`, `out/U/Init/Core.agda` and the others
+beside their sidecars, then checks them module by module in dependency
+order, listing the refusals of each:
 
 ```sh
 cd translator
 lake exe lean2agda --out out Init.Data.Nat.Gcd -- Nat.gcd_self
-agda --only-scope-checking out/U/Init/Data/Nat/Gcd.agda     # from out/
-python3 ../scripts/python/scaffold_check.py --messages out/U/Init/Data/Nat/Gcd.agda
+python3 ../scripts/python/agda_check.py --refusals --messages --listings listed out
 ```
+
+`--split BYTES` sets the size past which a module is cut into parts,
+1,000,000 bytes of printed Agda by default; `--split 0` never cuts.
 
 `--share N` sets the sharing threshold, 32 by default; `--share 0` turns
 the pass off.  The listing, `closure.txt` and standard output are as
@@ -193,8 +199,9 @@ projection.
    gives Agda's checker no sharing ([gap catalog][catalog-let]).
 +  `mdata` is dropped.  lean4export strips it too, but the environment's
    values carry it.
-+  `const` prints as `agdaIdent`, unqualified within one module;
-   `Naming.qualified` prefixes the owner's module path for [#22].
++  `const` prints as `agdaIdent` inside the module that owns the constant,
+   and with the owner's module path before it elsewhere
+   (`Naming.qualified`, [`modules.md`][modules]).
 +  A loose bound variable, a free variable and a metavariable are refused
    with a reason; none occurs in a compiled constant.
 
@@ -244,9 +251,10 @@ declarations are [#44]'s.
 
 ## The scaffold
 
-The scaffold is one Agda module per closure under
-`{-# OPTIONS --type-in-type #-}`.  Issues [#18] and [#20] settled how each
-kind of declaration is emitted, as follows:
+The scaffold declares a closure's constants under
+`{-# OPTIONS --type-in-type #-}`, one Agda module per Lean module
+([`modules.md`][modules]).  Issues [#18] and [#20] settled how each kind
+of declaration is emitted, as follows:
 
 +  the inductive types, each block of them one declaration: a record for
    each type with one constructor and no indices, a data type for each
@@ -294,8 +302,8 @@ Three refinements, as follows:
    depends on one of those are left out of the module, and `refusals.txt`
    names each with its kind and the reason: `sorryAx: a proof left to
    sorry`, `unsafe: exempt from Lean's kernel`, or `depends on X, and
-   through it on Y` naming the direct dependency and the root.  The
-   module's header counts them.  An `unsafe` inductive type is refused
+   through it on Y` naming the direct dependency and the root.  Each
+   module's header counts those of its own Lean module.  An `unsafe` inductive type is refused
    with its constructors and recursor before `Inductive.lean` sees it, so
    the `NO_POSITIVITY_CHECK` block of [`inductives.md`][inductives]
    reaches a module only through a caller that declares one itself; the
@@ -310,28 +318,33 @@ Three refinements, as follows:
    `tests/TranslatorTests/Input/Kinds.lean` has one of each kind, and the
    inductive types' fixture has the unsafe type `Bad`.
 
-Declarations follow the closure's groups, and inside a group (an inductive
-type with its recursor) the printed references decide.  The module sits at
-the path of its first root's sidecar until [#22] splits it into one module
-per Lean module, so a reverse lookup of an identifier in it may need any
-sidecar of the output directory.
+Inside a module, declarations follow the closure's groups, and inside a
+group (an inductive type with its recursor) the printed references decide.
+A module sits at the path of its source module's sidecar, so a reverse
+lookup of an identifier needs only the sidecar beside the module, or, for
+a part of a split module, beside the module it is a part of.
 
 ### What Agda checks, and the fallback
 
-Agda parses and scope-checks every scaffold, which is the first acceptance
-criterion of [#17] ("prints and re-parses").  `make test-translator` does
-so for the three core-Lean corpus entries; `make scaffold-corpus`, which
-needs Mathlib's cache, does so for all twelve entries of
-`corpus/manifest.json`, and all twelve pass (the report gives the table).
-Agda's time grows faster than the module: 6 s for 0.7 MB, 187 s for
-3.0 MB, and 28 minutes for `real-sqrt-nonneg`'s 7.5 MB, which is one
-reason for [#22]'s one module per Lean module.  Scope-checking does not see
-visibility or precedence errors, which still parse, so the scaffold is also
-type-checked.  Not every declaration can check: the postulated recursors
-withhold the iota reductions that Lean's kernel used.
-`scripts/python/scaffold_check.py` type-checks a scaffold anyway, running
-Agda on a scratch copy until the rest checks, and at each error does one
-of three things, as follows:
+Agda parsed and scope-checked every single-module scaffold, which is the
+first acceptance criterion of [#17] ("prints and re-parses"), for the
+three core-Lean corpus entries in `make test-translator` and for all
+twelve entries of `corpus/manifest.json` in `make scaffold-corpus` (the
+report gives the table).  Agda's time grew faster than the module: 6 s for
+0.7 MB, 187 s for 3.0 MB, and 28 minutes for `real-sqrt-nonneg`'s 7.5 MB,
+which is one reason for [#22]'s one module per Lean module.  In a tree,
+Agda scope-checks a module only once the modules it imports type-check
+(`--only-scope-checking` applies to the module named, not to its imports),
+so the parse and scope check now happen inside the type-checking loop
+below, whose first run of each module reports any such error.
+Scope-checking does not see visibility or precedence errors, which still
+parse, so the scaffold is type-checked in any case.  Not every declaration
+can check: the postulated recursors withhold the iota reductions that
+Lean's kernel used.  `scripts/python/scaffold_check.py` type-checks a
+scaffold module anyway, running Agda on a scratch copy until the rest
+checks, and `scripts/python/agda_check.py --refusals` runs it on each
+module of a tree in dependency order ([`modules.md`][modules]).  At each
+error it does one of three things, as follows:
 
 +  when the error's message, before the lines saying what Agda was
    checking, names a theorem that is still in its `opaque` block, the
@@ -439,27 +452,29 @@ broke each rule in turn and showed which checks fail:
    companions of the printing fixture, and a `String` root's builtin;
 +  `PrintingLexical.agda`, which `tests/Printing.lean` writes: a binder
    built from every Agda keyword and sort name, which Agda checks;
-+  seven scaffolds against golden files in `tests/expected/scaffolds/`,
-   scope-checked, and type-checked with `scaffold_check.py` against golden
-   listings: the three core-Lean corpus entries, the printing fixture
-   (`tests/TranslatorTests/Input/Printing.lean`, which prints every
-   constructor, every visibility and both repairs), `Fixtures.selected`,
-   the inductive types' fixture of [`inductives.md`][inductives], and
-   `kinds`, whose golden `refused.txt` names the six refused declarations
-   and whose golden listing shows the fallback; the scaffold of
-   `Init.Core`'s inductive types, against its listing alone; and the
-   declarations each scaffold's translator refuses, against a golden
-   `refused.txt` where one exists and required to be none otherwise;
++  seven scaffolds against golden trees in `tests/expected/scaffolds/`
+   ([`modules.md`][modules]), type-checked module by module with
+   `agda_check.py --refusals` against golden listings, one per module and
+   their sums in `checked.txt`: the three core-Lean corpus entries, the
+   printing fixture (`tests/TranslatorTests/Input/Printing.lean`, which
+   prints every constructor, every visibility and both repairs),
+   `Fixtures.selected`, the inductive types' fixture of
+   [`inductives.md`][inductives], and `kinds`, whose golden
+   `refusals.txt` names the six refused declarations and whose listings
+   show the fallback; the scaffold of `Init.Core`'s inductive types,
+   against its listings alone; and the declarations each scaffold's
+   translator refuses, against a golden `refusals.txt` where one exists
+   and required to be none otherwise;
 +  `scripts/python/tests/test_scaffold_check.py`: the checker's parsing
    of every block shape, the fallback's trigger (only a theorem the message
    proper names, never the refused declaration itself), the transparent
    form, the postulate form, the `in vain` mark, and a run in which the
    fake Agda names a theorem;
 +  the scaffold of the printing fixture's whole module, mutual `partial`
-   definitions included, scope-checked.
+   definitions included, which the refusal loop gets through.
 
 `make scaffold-corpus` is the check over all twelve corpus entries; it
-needs Mathlib's cache, takes about half an hour, and no CI job runs it.
+needs Mathlib's cache, and no CI job runs it.
 
 ## Hand-off to the emitters
 
@@ -519,6 +534,7 @@ It assumes the following of its callers:
 [report]: ../reports/printing-blowup-2026-10-12.md
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
 [naming]: naming.md
+[modules]: modules.md
 [catalog-irrel]: ../foundations/gap-catalog.md#proof-irrelevance
 [inductives]: inductives.md
 [inductives-projections]: inductives.md#projections

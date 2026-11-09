@@ -48,9 +48,8 @@ The deep notes it summarizes stay beside their components:
    is kept.
 +  The **closure** of a declaration is every constant it reaches through types,
    values, constructors, recursors and their reduction rules, in dependency
-   order; a **scaffold** is the Agda module the printer writes for a closure
-   under profile U, every constant with its printed type as a postulate except
-   the roots' values.
+   order; a **scaffold** is the tree of Agda modules, one per Lean module, that
+   the printer writes for a closure under profile U.
 +  The **corpus** is the set of twelve declarations of Lean's core library and
    Mathlib translated into Agda by hand before the translator existed, each
    with its exported kernel term and notes on what the translation needed; it
@@ -81,7 +80,7 @@ flowchart TB
   norm["Normalize: Lean4Less inserts casts for proof irrelevance,<br/>K-like reduction and the computation rule of Quot.lift"]:::planned
   univ["Elaborate universes: specialize by which levels are zero,<br/>then predicativize"]:::planned
   emit["Emit: names, printed terms and the scaffold (built);<br/>data and record, recursors, opaque theorems,<br/>parameters, one module per Lean module (planned)"]:::partial
-  check["Check: Agda under the profile's flags<br/>(the scaffold checker built; the driver for emitted modules planned)"]:::partial
+  check["Check: Agda under the profile's flags<br/>(the scaffold checker and the driver for emitted modules built)"]:::partial
   lib["An Agda library in two layers, constructive and classical"]:::planned
   olean --> load
   load --> norm --> univ --> emit --> check --> lib
@@ -95,7 +94,7 @@ flowchart TB
 | Normalize | the environment of the modules to translate, through Lean4Less's `.olean` output or inside its process ([#26] chooses the bridge across the toolchain skew) | a Lean⁻ environment; the casts inserted per constant; the constants aborted | planned | [#26], [#30] |
 | Elaborate universes | the Lean⁻ environment | each constant specialized by which of its universe-level parameters are zero, with predicative level annotations; the essentially impredicative constants, reported | planned | [#28], [#29] |
 | Emit | the closure, the profile and the layer | Agda modules | names, the printer, the sharing pass and the profile U scaffold built; the rest planned | [#16] to [#22], [#27], [#32], [#33], [#37], [#38] |
-| Check | the emitted modules and the profile's flags | Agda's verdict per module, with time and memory; the failures, fed back into the atlas by category | the scaffold checker and the corpus checker exist; the driver for emitted modules is planned | [#22], [#23], [#43], [#45] |
+| Check | the emitted modules and the profile's flags | Agda's verdict per module, with time and memory; the failures, fed back into the atlas by category | the scaffold checker, the corpus checker and the driver for emitted modules exist | [#22], [#23], [#43], [#45] |
 
 ## Stage by stage
 
@@ -214,7 +213,9 @@ made faithful in Milestones 3 and 4, as follows.
    builtins), the type abbreviations, the roots' values and the auxiliaries.
    `scripts/python/scaffold_check.py` type-checks it, turning each refusal into
    a postulate or a drop and listing them, and golden listings pin where each
-   scaffold stands.  All twelve corpus scaffolds print and scope-check.
+   scaffold stands.  All twelve corpus scaffolds printed and scope-checked as
+   single modules; [#22] made the scaffold a tree of modules, one per Lean
+   module ([`translator/modules.md`][modules]).
 +  **Inductive types and records** (planned by [#18]).  Structure-like
    inductives (one constructor, no indices, not recursive) become records with
    eta and the rest `data`; mutual and nested blocks are emitted directly.
@@ -266,10 +267,11 @@ made faithful in Milestones 3 and 4, as follows.
 Today `make corpus-check` runs the shell's `agda` on every corpus entry under
 the flags its files declare and prints a table
 ([`../corpus/README.md`][corpus], Checking), and
-`scripts/python/scaffold_check.py` type-checks a scaffold.  [#22] adds the
-driver for emitted modules, `scripts/python/agda_check.py`, which checks them
-in dependency order with a configurable parallelism and records time and peak
-memory per module; [#23] runs the corpus's golden outputs in CI and starts
+`scripts/python/scaffold_check.py` type-checks a scaffold module.  [#22] added
+the driver for emitted modules, `scripts/python/agda_check.py`, which checks
+them in dependency order with a configurable parallelism and records time and
+peak memory per module (`make check-output OUT=DIR`), and runs the scaffold
+checker over a tree with `--refusals`; [#23] runs the corpus's golden outputs in CI and starts
 `docs/performance.md`; [#43] and [#45] make checking affordable and
 incremental.  Every failure goes back into the atlas with its category (a
 translator defect, an essential impredicativity, a constant the normalizer
@@ -329,12 +331,12 @@ make lean-cache        # Mathlib's prebuilt .olean files, several gigabytes, onc
 make lean-build        # build the Lake package in translator/
 cd translator
 lake exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self    # the closure and its counts
-lake exe lean2agda --out out Init.Data.Nat.Gcd -- Nat.gcd_self  # closure.txt, sidecars, scaffold
-python3 ../scripts/python/scaffold_check.py --messages out/U/Init/Data/Nat/Gcd.agda
+lake exe lean2agda --out out Init.Data.Nat.Gcd -- Nat.gcd_self  # closure.txt, sidecars, the tree
+python3 ../scripts/python/agda_check.py --refusals --messages out   # the refusals, module by module
 cd ..
 make atlas             # the atlas and its report, about three minutes and 7.5 GiB
 make corpus-check      # Agda on every corpus entry
-make scaffold-corpus   # print and scope-check all twelve scaffolds, about half an hour
+make scaffold-corpus   # print all twelve scaffolds and check them module by module
 make test              # the Python suite and the translator's semantic and golden tests
 ```
 
@@ -384,6 +386,7 @@ Issues are cited by number; the documents are this repository's.
 [loading]: translator/loading.md
 [naming]: translator/naming.md
 [printing]: translator/printing.md
+[modules]: translator/modules.md
 [blowup]: reports/printing-blowup-2026-10-12.md
 [catalog]: foundations/gap-catalog.md
 [report]: foundations/gap-report-corpus.md
