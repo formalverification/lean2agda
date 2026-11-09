@@ -10,8 +10,9 @@ structural recursion Lean compiles through `brecOn`; an indexed family; a
 type nested through `Array` and `List`, whose recursors are a block of
 three; a mutual pair; a `K`-like family, a proposition with one
 constructor and no fields; a structure-like type that Agda receives as a
-data type, projected through its recursor; and a type without
-constructors.  Each theorem is proved by `rfl`, which Lean's kernel
+data type, projected through its recursor; a constructor with implicit
+and instance fields; a nested type whose shared major premise type the
+recursor's clauses must see through; and a type without constructors.  Each theorem is proved by `rfl`, which Lean's kernel
 checks by computing.
 -/
 
@@ -110,6 +111,24 @@ noncomputable def Holder.depth (h : Holder Nat) : Nat :=
   Holder.rec (motive := fun _ => Nat) 0 (fun _ d => d + 1) h
 
 theorem Holder.depth_example : Holder.depth (.mk (n := 1) (.mk (n := 2) .nil)) = 2 := rfl
+
+/-- A type nested through `List` and `Prod` whose element type is large:
+the major premise type of its recursor over the `List`,
+`List ((Nat → … → Nat) × Wide)`, is a closed term past the sharing
+threshold that occurs several times in that recursor's type, so the
+sharing pass makes it an auxiliary constant, which the recursor's clauses
+must see through to `List`. -/
+inductive Wide where
+  | leaf : Wide
+  | node (xs : List ((Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat → Nat →
+      Nat → Nat → Nat → Nat) × Wide)) : Wide
+
+def Wide.isLeaf : Wide → Bool
+  | .leaf => true
+  | .node _ => false
+
+theorem Wide.isLeaf_example : (Wide.node [(fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => 0, .leaf)]).isLeaf = false :=
+  rfl
 
 /-- No constructors. -/
 inductive Void where

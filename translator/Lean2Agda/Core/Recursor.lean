@@ -30,7 +30,7 @@ its clause is as follows:
 A type without constructors gets one clause with the absurd pattern.  The
 recursors of one block (the types of a mutual declaration, and a nested
 type's `rec_N` on the kernel's auxiliary types) are one `mutual`
-definition, since their rules call each other.  `docs/translator/inductives.md`
+definition, since their rules call each other.  `docs/translator/recursors.md`
 gives the rules and the probes behind them.
 -/
 
@@ -63,6 +63,21 @@ def enterIndices (r : RecursorVal) (s : Scope) (tail : Expr) :
   let some (.forallE _ majorType _ majorInfo) ← asPi scope rest | throw s!"{r.name} has no major premise"
   return (scope, patterns, majorType, majorInfo)
 
+/-- A type whose head is an inductive type: the type itself when its head
+is one, and otherwise its kernel weak head normal form.  The head can be a
+definition: the sharing pass makes a closed subterm that a recursor's type
+repeats into an auxiliary constant, and the major premise type of a nested
+type's `rec_N`, `List (… T …)`, can be one (`T.rec_1._share.1`), which
+the normal form unfolds to the application it abbreviates. -/
+def inductiveHeaded (env : Environment) (s : Scope) (t : Expr) : PrintM Expr := do
+  let t := t.consumeMData
+  match t.getAppFn with
+  | .const n _ =>
+    match env.find? n with
+    | some (.inductInfo _) => return t
+    | _ => kernelWhnf s t
+  | _ => kernelWhnf s t
+
 /-- The variable patterns of a recursor's parameters, motives and minor
 premises. -/
 def variablePatterns (binders : Array (Visibility × String × AgdaTerm)) : Array (Visibility × Pattern) :=
@@ -76,8 +91,7 @@ def recursorClause (r : RecursorVal) (binders : Array (Visibility × String × A
   let env := (← read).env
   let (scope, indexPatterns, majorType, majorInfo) ← enterIndices r s tail
   let mut scope := scope
-  let majorType ← if majorType.consumeMData.getAppFn.isConst then pure majorType.consumeMData
-    else kernelWhnf scope majorType
+  let majorType ← inductiveHeaded env scope majorType
   let .const induct us := majorType.getAppFn | throw s!"the major premise of {r.name} is not inductive"
   let some (.inductInfo ind) := env.find? induct | throw s!"no inductive type {induct}"
   let some (.ctorInfo c) := env.find? rule.ctor | throw s!"no constructor {rule.ctor}"
@@ -93,8 +107,7 @@ def recursorClause (r : RecursorVal) (binders : Array (Visibility × String × A
     fields := fields.push fv
     scope := scope'
     ctorType := b.instantiate1 fv
-  let target ← if ctorType.consumeMData.getAppFn.isConst then pure ctorType.consumeMData
-    else kernelWhnf scope ctorType
+  let target ← inductiveHeaded env scope ctorType
   let indices := target.getAppArgs.extract ind.numParams (ind.numParams + ind.numIndices)
   -- Lean's parameters that Agda keeps as indices, which the constructor
   -- binds with its own visibilities.
