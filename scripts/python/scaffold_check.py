@@ -7,9 +7,10 @@ Description:
   declarations Agda refuses and which theorems had to unfold.
 
   Agda stops at the first error in a module, and a scaffold holds
-  hundreds of declarations, some of which cannot check until the
-  emitter of issue M2-7 supplies the definitional unfolding they need.  The checker therefore runs Agda on a scratch copy of the
-  module repeatedly, and at each error does one of three things.  When
+  hundreds of declarations, some of which cannot check until a later
+  emitter supplies the definitional unfolding they need.  The checker
+  therefore runs Agda on a scratch copy of the module repeatedly, and at
+  each error does one of three things.  When
   the error's message names a theorem, which the scaffold keeps in an
   `opaque` block, the theorem is re-emitted as a transparent
   definition, so that what needed it to unfold can see its value: the
@@ -23,23 +24,31 @@ Description:
   met them, after three lines counting what checked (the declarations,
   and the data types and records the inductive types became), what
   unfolded, and how many of the recursors are still defined by pattern
-  matching.  An unfolding
-  is in vain when the declaration it was made for is refused or dropped
-  all the same, which the first later event at or beyond that
-  declaration decides, and the listing says so.
+  matching.  An unfolding is in vain when the declaration it was made
+  for is refused or dropped all the same, which the first later event at
+  or beyond that declaration decides, and the listing says so.
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
         [--timeout SECONDS] [--heap SIZE] [--messages] [--types-only]
         MODULE.agda
 
   Agda runs with its heap bounded, 8G by default (`--heap`, GHC's
-  `-M`), and names each declaration as it starts and ends it
-  (`-v tc.decl:5`): a run that exhausts the heap or the time bound is
-  charged to the declaration Agda named last, which is refused like any
-  other, its value postulated or, for a type, the declaration dropped
-  with what refers to it.  Agda's positivity check normalizes the types
-  of a data type's constructors and a record's fields, and the normal
-  form of some of Lean's compiled definitions is exponentially large.
+  `-M` on the command line, which wins over `GHCRTS`), since its
+  positivity check normalizes the types of a data type's constructors
+  and a record's fields, and the normal form of some of Lean's compiled
+  definitions is exponentially large.  A run that exhausts the heap is
+  charged to the declaration it died in, which is refused like any
+  other: its value postulated or, for a type, the declaration dropped
+  with what refers to it.  To know which one that is, Agda runs with
+  `-v tc.decl:5`, which names each data type, record and function
+  definition as Agda starts and ends it but no postulate or type
+  signature, and the checker's copy of the module puts a one-line
+  marker definition before each declaration: the last name a run
+  printed is a marker, and the declaration after it the one Agda died
+  in, or a declaration, and that one (a data type's positivity check
+  runs after its `Checked` line).  A run that passes the time bound
+  (`--timeout`, the whole run's) is an error that names the declaration
+  in progress, since the bound is no one declaration's.
 
   The listing is deterministic, so a test compares it with an expected
   one; `--messages` adds the first line of each error message.
@@ -105,13 +114,18 @@ _INDENT = "  "
 # checker, which points at a block's first line, not at a clause.
 _RECURSOR = "recursor"
 _TERMINATION = "TerminationIssue"
-# What a run that ran out of heap or time is charged with.  GHC's runtime
-# exits with 251 when the heap is exhausted.
+# What a run that ran out of heap is charged with.  GHC's runtime exits
+# with 251 when the heap is exhausted.
 _HEAP = "HeapExhausted"
-_TIME = "Timeout"
 _HEAP_EXIT = "exit code 251"
 # "Checking X." and "Checked X.", which `-v tc.decl:5` prints.
 _CHECKING = re.compile(r"^Check(?:ing|ed) (\S+)\.$", re.MULTILINE)
+# The prefix of the marker definitions the checker puts before each
+# declaration of its copy of the module; no name the translator prints
+# has a hyphen.
+_MARK = "scaffold-check-mark-"
+# A heap size as GHC's runtime takes it: a number and a unit.
+_HEAP_SIZE = re.compile(r"[1-9][0-9]*[kKmMgG]?")
 
 
 @dataclass(frozen=True)
@@ -299,14 +313,26 @@ def types_only(module: Module) -> Module:
     return Module(module.name, module.header, tuple(item for i, item in enumerate(items) if i in keep))
 
 
-def render(module: Module, state: State) -> tuple[str, tuple[tuple[int, int], ...]]:
-    """The module's text with the live items, and for each live item its
-    index and first line."""
+def marker(index: int) -> str:
+    """The marker definition the checker puts before the item at `index`.
+    Under `-v tc.decl:5` Agda 2.8.0 names each data type, record and
+    function definition as it starts and ends it, but no postulate and no
+    type signature, which it checks before it names the definition; a
+    marker is a definition, so Agda names it before the item it marks."""
+    name = f"{_MARK}{index}"
+    return f"{name} : Set₁\n{name} = Set"
+
+
+def render(module: Module, state: State, marks: bool = False) -> tuple[str, tuple[tuple[int, int], ...]]:
+    """The module's text with the live items, each after its marker
+    definition when `marks` is set, and the first line of each block: a
+    live item's with its index, a marker's with -1."""
     live = tuple(i for i, a in enumerate(state.alive) if a)
+    blocks = tuple(b for i in live for b in (((-1, marker(i)),) if marks else ()) + ((i, state.items[i].text),))
     header_lines = module.header.count("\n") + 1
-    starts = _starts(tuple(state.items[i].text.count("\n") + 1 for i in live), header_lines + 2)
-    text = "\n\n".join((module.header,) + tuple(state.items[i].text for i in live)) + "\n"
-    return text, tuple(zip(live, starts))
+    starts = _starts(tuple(text.count("\n") + 1 for _, text in blocks), header_lines + 2)
+    text = "\n\n".join((module.header,) + tuple(text for _, text in blocks)) + "\n"
+    return text, tuple((i, start) for (i, _), start in zip(blocks, starts))
 
 
 def _starts(heights: tuple[int, ...], first: int) -> tuple[int, ...]:
@@ -331,20 +357,51 @@ def parse_refusal(output: str) -> Optional[Refusal]:
 
 
 def capped(runner: Runner, heap: str) -> Runner:
-    """The runner, with Agda's heap bounded and each declaration named as
-    Agda starts and ends it."""
+    """The runner, with Agda's heap bounded and each data type, record
+    and function definition named as Agda starts and ends it."""
     def run(command: Sequence[str], cwd: Path, timeout: float) -> Result[subprocess.CompletedProcess, PipelineError]:
         return runner((command[0], "+RTS", f"-M{heap}", "-RTS", "-v", "tc.decl:5", *command[1:]), cwd, timeout)
     return run
 
 
 def parse_exhaustion(run: FileRun) -> Optional[tuple[str, Refusal]]:
-    """For a run that exhausted Agda's heap or time, the declaration Agda
-    named last and the refusal it is charged with; None for any other
-    run, or one that named no declaration."""
-    error = _TIME if run.outcome == Outcome.TIMEOUT else _HEAP if run.message.endswith(_HEAP_EXIT) else None
+    """For a run that exhausted Agda's heap, the name Agda printed last,
+    a marker's or a declaration's, and the refusal to charge; None for any
+    other run, or one that named nothing."""
+    exhausted = run.outcome == Outcome.FAIL and run.message.endswith(_HEAP_EXIT)
     names = _CHECKING.findall(run.output)
-    return (names[-1], Refusal(0, error, run.message, "")) if error and names else None
+    return (names[-1], Refusal(0, _HEAP, run.message, "")) if exhausted and names else None
+
+
+def charged(name: str, state: State) -> Optional[tuple[int, int]]:
+    """Where in the live items Agda was when it printed `name` last, as
+    (index, line within the item), the line deciding whether the type or
+    the value is refused.  A marker's name puts it in the type of the item
+    after the marker: Agda was past the marker and had not yet named the
+    item, so it was checking a postulate or a definition's type signature.
+    A declaration's name puts it in that item: in the value of a
+    definition, whose clauses Agda checks after naming it, or in a data
+    type or record, whose positivity check runs after its `Checked` line.
+    None for a name of no live item."""
+    if name.startswith(_MARK):
+        suffix = name[len(_MARK):]
+        index = int(suffix) if suffix.isdigit() else -1
+        return (index, 0) if 0 <= index < len(state.items) and state.alive[index] else None
+    owner = {n: i for i, item in enumerate(state.items) if state.alive[i] for n in item.names}
+    index = owner.get(name)
+    return None if index is None else (index, state.items[index].signature + 1)
+
+
+def timed_out(run: FileRun, state: State, timeout: float) -> str:
+    """The error for a run that passed the time bound.  The bound is the
+    whole run's, not any one declaration's, so the declaration in progress
+    is named and nothing is charged."""
+    names = _CHECKING.findall(run.output)
+    place = charged(names[-1], state) if names else None
+    index = place[0] if place is not None else None
+    where = f" while checking {state.items[index].names[0]}" if index is not None and state.items[index].names else ""
+    return (f"Agda ran past the time bound of {timeout:g} s{where}; the bound is the whole run's, "
+            "so nothing is refused: raise --timeout or check a smaller module")
 
 
 def locate(layout: tuple[tuple[int, int], ...], line: int) -> Optional[tuple[int, int]]:
@@ -414,7 +471,7 @@ def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
         items = state.items[:index] + (postulated(item, label),) + state.items[index + 1:]
         event = Event("refused value", item.names[0], refusal.error, refusal.message)
         return State(items, state.alive, state.events + (event,))
-    if has_value(item) and (offset > item.signature or refusal.error in (_HEAP, _TIME)):
+    if has_value(item) and offset > item.signature:
         items = state.items[:index] + (postulated(item),) + state.items[index + 1:]
         event = Event("refused value", item.names[0], refusal.error, refusal.message)
         return State(items, state.alive, state.events + (event,))
@@ -494,10 +551,11 @@ class Checked:
 def check_module(
     runner: Runner, clock: Clock, agda: str, module: Module, timeout: float, scratch: Path
 ) -> Result[Checked, PipelineError]:
-    """Run Agda on copies of the module under `scratch` until the
-    remaining declarations check.  Each round unfolds one theorem or
-    removes or rewrites one declaration, so there are at most as many
-    rounds as theorems plus twice the declarations."""
+    """Run Agda on copies of the module under `scratch`, each declaration
+    after its marker, until the remaining declarations check.  Each round
+    unfolds one theorem or removes or rewrites one declaration, so there
+    are at most as many rounds as theorems plus twice the declarations.
+    A run that passes the time bound stops the checker with an error."""
     relative = Path(*module.name.split(".")).with_suffix(".agda")
     made = ensure_dir_exists((scratch / relative).parent)
     if made.is_err:
@@ -505,7 +563,7 @@ def check_module(
     state = State(module.items, tuple(True for _ in module.items), ())
     runs, seconds = 0, 0.0
     for _ in range(2 * len(module.items) + theorems(module.items) + 1):
-        text, layout = render(module, state)
+        text, layout = render(module, state, marks=True)
         written = write_text(scratch / relative, text)
         if written.is_err:
             return Result.err(written.unwrap_err())
@@ -513,12 +571,14 @@ def check_module(
         runs, seconds = runs + 1, seconds + run.seconds
         if run.outcome == Outcome.PASS:
             return Result.ok(Checked(state, runs, seconds, run.seconds))
-        refusal = parse_refusal(run.output) if run.outcome == Outcome.FAIL else None
-        place = locate(layout, refusal.line) if refusal else None
+        if run.outcome == Outcome.TIMEOUT:
+            return Result.err(PipelineError(ErrorType.AGDA_ERROR, timed_out(run, state, timeout)))
+        refusal = parse_refusal(run.output)
+        located = locate(layout, refusal.line) if refusal else None
+        place = located if located is not None and located[0] >= 0 else None
         exhausted = parse_exhaustion(run) if refusal is None else None
         if exhausted is not None:
-            owner = {name: i for i, item in enumerate(state.items) if state.alive[i] for name in item.names}
-            refusal, place = exhausted[1], ((owner[exhausted[0]], 0) if exhausted[0] in owner else None)
+            refusal, place = exhausted[1], charged(exhausted[0], state)
         if refusal is None or place is None:
             return Result.err(PipelineError(ErrorType.AGDA_ERROR,
                                             f"cannot place Agda's failure: {run.message}"))
@@ -536,6 +596,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--messages", action="store_true")
     parser.add_argument("--types-only", action="store_true")
     args = parser.parse_args(argv)
+    if not _HEAP_SIZE.fullmatch(args.heap):
+        parser.error(f"--heap takes a size such as 8G or 512M, not {args.heap!r}")
     with tempfile.TemporaryDirectory(prefix="scaffold-check-") as scratch:
         outcome = read_text(args.module).and_then(parse_module).map(
             lambda m: types_only(m) if args.types_only else m).and_then(
