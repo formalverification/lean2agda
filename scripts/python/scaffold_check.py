@@ -611,16 +611,23 @@ def check_module(
 ) -> Result[Checked, PipelineError]:
     """Run Agda on copies of the module under `scratch`, each declaration
     after its marker, until the remaining declarations check.  Each round
-    unfolds one theorem or removes or rewrites one declaration, so there
-    are at most as many rounds as theorems plus twice the declarations.
-    A run that passes the time bound stops the checker with an error."""
+    unfolds one theorem or changes declarations: it postulates one's
+    value, which happens to a declaration at most once, or drops one with
+    its dependents, which happens to it at most once too.  Between two
+    changes each theorem unfolds at most once, since only a change puts
+    one back in its opaque block (`reverted`), and a theorem tried in vain
+    for one declaration may be tried again for the next.  The loop stops
+    with an error past either bound, which only a defect of the checker
+    can reach; a global cap would need (2n + 1)(t + 1) runs for n
+    declarations and t theorems.  A run that passes the time bound stops
+    the checker with an error."""
     relative = Path(*module.name.split(".")).with_suffix(".agda")
     made = ensure_dir_exists((scratch / relative).parent)
     if made.is_err:
         return Result.err(made.unwrap_err())
     state = State(module.items, tuple(True for _ in module.items), ())
-    runs, seconds = 0, 0.0
-    for _ in range(2 * len(module.items) + theorems(module.items) + 1):
+    runs, seconds, changes, streak = 0, 0.0, 0, 0
+    while changes <= 2 * len(module.items) and streak <= theorems(module.items):
         text, layout = render(module, state, marks=True)
         written = write_text(scratch / relative, text)
         if written.is_err:
@@ -641,6 +648,8 @@ def check_module(
             return Result.err(PipelineError(ErrorType.AGDA_ERROR,
                                             f"cannot place Agda's failure: {run.message}"))
         state = step(state, place[0], place[1], refusal)
+        unfolded = state.events[-1].action == "unfolded"
+        changes, streak = (changes, streak + 1) if unfolded else (changes + 1, 0)
     return Result.err(PipelineError(ErrorType.AGDA_ERROR, "the checker did not converge"))
 
 

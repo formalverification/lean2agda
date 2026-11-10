@@ -518,17 +518,29 @@ is an error that names the declaration in progress, since the bound is no
 one declaration's.
 
 The listing opens with three counts, the declarations that checked (and the
-data types and records among them), the theorems unfolded, and the recursors
-still defined by pattern matching with those the termination checker
-refused, and says of an unfolding that it was `in vain` when the declaration
-it was made for was refused or dropped all the same, which the first later
-event at or beyond that declaration decides.  Since [#31] the checker then
-puts the theorem back in its opaque block, so that no later declaration
-sees a proof that helped nothing: before, `Nat.modCoreGo_lt`'s three
-unfoldings in vain left `Nat.decLe`'s proofs transparent, and the
-positivity check of `ByteArray.IsValidUTF8`, which compares numerals
-through `Nat.decLe`, normalized through them until the heap ran out
-([`nat-operations.md`][nat-operations]).  A closure whose every
+data types and records among them), the unfoldings beside the module's
+theorems, and the recursors still defined by pattern matching with those the
+termination checker refused, and says of an unfolding that it was `in vain`
+when the declaration it was made for was refused or dropped all the same,
+which the first later event at or beyond that declaration decides.  Since
+[#31] the checker then puts the theorem back in its opaque block, so that no
+later declaration sees a proof that helped nothing: before,
+`Nat.modCoreGo_lt`'s three unfoldings in vain left `Nat.decLe`'s proofs
+transparent, and the positivity check of `ByteArray.IsValidUTF8`, which
+compares numerals through `Nat.decLe`, normalized through them until the
+heap ran out ([`nat-operations.md`][nat-operations]).  The next declaration
+that needs the theorem unfolds it again, and a module lists the unfoldings
+of other modules' theorems made for its own declarations, so the count of
+unfoldings may pass that of the module's theorems: 6 of 5 in the
+`arithmetic` tree's `Init.Data.Nat.Div.Basic`, three theorems of
+`Init.Prelude`, each unfolded for two of its declarations.  The loop's bound
+follows from the same rule: a
+declaration is postulated at most once and dropped at most once, and between
+two such changes each theorem unfolds at most once, so the loop stops with
+an error only past one of those counts, which a defect of the checker alone
+can reach.  A first version of the bound allowed each theorem one unfolding
+in all, and three theorems tried in vain by each of five definitions ran
+past it (the review of [#86]).  A closure whose every
 declaration is refused (`lcProof` as the root) gives a module with a header
 and nothing else, which Agda and the checker both accept.  The fallback
 re-emits the theorem transparently rather than putting the dependent in an
@@ -729,6 +741,7 @@ It assumes the following of its callers:
 [#30]: https://github.com/formalverification/lean2agda/issues/30
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [#44]: https://github.com/formalverification/lean2agda/issues/44
+[#86]: https://github.com/formalverification/lean2agda/pull/86
 [report]: ../reports/printing-blowup-2026-10-12.md
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
