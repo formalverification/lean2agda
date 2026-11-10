@@ -19,6 +19,8 @@ fallback fires and where the rules are left out.
 
 open Lean Lean2Agda
 
+namespace ScaffoldTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -152,10 +154,12 @@ def checkQuotientRules (env : Environment) : IO Unit := do
   let plain ← scaffoldOf env #[``KindFixtures.plain]
   require (plain.items.all fun i => (i.text.splitOn "REWRITE Quot").length == 1) "a rule without Quot"
 
-#eval show IO Unit from do
+def run : IO Unit := do
   let env ← importEnvironment #[`Init, `TranslatorTests.Input.Kinds, `TranslatorTests.Input.Printing,
     `TranslatorTests.Input.Quotients]
   checkKinds env
   checkCyclesAndBuiltins env
   checkQuotientRules env
   IO.println "scaffold checks: kinds, refusals, unsafe sharing, cycles, builtins, and quotient rules passed"
+
+end ScaffoldTests

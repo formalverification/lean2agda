@@ -7,6 +7,8 @@ import Atlas.Graph
 
 open Lean Lean2Agda
 
+namespace CheckTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -120,4 +122,4 @@ def runChecks : IO Unit := do
   checkAtlas
   IO.println "translator checks: parser, selection, dependencies, cycles, order, statistics, and atlas passed"
 
-#eval runChecks
+end CheckTests

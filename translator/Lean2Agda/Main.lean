@@ -4,6 +4,16 @@ File: translator/Lean2Agda/Main.lean
 import Lean2Agda
 import Lean
 
+/-!
+# The shell
+
+The translator's IO: it imports the environment, runs the pure core on
+it, and writes what the core returns.  The executable's root,
+`translator/Main.lean`, parses the command line and calls `run`; it is a
+module of its own so that the tests, which import this one for
+`importEnvironment`, can be an executable too.
+-/
+
 namespace Lean2Agda
 
 open Lean
@@ -77,19 +87,3 @@ def run (args : Args) : IO Unit := do
   if args.stats then (← IO.getStdout).putStr closure.stats.render
 
 end Lean2Agda
-
-def main (argv : List String) : IO UInt32 := do
-  match Lean2Agda.parseArgs argv with
-  | .error e =>
-    IO.eprintln s!"lean2agda: {e}\n{Lean2Agda.usage}"
-    return 2
-  | .ok args =>
-    if args.help then
-      IO.println Lean2Agda.usage
-      return 0
-    try
-      Lean2Agda.run args
-      return 0
-    catch e =>
-      IO.eprintln s!"lean2agda: {e}"
-      return 1

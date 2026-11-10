@@ -17,6 +17,8 @@ closures and checks one of them with `agda_check.py`.
 
 open Lean Lean2Agda
 
+namespace ModulesTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -130,8 +132,10 @@ def checkSplit (env : Environment) : IO Unit := do
   let c ← moduleOf t' consumer
   require (c.imports.contains ["U", "TranslatorTests", "Input", "Base"]) "Consumer imports a part"
 
-#eval show IO Unit from do
+def run : IO Unit := do
   let env ← importEnvironment #[`Init, `TranslatorTests.Input.Consumer]
   checkOwnersAndImports env
   checkSplit env
   IO.println "module checks: owners, qualified references, imports, auxiliaries, library files, and the split passed"
+
+end ModulesTests

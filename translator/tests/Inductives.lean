@@ -17,6 +17,8 @@ and in the scaffold of `Init.Core`'s inductive types.
 
 open Lean Lean2Agda
 
+namespace InductiveTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -173,10 +175,12 @@ def checkSharing (env : Environment) : IO Unit := do
   require ((← position "InductiveFixtures:Wide:node:~ushare:~n1") < (← position "InductiveFixtures:Wide"))
     "the auxiliary follows the type that uses it"
 
-#eval show IO Unit from do
+def run : IO Unit := do
   let env ← importEnvironment #[`Init, `TranslatorTests.Input.Inductives]
   checkShapes env
   checkDeclarations env
   checkProjections env
   checkSharing env
   IO.println "inductive checks: shapes, declarations, projections, and sharing passed"
+
+end InductiveTests

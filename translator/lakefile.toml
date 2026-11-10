@@ -17,6 +17,15 @@
 name = "lean2agda"
 defaultTargets = ["Lean2Agda", "lean2agda", "atlas"]
 
+# `lake test` builds and runs the executable `unittests` below (issue
+# M2-11).  An executable driver runs every check at every invocation; a
+# library driver would only build its modules, so a check would run only
+# when Lake rebuilt it, and one that reads a fixture would pass stale
+# after the fixture changed.  The name has no hyphen: Lake 5.0 decodes a
+# target's `name` leniently but looks the driver up with `String.toName`,
+# which gives no name for `unit-tests` (docs/lean-findings.md, LF-14).
+testDriver = "unittests"
+
 [leanOptions]
 autoImplicit = false
 
@@ -44,15 +53,45 @@ rev = "v4.33.1"
 [[lean_lib]]
 name = "Lean2Agda"
 
+# The translator's version, which Main.lean reads with `include_str`.
+# Lake tracks no file that `include_str` reads (docs/lean-findings.md,
+# LF-13), so the executable needs this target, whose hash enters the
+# trace of its root module: a change to VERSION rebuilds Main.lean.
+[[input_file]]
+name = "version"
+path = "VERSION"
+text = true
+
+# The root is Main.lean, outside the library, so that the unit tests'
+# executable can import the shell (Lean2Agda.Main) without a second
+# `main`; the root is also the one module the version input rebuilds.
 [[lean_exe]]
 name = "lean2agda"
-root = "Lean2Agda.Main"
+root = "Main"
 supportInterpreter = true
+needs = ["version"]
 
 # Small compiled inputs for translator tests; these import core Lean only.
 [[lean_lib]]
 name = "TranslatorTests"
 srcDir = "tests"
+
+# The unit checks, one module each; a module the driver imports must
+# belong to a library.  Each imports the environments it checks when it
+# runs, so building them needs no Mathlib.
+[[lean_lib]]
+name = "UnitChecks"
+srcDir = "tests"
+roots = ["Check", "Inductives", "Modules", "Naming", "Printing", "Scaffold"]
+
+# The test driver: tests/UnitTests.lean runs the checks, or those named
+# after `lake test --`.  supportInterpreter lets the imports run the
+# fixtures' `initialize` declarations, as the translator's does.
+[[lean_exe]]
+name = "unittests"
+root = "UnitTests"
+srcDir = "tests"
+supportInterpreter = true
 
 # Optional full-population naming check; it reads atlas records, never Mathlib.
 [[lean_exe]]

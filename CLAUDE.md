@@ -35,14 +35,37 @@ section before changing anything structural.
    `--library-file`, so a bare system `agda` would see no libraries.
 +  `make help` lists every target.  `make corpus-check` type-checks every
    translated corpus entry under the flags its files declare
-   (`corpus/README.md`); `make check` runs it, and the emitted-Agda check
-   joins with M2-8.  `make test` runs the Python suite under
-   `scripts/python/tests/` and the translator's semantic and golden tests
-   under `translator/tests/`; `make test-python` and
-   `make test-translator` run them separately.
+   (`corpus/README.md`); `make check` runs it, and with `OUT=DIR` also
+   `make check-output`, which checks the tree `lake exe lean2agda --out
+   DIR` emitted, module by module (`docs/translator/modules.md`).
+   `make test` runs the Python suite under `scripts/python/tests/` and
+   the translator's semantic and golden tests under `translator/tests/`;
+   `make test-python` and `make test-translator` run them separately.  The translator's harness,
+   `translator/tests/run.sh`, runs `lake test` (`make test-unit`), which
+   builds and runs the executable `unittests` over the Lean unit checks
+   (`translator/tests/UnitTests.lean` names them), every check at every
+   run, from `translator/` only; the checks that need Agda, a run's
+   output or a golden file stay in `run.sh`.
    `make atlas` writes the axiom atlas of the pinned Mathlib and its
    report (`atlas/README.md`); it needs Mathlib's cache and about
    7.5 GiB of memory, and no CI job runs it.
++  `docs/translator/architecture.md` is the translator's module map: a
+   row for every tracked `.lean` and `.sh` file under `translator/` and
+   for the Python the harness runs, with its stage and effects, the pass
+   order and the data types.  The Python suite fails when a file lacks
+   its row, a row names a missing file, a pure row's code uses `IO`, the
+   pass order names a definition its file lacks, or a tracked `.lean`,
+   `.py` or `.sh` file lacks a `File:` header naming its own path
+   (`scripts/python/standards_check.py`).  A pull request that adds a
+   module adds its row.
++  `translator/VERSION` is the translator's version, below `1.0.0` until
+   the first generated library; `lean2agda --version` prints it, and
+   `CHANGELOG.md` at the root has an entry per version listing its pull
+   requests, newest first.  A pull request that changes the translator
+   adds its line to the newest entry; the version moves only when a
+   generated library must tell two translators apart (the map's "The
+   version"), and the suite checks that the file and the changelog
+   agree.  The version is never written into emitted files.
 +  `translator/` is a Lake package requiring Mathlib and lean4export at
    pinned tags (`docs/pinning.md`).  Mathlib's prebuilt `.olean` files
    come from `lake exe cache get` there (`make lean-cache`); never
@@ -82,8 +105,10 @@ before any pull request.  The committed skills `project-setup` and
 ## Repository architecture
 
 +  `translator/`: the Lean 4 package (a Lake project) that reads the
-   elaborated environment and emits Agda; pure translation core, IO at
-   the edges.
+   elaborated environment and emits Agda; pure translation core
+   (`Lean2Agda/Core/`), IO at the edges (`Main.lean`, the executable's
+   root, and `Lean2Agda/Main.lean`, the shell).  The module map is
+   `docs/translator/architecture.md`.
 +  `corpus/`: Mathlib declarations translated by hand, one directory per
    entry with the Lean statement and exported term, the idiomatic Agda,
    and notes; the translator's test oracle.  `corpus/SCHEMA.md` defines

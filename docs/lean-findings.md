@@ -45,6 +45,8 @@ entry adds its row here too.
 | LF-10 | S2 | `by_cases` makes a proof classical without saying so, `Finset.image` among them |
 | LF-11 | S2 | lean4export gives terms that differ only in binder information one record |
 | LF-12 | Checked | the kernel's diagnostics name exactly the declarations that need the quotient's computation rules |
+| LF-13 | S2 | Lake does not track a file that `include_str` reads |
+| LF-14 | S2 | `testDriver` cannot name an executable whose name has a hyphen |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -562,6 +564,79 @@ entry adds its row here too.
    checker runs its To rerun section lists.
 +  **Upstream**.  Nothing filed: the short run could not be reproduced.
 
+## LF-13: Lake does not track a file that `include_str` reads
+
++  **Severity**.  S2.  Lake documents `input_file` targets and `needs` as
+   the way to make a module depend on a file; nothing says that
+   `include_str` alone leaves the dependency unrecorded, and a reader can
+   take a successful `lake build` for an up-to-date one.
++  **Found**.  2026-11-08 and 2026-11-09, while giving the translator a
+   version for issue [#25], at Lean v4.33.1 (Lake 5.0.0).
++  **What**.  `include_str "VERSION"` is a term elaborator that reads the
+   file when the module is compiled.  Lake's trace of the module covers its
+   source, its imports and its options, not the files its elaborators
+   read, so after the file changes `lake build` reports success, rebuilds
+   nothing, and the compiled string is the old one.  An `[[input_file]]`
+   target for the file, named in `needs` of the target that builds the
+   module, puts the file's hash in the module's trace, and a change to the
+   file rebuilds the module.
++  **Evidence**.  In the translator's own package, with
+   `translator/Main.lean` reading `VERSION` by `include_str` (this
+   branch's layout): with the executable's `needs = ["version"]`, changing
+   `VERSION` from `0.1.0` to `0.1.1` rebuilt `Main`, its object file and
+   the executable (three jobs, about two seconds), and
+   `lean2agda --version` printed `0.1.1`; with the `needs` line deleted,
+   changing it to `0.1.2` gave "Build completed successfully" and the
+   binary still printed `0.1.1`; with the line restored, the next
+   `lake build` rebuilt `Main` and printed `0.1.2`.  Scratch packages
+   showed the same with `needs` on an executable whose root belongs to no
+   library (2026-11-08, when the issue was planned), and with `needs` on a
+   library one of whose modules does the `include_str` (2026-11-09).
++  **To rerun**.  In a scratch copy of `translator/`, delete the line
+   `needs = ["version"]` from `lakefile.toml`, then run the following in
+   the Nix shell:
+
+   ```sh
+   lake build lean2agda && .lake/build/bin/lean2agda --version
+   echo 0.9.9 > VERSION
+   lake build lean2agda && .lake/build/bin/lean2agda --version   # still the old version
+   ```
+
++  **Upstream**.  Not reported; `input_file` is the documented remedy.
++  **What the project does**.  The executable `lean2agda` needs the input
+   file `version`, and `translator/tests/run.sh` checks that
+   `lake exe lean2agda --version` names the line of `VERSION`, so a lost
+   `needs` fails the harness.  Any later `include_str` of a tracked file
+   gets an input file of its own.
+
+## LF-14: `testDriver` cannot name an executable whose name has a hyphen
+
++  **Severity**.  S2.  A configuration defect with no effect on what is
+   built or checked; it fails loudly.
++  **Found**.  2026-11-09, while choosing `lake test`'s driver for issue
+   [#25], at Lean v4.33.1 (Lake 5.0.0).
++  **What**.  In `lakefile.toml`, an executable declared as
+   `name = "unit-tests"` builds and runs with `lake exe unit-tests`, but
+   `testDriver = "unit-tests"` fails with "invalid test driver: unknown
+   script, executable, or library 'unit-tests'".  Lake decodes a target's
+   `name` with `stringToLegalOrSimpleName`
+   ([`Load/Toml.lean`, line 447][lake-toml-name]), which falls back to
+   `Name.mkSimple` when `String.toName` gives the anonymous name, as it
+   does for a string that is not an identifier
+   ([`Util/Name.lean`, lines 24 and 25][lake-name]); the test driver is
+   looked up with `driver.toName` alone
+   ([`CLI/Actions.lean`, lines 75 to 87][lake-test-driver]), the anonymous
+   name, which matches nothing.  `testDriver = "«unit-tests»"` works, and
+   so does a name with no hyphen.
++  **Evidence**.  A scratch package with an executable `unit-tests`:
+   `testDriver = "unit-tests"` and `"pkg/unit-tests"` both failed as
+   above, and `"«unit-tests»"` ran the executable.
++  **Upstream**.  Not reported.  The lint driver goes through the same
+   `resolveDriver` and lookup, so it is likely to behave the same; that was
+   not run.
++  **What the project does**.  The test executable is `unittests`, with
+   no hyphen, and `translator/lakefile.toml` says why.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -592,5 +667,9 @@ entry adds its row here too.
 [export-format]: https://github.com/leanprover/lean4export/blob/v4.33.0/format_ndjson.md
 [expr-eqv]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Lean/Expr.lean#L804-L812
 [#21]: https://github.com/formalverification/lean2agda/issues/21
+[#25]: https://github.com/formalverification/lean2agda/issues/25
 [#30]: https://github.com/formalverification/lean2agda/issues/30
 [report-quot]: reports/quotient-rules-2026-11-08.md
+[lake-toml-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Load/Toml.lean#L447
+[lake-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Util/Name.lean#L24-L25
+[lake-test-driver]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/CLI/Actions.lean#L75-L87

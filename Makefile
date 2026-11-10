@@ -62,7 +62,7 @@ else
 endif
 
 .PHONY: help populate-dry populate update update-check lint \
-        doctor check check-output test test-python test-translator corpus-check corpus-tables atlas \
+        doctor check check-output test test-python test-translator test-unit corpus-check corpus-tables atlas \
 	scaffold-corpus \
 	test-naming-atlas \
         lean-cache lean-build lean-smoke \
@@ -152,6 +152,10 @@ test-python: ## Run the Python test suite without Lean or Agda
 
 test-translator: ## Check translator semantics, golden outputs, and command-line failures
 	LAKE="$(LAKE)" LEAN="$(LEAN)" AGDA="$(AGDA)" bash translator/tests/run.sh
+
+# test-translator runs this too, before the checks that need Agda.
+test-unit: ## Run the translator's Lean unit checks alone (lake test in translator/)
+	cd translator && $(LAKE) test
 
 test-naming-atlas: ## Check injectivity on a pinned atlas (set ATLAS=path/to/file.ndjson)
 	@test -n "$(ATLAS)" || { echo 'error: set ATLAS to the pinned atlas NDJSON file'; exit 2; }

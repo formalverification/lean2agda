@@ -12,7 +12,8 @@ namespace Lean2Agda
 open Lean
 
 def usage : String :=
-  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--split BYTES] [--stats] MODULE... [-- DECL...]"
+  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--split BYTES] [--stats] MODULE... [-- DECL...]\n" ++
+  "       lean2agda --help | --version"
 
 structure Args where
   profile : String := "U"
@@ -25,6 +26,7 @@ structure Args where
   split : Nat := defaultSplitThreshold
   stats : Bool := false
   help : Bool := false
+  version : Bool := false
   modules : Array Name := #[]
   declarations : Array Name := #[]
   deriving Inhabited
@@ -59,6 +61,7 @@ private def parseArgsAux (args : Args) : List String → Except String Args
     parseArgsAux { args with split } rest
   | "--stats" :: rest => parseArgsAux { args with stats := true } rest
   | "--help" :: rest => parseArgsAux { args with help := true } rest
+  | "--version" :: rest => parseArgsAux { args with version := true } rest
   | "--profile" :: [] => throw "--profile needs a value"
   | "--root" :: [] => throw "--root needs a Lean name"
   | "--out" :: [] => throw "--out needs a directory"
@@ -71,7 +74,7 @@ private def parseArgsAux (args : Args) : List String → Except String Args
 
 def parseArgs (argv : List String) : Except String Args := do
   let args ← parseArgsAux {} argv
-  if args.modules.isEmpty && !args.help then throw "at least one module is required"
+  if args.modules.isEmpty && !args.help && !args.version then throw "at least one module is required"
   return args
 
 end Lean2Agda
