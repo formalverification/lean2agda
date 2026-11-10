@@ -6,6 +6,8 @@ import TranslatorTests
 
 open Lean Lean2Agda
 
+namespace PrintingTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -222,7 +224,7 @@ def checkSharing (env : Environment) : IO Unit := do
   require ((List.range lg.nodes.size).all fun i => !lchosen[i]! || !lg.nodes[i]!.expr.isLambda)
     "a lambda was shared"
 
-#eval show IO Unit from do
+def run : IO Unit := do
   checkLayout
   checkBinderNames
   checkNaming
@@ -232,3 +234,5 @@ def checkSharing (env : Environment) : IO Unit := do
   if let some dir ← IO.getEnv "PRINTING_AGDA_TEST_DIR" then
     IO.FS.writeFile (System.FilePath.mk dir / "PrintingLexical.agda") lexicalFile
   IO.println s!"printer checks: {precedenceCases.length} layout cases, binder names, constructors, telescopes, repairs, and sharing passed"
+
+end PrintingTests
