@@ -29,8 +29,9 @@ check against it:
 +  A nested type needs nothing more: Agda accepts an occurrence of the type
    inside another type's parameters (`Array Syntax`) and checks it for
    positivity through that type's definition.  The kernel's auxiliary
-   types for it exist only in its recursors' motives, which the scaffold
-   postulates until issue M2-5.
+   types for it exist only in its recursors' motives, and its recursors,
+   defined by mutual pattern matching (`Recursor.lean`), match on the
+   constructors of the types it is nested through.
 
 `docs/translator/inductives.md` gives the rules and the probes behind
 them.

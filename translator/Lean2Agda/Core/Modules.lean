@@ -219,6 +219,7 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
     kept.foldl (fun m d => if d.auxiliary then m.insert d.name d else m) {}
   let needed := reachableAuxiliaries auxiliaries <| kept.foldl (fun acc d =>
     if d.auxiliary then acc else acc ++ constantExprs d.info) #[]
+  let recursors := recursorBlocks kept
   let mut owner : Std.HashMap Name ModuleName := {}
   for d in decls do
     let some m := d.sourceModule | throw s!"no source module assigned to {d.name}"
@@ -243,7 +244,7 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
     let p : Printer := { env, naming := Naming.qualified root fun n => (owner[n]?).filter (· != m) }
     let mut items := #[]
     for decl in groups[m]! do
-      if let some (item, c) ← scaffoldItem p byName decl then
+      if let some (item, c) ← scaffoldItem p byName recursors decl then
         items := items.push item
         counts := counts.add c
       if let some (name, type) := quotRule? decl.name then

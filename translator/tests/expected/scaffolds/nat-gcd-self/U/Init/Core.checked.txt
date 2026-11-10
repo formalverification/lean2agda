@@ -1,7 +1,5 @@
 checked 28 of 28 declarations, 2 of 2 data types and records
 unfolded 0 of 8 theorems, 0 in vain
-refused value UnequalTerms dif~uneg | U.Init.Prelude.Decidable:rec e₅ t₄
-refused value UnequalTerms dif~upos | U.Init.Prelude.Decidable:rec e₅ t₄
-refused value UnequalTerms if~uneg | U.Init.Prelude.Decidable:rec (λ x₅ → e₅) (λ x₅ → t₄)
-refused value UnequalTerms if~upos | U.Init.Prelude.Decidable:rec (λ x₅ → e₅) (λ x₅ → t₄)
-refused value UnequalTerms iteInduction | t₄ !=
+defined 2 of 2 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms dif~uneg | h₆ x != hnc₂ x of type U.Init.Prelude.False
+refused value UnequalTerms dif~upos | h₆ != hc₂ of type c₀

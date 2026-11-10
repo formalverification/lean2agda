@@ -1,6 +1,4 @@
 checked 21 of 21 declarations, 1 of 1 data types and records
-unfolded 2 of 2 theorems, 1 in vain
-unfolded CannotApply heq~uof~ueq for KindFixtures:Marker:mk:noConfusion, in vain | Expression used as function but does not have function type:
-refused value UnequalTerms KindFixtures:Marker:noConfusion | (k₁₀ : U.Init.Prelude.HEq mark₉ mark₉ → P₀) → P₀ !=<
-refused value CannotApply KindFixtures:Marker:mk:noConfusion | Expression used as function but does not have function type:
+unfolded 1 of 2 theorems, 0 in vain
+defined 1 of 1 recursors by pattern matching, 0 refused by the termination checker
 unfolded UnequalTerms KindFixtures:alias for KindFixtures:useAlias | KindFixtures:alias != KindFixtures:base of type

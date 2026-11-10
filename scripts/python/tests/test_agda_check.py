@@ -44,6 +44,12 @@ DIAMOND: dict[str, frozenset[str]] = {
 }
 
 
+def line_of(text: str, start: str) -> int:
+    """The 1-based number of the first line of `text` that begins with
+    `start`: where a fake Agda points its error."""
+    return next(i for i, line in enumerate(text.split("\n"), 1) if line.startswith(start))
+
+
 def module_text(name: str, imports: Sequence[str] = (), body: str = "postulate X : Set\n",
                 opens: Sequence[str] = ()) -> str:
     lines = [f"import {m}" for m in imports] + [f"open import {m}" for m in opens]
@@ -354,7 +360,8 @@ class TestUnfoldingAcrossModules(unittest.TestCase):
         injected = injections((unfold,))["U.B"]
         items = (parse_item("user : T\nuser = x"), parse_item("next : T\nnext = x"))
         checked = listing(State(items, (True, True), injected), False)
-        self.assertIn("unfolded 1 of 0 theorems, 0 in vain\nunfolded UnequalTerms thm for user\n", checked)
+        self.assertIn("unfolded 1 of 0 theorems, 0 in vain\n", checked)
+        self.assertTrue(checked.endswith("\nunfolded UnequalTerms thm for user\n"), checked)
         refused = State(items, (True, True), injected + (Event("refused value", "user", "UnequalTerms", "again"),))
         self.assertIn("unfolded UnequalTerms thm for user, in vain\n", listing(refused, False))
         # Two such unfoldings in one module: neither is looked up there.
@@ -440,21 +447,27 @@ class TestRefusalsOverATree(unittest.TestCase):
             (root / "U" / "B.agda").write_text(MODULE_B)
             tree = read_tree(root).unwrap()
             seen: dict[str, list[str]] = {"U/A.agda": [], "U/B.agda": []}
-            # A: `bad`'s type is refused (line 8), then `soft`'s value
-            # (line 9, once `bad` is gone).
-            answers = {"U/A.agda": iter(["/s/U/A.agda:8.1-9: error: [X]\nno\nwhen x\n",
-                                         "/s/U/A.agda:9.1-9: error: [Y]\nno\nwhen y\n", ""]),
-                       "U/B.agda": iter([""])}
+            # A: `bad`'s type is refused, then `soft`'s value, once `bad`
+            # is gone; each error points at the line where the checker's
+            # copy has that declaration (after a marker definition).
+            answers = {"U/A.agda": iter([("postulate bad", "X"), ("soft = ", "Y"), None]),
+                       "U/B.agda": iter([None])}
 
             def runner(command: Sequence[str], cwd: Path, timeout: float) -> tuple:
                 path = command[-1]
-                seen[path].append((cwd / path).read_text())
-                output = next(answers[path])
-                return (passed(command) if not output else failed(output)), 100
+                text = (cwd / path).read_text()
+                seen[path].append(text)
+                answer = next(answers[path])
+                if answer is None:
+                    return passed(command), 100
+                return failed(f"/s/{path}:{line_of(text, answer[0])}.1-9: error: [{answer[1]}]\nno\nwhen x\n"), 100
 
             ticks = iter(range(1000))
             pruned, _ = prune_tree(tree, root, root, runner, lambda: float(next(ticks)), "agda", 2, 60.0, "8G", False)
-            self.assertIn("postulate soft : Nat", (root / "U" / "A.agda").read_text())
+            final = (root / "U" / "A.agda").read_text()
+            self.assertIn("postulate soft : Nat", final)
+            # What B imports, and --keep copies, has no marker definitions.
+            self.assertNotIn("scaffold-check-mark", final)
         self.assertEqual(pruned["U.A"].dead, frozenset({"bad"}))
         self.assertEqual(len(seen["U/B.agda"]), 1)
         self.assertNotIn("user", seen["U/B.agda"][0])
@@ -462,7 +475,9 @@ class TestRefusalsOverATree(unittest.TestCase):
         self.assertIn("soft~uuse = U.A.soft", seen["U/B.agda"][0])
         self.assertEqual(pruned["U.B"].listing,
                          "checked 3 of 5 declarations, 0 of 0 data types and records\n"
-                         "unfolded 0 of 0 theorems, 0 in vain\ndropped user\ndropped chain\n")
+                         "unfolded 0 of 0 theorems, 0 in vain\n"
+                     "defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker\n"
+                     "dropped user\ndropped chain\n")
         self.assertEqual((pruned["U.A"].runs, pruned["U.B"].runs, pruned["U.B"].peak_kib), (3, 1, 100))
         self.assertIsInstance(pruned["U.B"], Pruned)
 
@@ -472,11 +487,13 @@ class TestRefusalsOverATree(unittest.TestCase):
             (root / "U").mkdir()
             (root / "U" / "B.agda").write_text(module_text("U.B", body="keep : Nat\nkeep = lost\n"))
             tree = read_tree(root).unwrap()
-            answers = iter(["/s/U/B.agda:6.1-9: error: [NotInScope]\nNot in scope:\n  lost\nwhen x\n", ""])
+            answers = iter([True, False])
 
             def runner(command: Sequence[str], cwd: Path, timeout: float) -> tuple:
-                output = next(answers)
-                return (passed(command) if not output else failed(output)), 1
+                if not next(answers):
+                    return passed(command), 1
+                line = line_of((cwd / command[-1]).read_text(), "keep = lost")
+                return failed(f"/s/U/B.agda:{line}.1-9: error: [NotInScope]\nNot in scope:\n  lost\nwhen x\n"), 1
 
             ticks = iter(range(100))
             pruned, _ = prune_tree(tree, root, root, runner, lambda: float(next(ticks)), "agda", 1, 60.0, "8G", False)

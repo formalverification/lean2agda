@@ -10,7 +10,9 @@ record KindFixtures:Marker (α₀ : Set) : Set where
   field
     mark₁ : α₀
 
-postulate KindFixtures:Marker:rec : {α₀ : Set} → {motive₁ : KindFixtures:Marker α₀ → Set} → ((mark₂ : α₀) → motive₁ (KindFixtures:Marker:mk {α₀} mark₂)) → (t₂ : KindFixtures:Marker α₀) → motive₁ t₂
+-- recursor
+KindFixtures:Marker:rec : {α₀ : Set} → {motive₁ : KindFixtures:Marker α₀ → Set} → ((mark₂ : α₀) → motive₁ (KindFixtures:Marker:mk {α₀} mark₂)) → (t₂ : KindFixtures:Marker α₀) → motive₁ t₂
+KindFixtures:Marker:rec {α₀} {motive₁} mk₂ (KindFixtures:Marker:mk mark₃) = mk₂ mark₃
 
 KindFixtures:Marker:casesOn : {α₀ : Set} → {motive₁ : KindFixtures:Marker α₀ → Set} → (t₂ : KindFixtures:Marker α₀) → ((mark₃ : α₀) → motive₁ (KindFixtures:Marker:mk {α₀} mark₃)) → motive₁ t₂
 KindFixtures:Marker:casesOn {α₀} {motive₁} t₂ mk₃ = KindFixtures:Marker:rec {α₀} {motive₁} (λ (mark₄ : α₀) → mk₃ mark₄) t₂

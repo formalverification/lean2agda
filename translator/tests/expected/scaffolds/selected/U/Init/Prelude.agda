@@ -8,7 +8,9 @@ record Add (α₀ : Set) : Set where
   field
     add₁ : α₀ → α₀ → α₀
 
-postulate Add:rec : {α₀ : Set} → {motive₁ : Add α₀ → Set} → ((add₂ : α₀ → α₀ → α₀) → motive₁ (Add:mk {α₀} add₂)) → (t₂ : Add α₀) → motive₁ t₂
+-- recursor
+Add:rec : {α₀ : Set} → {motive₁ : Add α₀ → Set} → ((add₂ : α₀ → α₀ → α₀) → motive₁ (Add:mk {α₀} add₂)) → (t₂ : Add α₀) → motive₁ t₂
+Add:rec {α₀} {motive₁} mk₂ (Add:mk add₃) = mk₂ add₃
 
 Add:add : {α₀ : Set} → ⦃ _ : Add α₀ ⦄ → α₀ → α₀ → α₀
 Add:add {α₀} ⦃ self₁ ⦄ = Add.add₁ {α₀} self₁
@@ -18,14 +20,19 @@ data Nat : Set where
   Nat:succ : Nat → Nat
 {-# BUILTIN NATURAL Nat #-}
 
-postulate Nat:rec : {motive₀ : Nat → Set} → motive₀ Nat:zero → ((n₁ : Nat) → motive₀ n₁ → motive₀ (Nat:succ n₁)) → (t₁ : Nat) → motive₀ t₁
+-- recursor
+Nat:rec : {motive₀ : Nat → Set} → motive₀ Nat:zero → ((n₁ : Nat) → motive₀ n₁ → motive₀ (Nat:succ n₁)) → (t₁ : Nat) → motive₀ t₁
+Nat:rec {motive₀} zero₁ succ₂ Nat:zero = zero₁
+Nat:rec {motive₀} zero₁ succ₂ (Nat:succ n₃) = succ₂ n₃ (Nat:rec {motive₀} zero₁ succ₂ n₃)
 
 record OfNat (α₀ : Set) (x₁ : Nat) : Set where
   constructor OfNat:mk
   field
     ofNat₂ : α₀
 
-postulate OfNat:rec : {α₀ : Set} → {x₁ : Nat} → {motive₂ : OfNat α₀ x₁ → Set} → ((ofNat₃ : α₀) → motive₂ (OfNat:mk {α₀} {x₁} ofNat₃)) → (t₃ : OfNat α₀ x₁) → motive₂ t₃
+-- recursor
+OfNat:rec : {α₀ : Set} → {x₁ : Nat} → {motive₂ : OfNat α₀ x₁ → Set} → ((ofNat₃ : α₀) → motive₂ (OfNat:mk {α₀} {x₁} ofNat₃)) → (t₃ : OfNat α₀ x₁) → motive₂ t₃
+OfNat:rec {α₀} {x₁} {motive₂} mk₃ (OfNat:mk ofNat₄) = mk₃ ofNat₄
 
 OfNat:ofNat : {α₀ : Set} → (x₁ : Nat) → ⦃ _ : OfNat α₀ x₁ ⦄ → α₀
 OfNat:ofNat {α₀} x₁ ⦃ self₂ ⦄ = OfNat.ofNat₂ {α₀} {x₁} self₂
@@ -41,7 +48,9 @@ record HAdd (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hAdd₃ : α₀ → β₁ → γ₂
 
-postulate HAdd:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HAdd α₀ β₁ γ₂ → Set} → ((hAdd₄ : α₀ → β₁ → γ₂) → motive₃ (HAdd:mk {α₀} {β₁} {γ₂} hAdd₄)) → (t₄ : HAdd α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HAdd:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HAdd α₀ β₁ γ₂ → Set} → ((hAdd₄ : α₀ → β₁ → γ₂) → motive₃ (HAdd:mk {α₀} {β₁} {γ₂} hAdd₄)) → (t₄ : HAdd α₀ β₁ γ₂) → motive₃ t₄
+HAdd:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HAdd:mk hAdd₅) = mk₄ hAdd₅
 
 HAdd:hAdd : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HAdd α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HAdd:hAdd {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HAdd.hAdd₃ {α₀} {β₁} {γ₂} self₃
@@ -58,12 +67,16 @@ record PProd (α₀ : Set) (β₁ : Set) : Set where
     fst₂ : α₀
     snd₃ : β₁
 
-postulate PProd:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : PProd α₀ β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁) → motive₂ (PProd:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PProd α₀ β₁) → motive₂ t₃
+-- recursor
+PProd:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : PProd α₀ β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁) → motive₂ (PProd:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PProd α₀ β₁) → motive₂ t₃
+PProd:rec {α₀} {β₁} {motive₂} mk₃ (PProd:mk fst₄ snd₅) = mk₃ fst₄ snd₅
 
 record PUnit : Set where
   constructor PUnit:unit
 
-postulate PUnit:rec : {motive₀ : PUnit → Set} → motive₀ PUnit:unit → (t₁ : PUnit) → motive₀ t₁
+-- recursor
+PUnit:rec : {motive₀ : PUnit → Set} → motive₀ PUnit:unit → (t₁ : PUnit) → motive₀ t₁
+PUnit:rec {motive₀} unit₁ PUnit:unit = unit₁
 
 Nat:below : {_ : Nat → Set} → Nat → Set
 Nat:below {motive₀} t₁ = Nat:rec {λ (t₂ : Nat) → Set} PUnit (λ (n₂ : Nat) → λ (nih₃ : Set) → PProd (motive₀ n₂) nih₃) t₁

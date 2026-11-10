@@ -1,16 +1,16 @@
 /-
 File: translator/Lean2Agda/Core/Scaffold.lean
 -/
-import Lean2Agda.Core.Inductive
+import Lean2Agda.Core.Recursor
 import Lean2Agda.Core.Share
 
 /-!
 # The profile U scaffold
 
 The Agda declarations of a closure, the test of the printer and the
-emitters until issue M2-5 emits recursors; `Modules.lean` lays them out
-as one Agda module per Lean module.  It declares every constant of the
-closure that it does not refuse, by kind, as follows:
+emitters; `Modules.lean` lays them out as one Agda module per Lean
+module.  It declares every constant of the closure that it does not
+refuse, by kind, as follows:
 
 +  the inductive types, each block of them one declaration
    (`Inductive.lean`): a record for each structure-like type and a data
@@ -18,6 +18,9 @@ closure that it does not refuse, by kind, as follows:
    that literals print as decimals;
 +  `String`, a postulate bound to `BUILTIN STRING`, which needs one, and
    so its constructor and recursor are postulates too;
++  the recursors of each block of inductive types as one definition by
+   pattern matching (`Recursor.lean`), whose clauses are the kernel's
+   computation rules, under the comment `-- recursor`;
 +  a definition (`defnInfo`, `partial` companions and the projection
    functions of records included) as a transparent definition with its
    printed clause, since Lean's terms rely on unfolding it; the sharing
@@ -29,9 +32,9 @@ closure that it does not refuse, by kind, as follows:
 +  one of Lean's opaque constants (`opaqueInfo`, a `partial` definition
    among them) inside an `opaque` block with its value, which is what
    Lean's kernel has: a value it never unfolds;
-+  an axiom, a recursor and a quotient primitive as a postulate, with
-   the kernel's computation rules of `Quot.lift` and `Quot.ind` after
-   their postulates as rewrite rules (issue M2-7): a postulate of the
++  an axiom and a quotient primitive as a postulate, with the kernel's
+   computation rules of `Quot.lift` and `Quot.ind` after their
+   postulates as rewrite rules (issue M2-7): a postulate of the
    equation, over `Eq`, which `Inductive.lean` declares the rewrite
    relation, followed by its `REWRITE` pragma.
 
@@ -39,7 +42,8 @@ It refuses `sorryAx`, every `unsafe` declaration, and whatever depends on
 one of those, and names each with its reason (`Scaffold.refused`,
 written to `refusals.txt`).  A definition whose printed value refers to
 itself, or to a definition that refers back to it, is postulated instead
-(`breakCycles`).
+(`breakCycles`); a recursor refers to itself through its recursive
+calls, which Agda's termination checker decides, and is exempt.
 
 `scripts/python/agda_check.py --refusals` type-checks the modules
 declaration by declaration, with `scaffold_check.py`'s loop;
@@ -56,12 +60,17 @@ def profileUOptions : String := "{-# OPTIONS --type-in-type --rewriting #-}"
 
 /-- One declaration of a module: the identifiers it declares, those its
 text refers to, and its text.  A declaration with a value also carries
-its fallback, the references and text of a postulate of its type. -/
+its fallback, the references and text of a postulate of its type.  A
+structural one is a recursor block defined by pattern matching, whose
+recursion on its constructors' fields Agda's termination checker judges:
+its references leave out the block's own names (`recursorDecl`), and
+`breakCycles` would not count a reference to itself as a cycle either. -/
 structure ScaffoldItem where
   provides : Array String
   references : Array String
   text : String
   fallback : Option (Array String × String) := none
+  structural : Bool := false
   deriving Inhabited
 
 /-! ## Refusals -/
@@ -164,11 +173,13 @@ partial def orderItems (items : Array ScaffoldItem) : Except String (Array Scaff
 a definition that refers back to it, under a comment saying so.  Lean's
 kernel accepts such a cycle only among the `_unsafe_rec` companions of
 `partial` definitions, whose safety is `partial`, and Agda could check
-none of them. -/
+none of them.  A structural item's references to itself are its
+recursion, not a cycle. -/
 def breakCycles (items : Array ScaffoldItem) : Array ScaffoldItem := Id.run do
   let provider : Std.HashMap String Nat := (List.range items.size).foldl (fun m i =>
     items[i]!.provides.foldl (fun m n => m.insert n i) m) {}
-  let successors (i : Nat) : List Nat := items[i]!.references.toList.filterMap (provider[·]?)
+  let successors (i : Nat) : List Nat := items[i]!.references.toList.filterMap fun r =>
+    (provider[r]?).filter fun j => !(j == i && items[i]!.structural)
   let mut result := items
   for group in SCC.scc (List.range items.size) successors do
     let cyclic := match group with
@@ -295,10 +306,35 @@ def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : Ind
   return ({ provides := d.provides, references := d.references,
             text := "\n".intercalate d.lines.toList ++ "\n" }, d.counts)
 
+/-- The recursors of a block of inductive types as one structural item
+under the comment `-- recursor`, with the postulates of their types as
+its fallback. -/
+def recursorItem (p : Printer) (members : Array RecursorVal) : Except String (ScaffoldItem × PrintCounts) := do
+  let d ← recursorDecl p members
+  let postulates := "\n".intercalate d.postulates.toList ++ "\n"
+  return ({ provides := d.provides, references := d.references,
+            text := "-- recursor\n" ++ "\n".intercalate d.lines.toList ++ "\n",
+            fallback := some (d.typeReferences, "-- recursor, postulated\n" ++ postulates),
+            structural := true }, d.counts)
+
+/-- The recursors of each block of inductive types in a closure, keyed by
+the block's first type, in `recursorRank`'s order. -/
+def recursorBlocks (decls : Array Declaration) : Std.HashMap Name (Array RecursorVal) :=
+  let blocks := decls.foldl (init := ({} : Std.HashMap Name (Array RecursorVal))) fun m d =>
+    match d.info with
+    | .recInfo r => match r.all.head? with
+      | some first => m.insert first ((m.getD first #[]).push r)
+      | none => m
+    | _ => m
+  blocks.fold (init := {}) fun m first members => m.insert first <| members.qsort fun a b =>
+    let (ra, rb) := (recursorRank a.all a.name, recursorRank b.all b.name)
+    ra < rb || (ra == rb && toString a.name < toString b.name)
+
 /-- The scaffold's item for one declaration, by its kind, or none for one
-that its inductive block's item declares: a constructor, or a type of a
-mutual block other than its first. -/
-def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration) (decl : Declaration) :
+that its block's item declares: a constructor, a type of a mutual block
+other than its first, or a recursor other than its block's first. -/
+def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration)
+    (recursors : Std.HashMap Name (Array RecursorVal)) (decl : Declaration) :
     Except String (Option (ScaffoldItem × PrintCounts)) := do
   match decl.info with
   | .inductInfo v =>
@@ -308,6 +344,12 @@ def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration) (decl : D
   | .ctorInfo c =>
     if c.induct == ``String then return some (← postulateItem p decl)
     return none
+  | .recInfo r =>
+    -- `String` is a postulate, and so is its recursor.
+    if r.all.contains ``String then return some (← postulateItem p decl)
+    let members := (r.all.head?.bind (recursors[·]?)).getD #[r]
+    if members[0]?.map (·.name) != some r.name then return none
+    return some (← recursorItem p members)
   | .defnInfo _ => return some (← definitionItem p decl)
   | .thmInfo _ => return some (← opaqueItem p decl "theorem")
   | .opaqueInfo _ => return some (← opaqueItem p decl "opaque constant")

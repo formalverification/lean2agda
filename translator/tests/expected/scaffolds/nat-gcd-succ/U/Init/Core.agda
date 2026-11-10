@@ -16,7 +16,9 @@ record PSigma {α₀ : Set} (β₁ : α₀ → Set) : Set where
     fst₂ : α₀
     snd₃ : β₁ fst₂
 
-postulate PSigma:rec : {α₀ : Set} → {β₁ : α₀ → Set} → {motive₂ : PSigma {α₀} β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁ fst₃) → motive₂ (PSigma:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PSigma {α₀} β₁) → motive₂ t₃
+-- recursor
+PSigma:rec : {α₀ : Set} → {β₁ : α₀ → Set} → {motive₂ : PSigma {α₀} β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁ fst₃) → motive₂ (PSigma:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PSigma {α₀} β₁) → motive₂ t₃
+PSigma:rec {α₀} {β₁} {motive₂} mk₃ (PSigma:mk fst₄ snd₅) = mk₃ fst₄ snd₅
 
 PSigma:casesOn : {α₀ : Set} → {β₁ : α₀ → Set} → {motive₂ : PSigma {α₀} β₁ → Set} → (t₃ : PSigma {α₀} β₁) → ((fst₄ : α₀) → (snd₅ : β₁ fst₄) → motive₂ (PSigma:mk {α₀} {β₁} fst₄ snd₅)) → motive₂ t₃
 PSigma:casesOn {α₀} {β₁} {motive₂} t₃ mk₄ = PSigma:rec {α₀} {β₁} {motive₂} (λ (fst₅ : α₀) → λ (snd₆ : β₁ fst₅) → mk₄ fst₅ snd₆) t₃

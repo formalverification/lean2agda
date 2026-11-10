@@ -76,7 +76,8 @@ check_tree nat-gcd-self Init.Data.Nat.Gcd -- Nat.gcd_self
 check_tree printing TranslatorTests.Input.Printing -- PrintFixtures.alignedTop \
   PrintFixtures.alignedDeep PrintFixtures.withLet PrintFixtures.redex PrintFixtures.higher \
   PrintFixtures.strict PrintFixtures.pick PrintFixtures.greeting PrintFixtures.large \
-  PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value
+  PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value \
+  PrintFixtures.etaRepaired PrintFixtures.instanceRepaired PrintFixtures.hiddenInstanceRepaired
 KEEP="$scratch/kept-selected" check_tree selected TranslatorTests.Input.Consumer -- Fixtures.selected
 check_tree inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
   InductiveFixtures.Same InductiveFixtures.Sized InductiveFixtures.Packed InductiveFixtures.Packed.width \
@@ -85,6 +86,7 @@ check_tree inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec 
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
 check_tree kinds TranslatorTests.Input.Kinds
+check_tree recursors TranslatorTests.Input.Recursors
 check_tree quotients TranslatorTests.Input.Quotients
 
 # Where the quotient's computation rules fire (issue M2-7): the same
@@ -108,7 +110,8 @@ python3 ../scripts/python/agda_check.py --agda "${AGDA:-agda}" -j "$jobs" "$scra
 # and kinds cut after every item, so that the fallback's unfolding of
 # KindFixtures.alias for useAlias crosses parts.
 events_of() {
-  find "$1" -name '*.checked.txt' -exec tail -q -n +3 {} + | sed 's/ | .*//' | sort
+  find "$1" -name '*.checked.txt' -exec cat {} + \
+    | grep -Ev '^(checked|unfolded|defined) [0-9]+ of [0-9]+ ' | sed 's/ | .*//' | sort
 }
 check_split() {
   local name=$1 split=$2

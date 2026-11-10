@@ -6,6 +6,7 @@ import Inductives
 import Modules
 import Naming
 import Printing
+import Recursors
 import Scaffold
 
 /-!
@@ -29,7 +30,7 @@ previous run's output, or a golden file stay in `run.sh`.
 def checks : List (String × IO Unit) :=
   [("check", CheckTests.runChecks), ("inductives", InductiveTests.run),
    ("modules", ModulesTests.run), ("naming", NamingTests.run), ("printing", PrintingTests.run),
-   ("scaffold", ScaffoldTests.run)]
+   ("recursors", RecursorTests.run), ("scaffold", ScaffoldTests.run)]
 
 /-- Run one check, timed; its failure is reported, not thrown. -/
 def runCheck (name : String) (check : IO Unit) : IO Bool := do

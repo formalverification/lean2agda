@@ -1,5 +1,5 @@
 {-# OPTIONS --type-in-type --rewriting #-}
--- lean2agda, profile U: the scaffold of the closure of PrintFixtures:Dependent:value PrintFixtures:Pair:first PrintFixtures:alignedDeep PrintFixtures:alignedTop PrintFixtures:doubling and 8 more
+-- lean2agda, profile U: the scaffold of the closure of PrintFixtures:Dependent:value PrintFixtures:Pair:first PrintFixtures:alignedDeep PrintFixtures:alignedTop PrintFixtures:doubling and 11 more
 -- Lean module Init.Prelude
 module U.Init.Prelude where
 
@@ -8,7 +8,9 @@ record Add (α₀ : Set) : Set where
   field
     add₁ : α₀ → α₀ → α₀
 
-postulate Add:rec : {α₀ : Set} → {motive₁ : Add α₀ → Set} → ((add₂ : α₀ → α₀ → α₀) → motive₁ (Add:mk {α₀} add₂)) → (t₂ : Add α₀) → motive₁ t₂
+-- recursor
+Add:rec : {α₀ : Set} → {motive₁ : Add α₀ → Set} → ((add₂ : α₀ → α₀ → α₀) → motive₁ (Add:mk {α₀} add₂)) → (t₂ : Add α₀) → motive₁ t₂
+Add:rec {α₀} {motive₁} mk₂ (Add:mk add₃) = mk₂ add₃
 
 Add:add : {α₀ : Set} → ⦃ _ : Add α₀ ⦄ → α₀ → α₀ → α₀
 Add:add {α₀} ⦃ self₁ ⦄ = Add.add₁ {α₀} self₁
@@ -19,7 +21,9 @@ record And (a₀ : Set) (b₁ : Set) : Set where
     left₂ : a₀
     right₃ : b₁
 
-postulate And:rec : {a₀ : Set} → {b₁ : Set} → {motive₂ : And a₀ b₁ → Set} → ((left₃ : a₀) → (right₄ : b₁) → motive₂ (And:intro {a₀} {b₁} left₃ right₄)) → (t₃ : And a₀ b₁) → motive₂ t₃
+-- recursor
+And:rec : {a₀ : Set} → {b₁ : Set} → {motive₂ : And a₀ b₁ → Set} → ((left₃ : a₀) → (right₄ : b₁) → motive₂ (And:intro {a₀} {b₁} left₃ right₄)) → (t₃ : And a₀ b₁) → motive₂ t₃
+And:rec {a₀} {b₁} {motive₂} intro₃ (And:intro left₄ right₅) = intro₃ left₄ right₅
 
 And:casesOn : {a₀ : Set} → {b₁ : Set} → {motive₂ : And a₀ b₁ → Set} → (t₃ : And a₀ b₁) → ((left₄ : a₀) → (right₅ : b₁) → motive₂ (And:intro {a₀} {b₁} left₄ right₅)) → motive₂ t₃
 And:casesOn {a₀} {b₁} {motive₂} t₃ intro₄ = And:rec {a₀} {b₁} {motive₂} (λ (left₅ : a₀) → λ (right₆ : b₁) → intro₄ left₅ right₆) t₃
@@ -28,21 +32,29 @@ data List (α₀ : Set) : Set where
   List:nil : List α₀
   List:cons : α₀ → List α₀ → List α₀
 
-postulate List:rec : {α₀ : Set} → {motive₁ : List α₀ → Set} → motive₁ (List:nil {α₀}) → ((head₂ : α₀) → (tail₃ : List α₀) → motive₁ tail₃ → motive₁ (List:cons {α₀} head₂ tail₃)) → (t₂ : List α₀) → motive₁ t₂
+-- recursor
+List:rec : {α₀ : Set} → {motive₁ : List α₀ → Set} → motive₁ (List:nil {α₀}) → ((head₂ : α₀) → (tail₃ : List α₀) → motive₁ tail₃ → motive₁ (List:cons {α₀} head₂ tail₃)) → (t₂ : List α₀) → motive₁ t₂
+List:rec {α₀} {motive₁} nil₂ cons₃ List:nil = nil₂
+List:rec {α₀} {motive₁} nil₂ cons₃ (List:cons head₄ tail₅) = cons₃ head₄ tail₅ (List:rec {α₀} {motive₁} nil₂ cons₃ tail₅)
 
 record Array (α₀ : Set) : Set where
   constructor Array:mk
   field
     toList₁ : List α₀
 
-postulate Array:rec : {α₀ : Set} → {motive₁ : Array α₀ → Set} → ((toList₂ : List α₀) → motive₁ (Array:mk {α₀} toList₂)) → (t₂ : Array α₀) → motive₁ t₂
+-- recursor
+Array:rec : {α₀ : Set} → {motive₁ : Array α₀ → Set} → ((toList₂ : List α₀) → motive₁ (Array:mk {α₀} toList₂)) → (t₂ : Array α₀) → motive₁ t₂
+Array:rec {α₀} {motive₁} mk₂ (Array:mk toList₃) = mk₂ toList₃
 
 data Nat : Set where
   Nat:zero : Nat
   Nat:succ : Nat → Nat
 {-# BUILTIN NATURAL Nat #-}
 
-postulate Nat:rec : {motive₀ : Nat → Set} → motive₀ Nat:zero → ((n₁ : Nat) → motive₀ n₁ → motive₀ (Nat:succ n₁)) → (t₁ : Nat) → motive₀ t₁
+-- recursor
+Nat:rec : {motive₀ : Nat → Set} → motive₀ Nat:zero → ((n₁ : Nat) → motive₀ n₁ → motive₀ (Nat:succ n₁)) → (t₁ : Nat) → motive₀ t₁
+Nat:rec {motive₀} zero₁ succ₂ Nat:zero = zero₁
+Nat:rec {motive₀} zero₁ succ₂ (Nat:succ n₃) = succ₂ n₃ (Nat:rec {motive₀} zero₁ succ₂ n₃)
 
 Array:emptyWithCapacity : {α₀ : Set} → Nat → Array α₀
 Array:emptyWithCapacity {α₀} c₁ = Array:mk {α₀} (List:nil {α₀})
@@ -52,7 +64,9 @@ record OfNat (α₀ : Set) (x₁ : Nat) : Set where
   field
     ofNat₂ : α₀
 
-postulate OfNat:rec : {α₀ : Set} → {x₁ : Nat} → {motive₂ : OfNat α₀ x₁ → Set} → ((ofNat₃ : α₀) → motive₂ (OfNat:mk {α₀} {x₁} ofNat₃)) → (t₃ : OfNat α₀ x₁) → motive₂ t₃
+-- recursor
+OfNat:rec : {α₀ : Set} → {x₁ : Nat} → {motive₂ : OfNat α₀ x₁ → Set} → ((ofNat₃ : α₀) → motive₂ (OfNat:mk {α₀} {x₁} ofNat₃)) → (t₃ : OfNat α₀ x₁) → motive₂ t₃
+OfNat:rec {α₀} {x₁} {motive₂} mk₃ (OfNat:mk ofNat₄) = mk₃ ofNat₄
 
 OfNat:ofNat : {α₀ : Set} → (x₁ : Nat) → ⦃ _ : OfNat α₀ x₁ ⦄ → α₀
 OfNat:ofNat {α₀} x₁ ⦃ self₂ ⦄ = OfNat.ofNat₂ {α₀} {x₁} self₂
@@ -72,12 +86,16 @@ record PProd (α₀ : Set) (β₁ : Set) : Set where
     fst₂ : α₀
     snd₃ : β₁
 
-postulate PProd:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : PProd α₀ β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁) → motive₂ (PProd:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PProd α₀ β₁) → motive₂ t₃
+-- recursor
+PProd:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : PProd α₀ β₁ → Set} → ((fst₃ : α₀) → (snd₄ : β₁) → motive₂ (PProd:mk {α₀} {β₁} fst₃ snd₄)) → (t₃ : PProd α₀ β₁) → motive₂ t₃
+PProd:rec {α₀} {β₁} {motive₂} mk₃ (PProd:mk fst₄ snd₅) = mk₃ fst₄ snd₅
 
 record PUnit : Set where
   constructor PUnit:unit
 
-postulate PUnit:rec : {motive₀ : PUnit → Set} → motive₀ PUnit:unit → (t₁ : PUnit) → motive₀ t₁
+-- recursor
+PUnit:rec : {motive₀ : PUnit → Set} → motive₀ PUnit:unit → (t₁ : PUnit) → motive₀ t₁
+PUnit:rec {motive₀} unit₁ PUnit:unit = unit₁
 
 List:below : {α₀ : Set} → {_ : List α₀ → Set} → List α₀ → Set
 List:below {α₀} {motive₁} t₂ = List:rec {α₀} {λ (t₃ : List α₀) → Set} PUnit (λ (head₃ : α₀) → λ (tail₄ : List α₀) → λ (tailih₅ : Set) → PProd (motive₁ tail₄) tailih₅) t₂
@@ -108,7 +126,9 @@ record LT (α₀ : Set) : Set where
   field
     lt₁ : α₀ → α₀ → Set
 
-postulate LT:rec : {α₀ : Set} → {motive₁ : LT α₀ → Set} → ((lt₂ : α₀ → α₀ → Set) → motive₁ (LT:mk {α₀} lt₂)) → (t₂ : LT α₀) → motive₁ t₂
+-- recursor
+LT:rec : {α₀ : Set} → {motive₁ : LT α₀ → Set} → ((lt₂ : α₀ → α₀ → Set) → motive₁ (LT:mk {α₀} lt₂)) → (t₂ : LT α₀) → motive₁ t₂
+LT:rec {α₀} {motive₁} mk₂ (LT:mk lt₃) = mk₂ lt₃
 
 LT:lt : {α₀ : Set} → ⦃ _ : LT α₀ ⦄ → α₀ → α₀ → Set
 LT:lt {α₀} ⦃ self₁ ⦄ = LT.lt₁ {α₀} self₁
@@ -117,7 +137,10 @@ data Nat:le (n₀ : Nat) : Nat → Set where
   Nat:le:refl : Nat:le n₀ n₀
   Nat:le:step : {m₁ : Nat} → Nat:le n₀ m₁ → Nat:le n₀ (Nat:succ m₁)
 
-postulate Nat:le:rec : {n₀ : Nat} → {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ → Set} → motive₁ n₀ (Nat:le:refl {n₀}) → ({m₂ : Nat} → (a₃ : Nat:le n₀ m₂) → motive₁ m₂ a₃ → motive₁ (Nat:succ m₂) (Nat:le:step {n₀} {m₂} a₃)) → {a₂ : Nat} → (t₃ : Nat:le n₀ a₂) → motive₁ a₂ t₃
+-- recursor
+Nat:le:rec : {n₀ : Nat} → {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ → Set} → motive₁ n₀ (Nat:le:refl {n₀}) → ({m₂ : Nat} → (a₃ : Nat:le n₀ m₂) → motive₁ m₂ a₃ → motive₁ (Nat:succ m₂) (Nat:le:step {n₀} {m₂} a₃)) → {a₂ : Nat} → (t₃ : Nat:le n₀ a₂) → motive₁ a₂ t₃
+Nat:le:rec {n₀} {motive₁} refl₂ step₃ {_} Nat:le:refl = refl₂
+Nat:le:rec {n₀} {motive₁} refl₂ step₃ {_} (Nat:le:step {m₅} a₆) = step₃ {m₅} a₆ (Nat:le:rec {n₀} {motive₁} refl₂ step₃ {m₅} a₆)
 
 Nat:lt : Nat → Nat → Set
 Nat:lt n₀ m₁ = Nat:le (Nat:succ n₀) m₁
@@ -131,7 +154,9 @@ record Fin (n₀ : Nat) : Set where
     val₁ : Nat
     isLt₂ : LT:lt {Nat} ⦃ instLTNat ⦄ val₁ n₀
 
-postulate Fin:rec : {n₀ : Nat} → {motive₁ : Fin n₀ → Set} → ((val₂ : Nat) → (isLt₃ : LT:lt {Nat} ⦃ instLTNat ⦄ val₂ n₀) → motive₁ (Fin:mk {n₀} val₂ isLt₃)) → (t₂ : Fin n₀) → motive₁ t₂
+-- recursor
+Fin:rec : {n₀ : Nat} → {motive₁ : Fin n₀ → Set} → ((val₂ : Nat) → (isLt₃ : LT:lt {Nat} ⦃ instLTNat ⦄ val₂ n₀) → motive₁ (Fin:mk {n₀} val₂ isLt₃)) → (t₂ : Fin n₀) → motive₁ t₂
+Fin:rec {n₀} {motive₁} mk₂ (Fin:mk val₃ isLt₄) = mk₂ val₃ isLt₄
 
 outParam : Set → Set
 outParam α₀ = α₀
@@ -141,7 +166,9 @@ record HPow (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hPow₃ : α₀ → β₁ → γ₂
 
-postulate HPow:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HPow α₀ β₁ γ₂ → Set} → ((hPow₄ : α₀ → β₁ → γ₂) → motive₃ (HPow:mk {α₀} {β₁} {γ₂} hPow₄)) → (t₄ : HPow α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HPow:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HPow α₀ β₁ γ₂ → Set} → ((hPow₄ : α₀ → β₁ → γ₂) → motive₃ (HPow:mk {α₀} {β₁} {γ₂} hPow₄)) → (t₄ : HPow α₀ β₁ γ₂) → motive₃ t₄
+HPow:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HPow:mk hPow₅) = mk₄ hPow₅
 
 HPow:hPow : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HPow α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HPow:hPow {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HPow.hPow₃ {α₀} {β₁} {γ₂} self₃
@@ -151,7 +178,9 @@ record Pow (α₀ : Set) (β₁ : Set) : Set where
   field
     pow₂ : α₀ → β₁ → α₀
 
-postulate Pow:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : Pow α₀ β₁ → Set} → ((pow₃ : α₀ → β₁ → α₀) → motive₂ (Pow:mk {α₀} {β₁} pow₃)) → (t₃ : Pow α₀ β₁) → motive₂ t₃
+-- recursor
+Pow:rec : {α₀ : Set} → {β₁ : Set} → {motive₂ : Pow α₀ β₁ → Set} → ((pow₃ : α₀ → β₁ → α₀) → motive₂ (Pow:mk {α₀} {β₁} pow₃)) → (t₃ : Pow α₀ β₁) → motive₂ t₃
+Pow:rec {α₀} {β₁} {motive₂} mk₃ (Pow:mk pow₄) = mk₃ pow₄
 
 Pow:pow : {α₀ : Set} → {β₁ : Set} → ⦃ _ : Pow α₀ β₁ ⦄ → α₀ → β₁ → α₀
 Pow:pow {α₀} {β₁} ⦃ self₂ ⦄ = Pow.pow₂ {α₀} {β₁} self₂
@@ -209,7 +238,9 @@ record NatPow (α₀ : Set) : Set where
   field
     pow₁ : α₀ → Nat → α₀
 
-postulate NatPow:rec : {α₀ : Set} → {motive₁ : NatPow α₀ → Set} → ((pow₂ : α₀ → Nat → α₀) → motive₁ (NatPow:mk {α₀} pow₂)) → (t₂ : NatPow α₀) → motive₁ t₂
+-- recursor
+NatPow:rec : {α₀ : Set} → {motive₁ : NatPow α₀ → Set} → ((pow₂ : α₀ → Nat → α₀) → motive₁ (NatPow:mk {α₀} pow₂)) → (t₂ : NatPow α₀) → motive₁ t₂
+NatPow:rec {α₀} {motive₁} mk₂ (NatPow:mk pow₃) = mk₂ pow₃
 
 instNatPowNat : NatPow Nat
 instNatPowNat = NatPow:mk {Nat} Nat:pow
@@ -225,11 +256,15 @@ record BitVec (w₀ : Nat) : Set where
   field
     toFin₁ : Fin (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) w₀)
 
-postulate BitVec:rec : {w₀ : Nat} → {motive₁ : BitVec w₀ → Set} → ((toFin₂ : Fin (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) w₀)) → motive₁ (BitVec:ofFin {w₀} toFin₂)) → (t₂ : BitVec w₀) → motive₁ t₂
+-- recursor
+BitVec:rec : {w₀ : Nat} → {motive₁ : BitVec w₀ → Set} → ((toFin₂ : Fin (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) w₀)) → motive₁ (BitVec:ofFin {w₀} toFin₂)) → (t₂ : BitVec w₀) → motive₁ t₂
+BitVec:rec {w₀} {motive₁} ofFin₂ (BitVec:ofFin toFin₃) = ofFin₂ toFin₃
 
 data False : Set where
 
-postulate False:rec : (motive₀ : False → Set) → (t₁ : False) → motive₀ t₁
+-- recursor
+False:rec : (motive₀ : False → Set) → (t₁ : False) → motive₀ t₁
+False:rec motive₀ ()
 
 False:elim : {C₀ : Set} → False → C₀
 False:elim {C₀} h₁ = False:rec (λ (x₂ : False) → C₀) h₁
@@ -239,7 +274,9 @@ record HMul (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hMul₃ : α₀ → β₁ → γ₂
 
-postulate HMul:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HMul α₀ β₁ γ₂ → Set} → ((hMul₄ : α₀ → β₁ → γ₂) → motive₃ (HMul:mk {α₀} {β₁} {γ₂} hMul₄)) → (t₄ : HMul α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HMul:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HMul α₀ β₁ γ₂ → Set} → ((hMul₄ : α₀ → β₁ → γ₂) → motive₃ (HMul:mk {α₀} {β₁} {γ₂} hMul₄)) → (t₄ : HMul α₀ β₁ γ₂) → motive₃ t₄
+HMul:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HMul:mk hMul₅) = mk₄ hMul₅
 
 HMul:hMul : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HMul α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HMul:hMul {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HMul.hMul₃ {α₀} {β₁} {γ₂} self₃
@@ -249,7 +286,9 @@ record HAdd (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hAdd₃ : α₀ → β₁ → γ₂
 
-postulate HAdd:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HAdd α₀ β₁ γ₂ → Set} → ((hAdd₄ : α₀ → β₁ → γ₂) → motive₃ (HAdd:mk {α₀} {β₁} {γ₂} hAdd₄)) → (t₄ : HAdd α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HAdd:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HAdd α₀ β₁ γ₂ → Set} → ((hAdd₄ : α₀ → β₁ → γ₂) → motive₃ (HAdd:mk {α₀} {β₁} {γ₂} hAdd₄)) → (t₄ : HAdd α₀ β₁ γ₂) → motive₃ t₄
+HAdd:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HAdd:mk hAdd₅) = mk₄ hAdd₅
 
 HAdd:hAdd : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HAdd α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HAdd:hAdd {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HAdd.hAdd₃ {α₀} {β₁} {γ₂} self₃
@@ -258,14 +297,18 @@ data Eq {α₀ : Set} : α₀ → α₀ → Set where
   Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
 {-# BUILTIN REWRITE Eq #-}
 
-postulate Eq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : (a₂ : α₀) → Eq {α₀} a₁ a₂ → Set} → motive₂ a₁ (Eq:refl {α₀} a₁) → {a₃ : α₀} → (t₄ : Eq {α₀} a₁ a₃) → motive₂ a₃ t₄
+-- recursor
+Eq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : (a₂ : α₀) → Eq {α₀} a₁ a₂ → Set} → motive₂ a₁ (Eq:refl {α₀} a₁) → {a₃ : α₀} → (t₄ : Eq {α₀} a₁ a₃) → motive₂ a₃ t₄
+Eq:rec {α₀} {a₁} {motive₂} refl₃ {_} (Eq:refl _) = refl₃
 
 record LE (α₀ : Set) : Set where
   constructor LE:mk
   field
     le₁ : α₀ → α₀ → Set
 
-postulate LE:rec : {α₀ : Set} → {motive₁ : LE α₀ → Set} → ((le₂ : α₀ → α₀ → Set) → motive₁ (LE:mk {α₀} le₂)) → (t₂ : LE α₀) → motive₁ t₂
+-- recursor
+LE:rec : {α₀ : Set} → {motive₁ : LE α₀ → Set} → ((le₂ : α₀ → α₀ → Set) → motive₁ (LE:mk {α₀} le₂)) → (t₂ : LE α₀) → motive₁ t₂
+LE:rec {α₀} {motive₁} mk₂ (LE:mk le₃) = mk₂ le₃
 
 LE:le : {α₀ : Set} → ⦃ _ : LE α₀ ⦄ → α₀ → α₀ → Set
 LE:le {α₀} ⦃ self₁ ⦄ = LE.le₁ {α₀} self₁
@@ -297,12 +340,15 @@ data Nat:le:below {n₀ : Nat} {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ �
   Nat:le:below:refl : Nat:le:below {n₀} {motive₁} {n₀} (Nat:le:refl {n₀})
   Nat:le:below:step : {m₂ : Nat} → (a₃ : Nat:le n₀ m₂) → Nat:le:below {n₀} {motive₁} {m₂} a₃ → motive₁ m₂ a₃ → Nat:le:below {n₀} {motive₁} {Nat:succ m₂} (Nat:le:step {n₀} {m₂} a₃)
 
-postulate Nat:le:below:rec : {n₀ : Nat} → {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ → Set} → {motive₂ : {a₂ : Nat} → (t₃ : Nat:le n₀ a₂) → Nat:le:below {n₀} {motive₁} {a₂} t₃ → Set} → motive₂ {n₀} (Nat:le:refl {n₀}) (Nat:le:below:refl {n₀} {motive₁}) → ({m₃ : Nat} → (a₄ : Nat:le n₀ m₃) → (ih₅ : Nat:le:below {n₀} {motive₁} {m₃} a₄) → (aih₆ : motive₁ m₃ a₄) → motive₂ {m₃} a₄ ih₅ → motive₂ {Nat:succ m₃} (Nat:le:step {n₀} {m₃} a₄) (Nat:le:below:step {n₀} {motive₁} {m₃} a₄ ih₅ aih₆)) → {a₃ : Nat} → {t₄ : Nat:le n₀ a₃} → (t₅ : Nat:le:below {n₀} {motive₁} {a₃} t₄) → motive₂ {a₃} t₄ t₅
+-- recursor
+Nat:le:below:rec : {n₀ : Nat} → {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ → Set} → {motive₂ : {a₂ : Nat} → (t₃ : Nat:le n₀ a₂) → Nat:le:below {n₀} {motive₁} {a₂} t₃ → Set} → motive₂ {n₀} (Nat:le:refl {n₀}) (Nat:le:below:refl {n₀} {motive₁}) → ({m₃ : Nat} → (a₄ : Nat:le n₀ m₃) → (ih₅ : Nat:le:below {n₀} {motive₁} {m₃} a₄) → (aih₆ : motive₁ m₃ a₄) → motive₂ {m₃} a₄ ih₅ → motive₂ {Nat:succ m₃} (Nat:le:step {n₀} {m₃} a₄) (Nat:le:below:step {n₀} {motive₁} {m₃} a₄ ih₅ aih₆)) → {a₃ : Nat} → {t₄ : Nat:le n₀ a₃} → (t₅ : Nat:le:below {n₀} {motive₁} {a₃} t₄) → motive₂ {a₃} t₄ t₅
+Nat:le:below:rec {n₀} {motive₁} {motive₂} refl₃ step₄ {_} {_} Nat:le:below:refl = refl₃
+Nat:le:below:rec {n₀} {motive₁} {motive₂} refl₃ step₄ {_} {_} (Nat:le:below:step {m₇} a₈ ih₉ aih₁₀) = step₄ {m₇} a₈ ih₉ aih₁₀ (Nat:le:below:rec {n₀} {motive₁} {motive₂} refl₃ step₄ {m₇} {a₈} ih₉)
 
 -- theorem
 opaque
   Nat:le:brecOn : {n₀ : Nat} → {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ → Set} → {a₂ : Nat} → (t₃ : Nat:le n₀ a₂) → ((a₄ : Nat) → (t₅ : Nat:le n₀ a₄) → Nat:le:below {n₀} {motive₁} {a₄} t₅ → motive₁ a₄ t₅) → motive₁ a₂ t₃
-  Nat:le:brecOn {n₀} {motive₁} {a₂} t₃ F1₄ = F1₄ a₂ t₃ (Nat:le:rec {n₀} {Nat:le:below {n₀} {motive₁}} (Nat:le:below:refl {n₀} {motive₁}) (λ {m₅ : Nat} → λ (a₆ : Nat:le n₀ m₅) → λ (ih₇ : Nat:le:below {n₀} {motive₁} {m₅} a₆) → Nat:le:below:step {n₀} {motive₁} {m₅} a₆ ih₇ (F1₄ m₅ a₆ ih₇)) {a₂} t₃)
+  Nat:le:brecOn {n₀} {motive₁} {a₂} t₃ F1₄ = F1₄ a₂ t₃ (Nat:le:rec {n₀} {λ (a₅ : Nat) → λ (t₆ : Nat:le n₀ a₅) → Nat:le:below {n₀} {motive₁} {a₅} t₆} (Nat:le:below:refl {n₀} {motive₁}) (λ {m₅ : Nat} → λ (a₆ : Nat:le n₀ m₅) → λ (ih₇ : Nat:le:below {n₀} {motive₁} {m₅} a₆) → Nat:le:below:step {n₀} {motive₁} {m₅} a₆ ih₇ (F1₄ m₅ a₆ ih₇)) {a₂} t₃)
 
 -- theorem
 opaque
@@ -312,7 +358,9 @@ opaque
 data HEq {α₀ : Set} : α₀ → {β₁ : Set} → β₁ → Set where
   HEq:refl : (a₁ : α₀) → HEq {α₀} a₁ {α₀} a₁
 
-postulate HEq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : {β₂ : Set} → (a₃ : β₂) → HEq {α₀} a₁ {β₂} a₃ → Set} → motive₂ {α₀} a₁ (HEq:refl {α₀} a₁) → {β₃ : Set} → {a₄ : β₃} → (t₅ : HEq {α₀} a₁ {β₃} a₄) → motive₂ {β₃} a₄ t₅
+-- recursor
+HEq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : {β₂ : Set} → (a₃ : β₂) → HEq {α₀} a₁ {β₂} a₃ → Set} → motive₂ {α₀} a₁ (HEq:refl {α₀} a₁) → {β₃ : Set} → {a₄ : β₃} → (t₅ : HEq {α₀} a₁ {β₃} a₄) → motive₂ {β₃} a₄ t₅
+HEq:rec {α₀} {a₁} {motive₂} refl₃ {_} {_} (HEq:refl _) = refl₃
 
 Nat:le:below:casesOn : {n₀ : Nat} → {motive₁ : (a₁ : Nat) → Nat:le n₀ a₁ → Set} → {motive₂ : {a₂ : Nat} → (t₃ : Nat:le n₀ a₂) → Nat:le:below {n₀} {motive₁} {a₂} t₃ → Set} → {a₃ : Nat} → {t₄ : Nat:le n₀ a₃} → (t₅ : Nat:le:below {n₀} {motive₁} {a₃} t₄) → motive₂ {n₀} (Nat:le:refl {n₀}) (Nat:le:below:refl {n₀} {motive₁}) → ({m₆ : Nat} → (a₇ : Nat:le n₀ m₆) → (ih₈ : Nat:le:below {n₀} {motive₁} {m₆} a₇) → (aih₉ : motive₁ m₆ a₇) → motive₂ {Nat:succ m₆} (Nat:le:step {n₀} {m₆} a₇) (Nat:le:below:step {n₀} {motive₁} {m₆} a₇ ih₈ aih₉)) → motive₂ {a₃} t₄ t₅
 Nat:le:below:casesOn {n₀} {motive₁} {motive₂} {a₃} {t₄} t₅ refl₆ step₇ = Nat:le:below:rec {n₀} {motive₁} {motive₂} refl₆ (λ {m₈ : Nat} → λ (a₉ : Nat:le n₀ m₈) → λ (ih₁₀ : Nat:le:below {n₀} {motive₁} {m₈} a₉) → λ (aih₁₁ : motive₁ m₈ a₉) → λ (ihih₁₂ : motive₂ {m₈} a₉ ih₁₀) → step₇ {m₈} a₉ ih₁₀ aih₁₁) {a₃} {t₄} t₅
@@ -374,7 +422,9 @@ record Mul (α₀ : Set) : Set where
   field
     mul₁ : α₀ → α₀ → α₀
 
-postulate Mul:rec : {α₀ : Set} → {motive₁ : Mul α₀ → Set} → ((mul₂ : α₀ → α₀ → α₀) → motive₁ (Mul:mk {α₀} mul₂)) → (t₂ : Mul α₀) → motive₁ t₂
+-- recursor
+Mul:rec : {α₀ : Set} → {motive₁ : Mul α₀ → Set} → ((mul₂ : α₀ → α₀ → α₀) → motive₁ (Mul:mk {α₀} mul₂)) → (t₂ : Mul α₀) → motive₁ t₂
+Mul:rec {α₀} {motive₁} mk₂ (Mul:mk mul₃) = mk₂ mul₃
 
 Mul:mul : {α₀ : Set} → ⦃ _ : Mul α₀ ⦄ → α₀ → α₀ → α₀
 Mul:mul {α₀} ⦃ self₁ ⦄ = Mul.mul₁ {α₀} self₁
@@ -411,7 +461,9 @@ record HMod (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hMod₃ : α₀ → β₁ → γ₂
 
-postulate HMod:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HMod α₀ β₁ γ₂ → Set} → ((hMod₄ : α₀ → β₁ → γ₂) → motive₃ (HMod:mk {α₀} {β₁} {γ₂} hMod₄)) → (t₄ : HMod α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HMod:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HMod α₀ β₁ γ₂ → Set} → ((hMod₄ : α₀ → β₁ → γ₂) → motive₃ (HMod:mk {α₀} {β₁} {γ₂} hMod₄)) → (t₄ : HMod α₀ β₁ γ₂) → motive₃ t₄
+HMod:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HMod:mk hMod₅) = mk₄ hMod₅
 
 HMod:hMod : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HMod α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HMod:hMod {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HMod.hMod₃ {α₀} {β₁} {γ₂} self₃
@@ -421,13 +473,18 @@ record Mod (α₀ : Set) : Set where
   field
     mod₁ : α₀ → α₀ → α₀
 
-postulate Mod:rec : {α₀ : Set} → {motive₁ : Mod α₀ → Set} → ((mod₂ : α₀ → α₀ → α₀) → motive₁ (Mod:mk {α₀} mod₂)) → (t₂ : Mod α₀) → motive₁ t₂
+-- recursor
+Mod:rec : {α₀ : Set} → {motive₁ : Mod α₀ → Set} → ((mod₂ : α₀ → α₀ → α₀) → motive₁ (Mod:mk {α₀} mod₂)) → (t₂ : Mod α₀) → motive₁ t₂
+Mod:rec {α₀} {motive₁} mk₂ (Mod:mk mod₃) = mk₂ mod₃
 
 data Bool : Set where
   Bool:false : Bool
   Bool:true : Bool
 
-postulate Bool:rec : {motive₀ : Bool → Set} → motive₀ Bool:false → motive₀ Bool:true → (t₁ : Bool) → motive₀ t₁
+-- recursor
+Bool:rec : {motive₀ : Bool → Set} → motive₀ Bool:false → motive₀ Bool:true → (t₁ : Bool) → motive₀ t₁
+Bool:rec {motive₀} false₁ true₂ Bool:false = false₁
+Bool:rec {motive₀} false₁ true₂ Bool:true = true₂
 
 Not : Set → Set
 Not a₀ = a₀ → False
@@ -436,7 +493,10 @@ data Decidable (p₀ : Set) : Set where
   Decidable:isFalse : Not p₀ → Decidable p₀
   Decidable:isTrue : p₀ → Decidable p₀
 
-postulate Decidable:rec : {p₀ : Set} → {motive₁ : Decidable p₀ → Set} → ((h₂ : Not p₀) → motive₁ (Decidable:isFalse {p₀} h₂)) → ((h₂ : p₀) → motive₁ (Decidable:isTrue {p₀} h₂)) → (t₂ : Decidable p₀) → motive₁ t₂
+-- recursor
+Decidable:rec : {p₀ : Set} → {motive₁ : Decidable p₀ → Set} → ((h₂ : Not p₀) → motive₁ (Decidable:isFalse {p₀} h₂)) → ((h₂ : p₀) → motive₁ (Decidable:isTrue {p₀} h₂)) → (t₂ : Decidable p₀) → motive₁ t₂
+Decidable:rec {p₀} {motive₁} isFalse₂ isTrue₃ (Decidable:isFalse h₄) = isFalse₂ h₄
+Decidable:rec {p₀} {motive₁} isFalse₂ isTrue₃ (Decidable:isTrue h₄) = isTrue₃ h₄
 
 Nat:ble:match~u1 : (motive₀ : Nat → Nat → Set) → (x₁ : Nat) → (x₂ : Nat) → ((x₃ : Nat) → motive₀ Nat:zero x₃) → ((n₃ : Nat) → motive₀ (Nat:succ n₃) Nat:zero) → ((n₃ : Nat) → (m₄ : Nat) → motive₀ (Nat:succ n₃) (Nat:succ m₄)) → motive₀ x₁ x₂
 Nat:ble:match~u1 motive₀ x₁ x₂ h1₃ h2₄ h3₅ = Nat:casesOn {λ (x₆ : Nat) → motive₀ x₆ x₂} x₁ (h1₃ x₂) (λ (n₆ : Nat) → Nat:casesOn {λ (x₇ : Nat) → motive₀ (Nat:succ n₆) x₇} x₂ (h2₄ n₆) (λ (n₇ : Nat) → h3₅ n₆ n₇))
@@ -468,7 +528,9 @@ Nat:beq x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Bool} x₀ Nat:beq:~
 record True : Set where
   constructor True:intro
 
-postulate True:rec : {motive₀ : True → Set} → motive₀ True:intro → (t₁ : True) → motive₀ t₁
+-- recursor
+True:rec : {motive₀ : True → Set} → motive₀ True:intro → (t₁ : True) → motive₀ t₁
+True:rec {motive₀} intro₁ True:intro = intro₁
 
 ~uprivate:Init:Prelude:~n0:noConfusion~uof~uNat:aux:match~u1~u1 : (motive₀ : Nat → Set) → (x₁ : Nat) → (Unit → motive₀ Nat:zero) → ((n₂ : Nat) → motive₀ (Nat:succ n₂)) → motive₀ x₁
 ~uprivate:Init:Prelude:~n0:noConfusion~uof~uNat:aux:match~u1~u1 motive₀ x₁ h1₂ h2₃ = Nat:casesOn {λ (x₄ : Nat) → motive₀ x₄} x₁ (h1₂ Unit:unit) (λ (n₄ : Nat) → h2₃ n₄)
@@ -500,7 +562,7 @@ Nat:le~uof~uble~ueq~utrue:~uf {n₀} f₁ {m₂} h₃ = ~uprivate:Init:Prelude:~
 -- theorem
 opaque
   Nat:le~uof~uble~ueq~utrue : {n₀ : Nat} → {m₁ : Nat} → Eq {Bool} (Nat:ble n₀ m₁) Bool:true → LE:le {Nat} ⦃ instLENat ⦄ n₀ m₁
-  Nat:le~uof~uble~ueq~utrue {n₀} {m₁} h₂ = Nat:brecOn {λ (n₃ : Nat) → {m₄ : Nat} → Eq {Bool} (Nat:ble n₃ m₄) Bool:true → LE:le {Nat} ⦃ instLENat ⦄ n₃ m₄} n₀ Nat:le~uof~uble~ueq~utrue:~uf {m₁} h₂
+  Nat:le~uof~uble~ueq~utrue {n₀} {m₁} h₂ = Nat:brecOn {λ (n₃ : Nat) → {m₄ : Nat} → Eq {Bool} (Nat:ble n₃ m₄) Bool:true → LE:le {Nat} ⦃ instLENat ⦄ n₃ m₄} n₀ (λ (t₃ : Nat) → λ (f₄ : Nat:below {λ (n₄ : Nat) → {m₅ : Nat} → Eq {Bool} (Nat:ble n₄ m₅) Bool:true → LE:le {Nat} ⦃ instLENat ⦄ n₄ m₅} t₃) → Nat:le~uof~uble~ueq~utrue:~uf {t₃} f₄) {m₁} h₂
 
 ~uprivate:Init:Prelude:~n0:Nat:ble~uself~ueq~utrue:match~u1~u1 : (motive₀ : Nat → Set) → (x₁ : Nat) → (Unit → motive₀ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) → ((n₂ : Nat) → motive₀ (Nat:succ n₂)) → motive₀ x₁
 ~uprivate:Init:Prelude:~n0:Nat:ble~uself~ueq~utrue:match~u1~u1 motive₀ x₁ h1₂ h2₃ = Nat:casesOn {λ (x₄ : Nat) → motive₀ x₄} x₁ (h1₂ Unit:unit) (λ (n₄ : Nat) → h2₃ n₄)
@@ -596,7 +658,9 @@ record HSub (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hSub₃ : α₀ → β₁ → γ₂
 
-postulate HSub:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HSub α₀ β₁ γ₂ → Set} → ((hSub₄ : α₀ → β₁ → γ₂) → motive₃ (HSub:mk {α₀} {β₁} {γ₂} hSub₄)) → (t₄ : HSub α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HSub:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HSub α₀ β₁ γ₂ → Set} → ((hSub₄ : α₀ → β₁ → γ₂) → motive₃ (HSub:mk {α₀} {β₁} {γ₂} hSub₄)) → (t₄ : HSub α₀ β₁ γ₂) → motive₃ t₄
+HSub:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HSub:mk hSub₅) = mk₄ hSub₅
 
 HSub:hSub : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HSub α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HSub:hSub {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HSub.hSub₃ {α₀} {β₁} {γ₂} self₃
@@ -681,7 +745,9 @@ record Sub (α₀ : Set) : Set where
   field
     sub₁ : α₀ → α₀ → α₀
 
-postulate Sub:rec : {α₀ : Set} → {motive₁ : Sub α₀ → Set} → ((sub₂ : α₀ → α₀ → α₀) → motive₁ (Sub:mk {α₀} sub₂)) → (t₂ : Sub α₀) → motive₁ t₂
+-- recursor
+Sub:rec : {α₀ : Set} → {motive₁ : Sub α₀ → Set} → ((sub₂ : α₀ → α₀ → α₀) → motive₁ (Sub:mk {α₀} sub₂)) → (t₂ : Sub α₀) → motive₁ t₂
+Sub:rec {α₀} {motive₁} mk₂ (Sub:mk sub₃) = mk₂ sub₃
 
 Sub:sub : {α₀ : Set} → ⦃ _ : Sub α₀ ⦄ → α₀ → α₀ → α₀
 Sub:sub {α₀} ⦃ self₁ ⦄ = Sub.sub₁ {α₀} self₁
@@ -756,7 +822,10 @@ data Or (a₀ : Set) (b₁ : Set) : Set where
   Or:inl : a₀ → Or a₀ b₁
   Or:inr : b₁ → Or a₀ b₁
 
-postulate Or:rec : {a₀ : Set} → {b₁ : Set} → {motive₂ : Or a₀ b₁ → Set} → ((h₃ : a₀) → motive₂ (Or:inl {a₀} {b₁} h₃)) → ((h₃ : b₁) → motive₂ (Or:inr {a₀} {b₁} h₃)) → (t₃ : Or a₀ b₁) → motive₂ t₃
+-- recursor
+Or:rec : {a₀ : Set} → {b₁ : Set} → {motive₂ : Or a₀ b₁ → Set} → ((h₃ : a₀) → motive₂ (Or:inl {a₀} {b₁} h₃)) → ((h₃ : b₁) → motive₂ (Or:inr {a₀} {b₁} h₃)) → (t₃ : Or a₀ b₁) → motive₂ t₃
+Or:rec {a₀} {b₁} {motive₂} inl₃ inr₄ (Or:inl h₅) = inl₃ h₅
+Or:rec {a₀} {b₁} {motive₂} inl₃ inr₄ (Or:inr h₅) = inr₄ h₅
 
 Or:casesOn : {a₀ : Set} → {b₁ : Set} → {motive₂ : Or a₀ b₁ → Set} → (t₃ : Or a₀ b₁) → ((h₄ : a₀) → motive₂ (Or:inl {a₀} {b₁} h₄)) → ((h₄ : b₁) → motive₂ (Or:inr {a₀} {b₁} h₄)) → motive₂ t₃
 Or:casesOn {a₀} {b₁} {motive₂} t₃ inl₄ inr₅ = Or:rec {a₀} {b₁} {motive₂} (λ (h₆ : a₀) → inl₄ h₆) (λ (h₆ : b₁) → inr₅ h₆) t₃
@@ -882,21 +951,27 @@ record UInt8 : Set where
   field
     toBitVec₀ : BitVec (OfNat:ofNat {Nat} 8 ⦃ instOfNatNat 8 ⦄)
 
-postulate UInt8:rec : {motive₀ : UInt8 → Set} → ((toBitVec₁ : BitVec (OfNat:ofNat {Nat} 8 ⦃ instOfNatNat 8 ⦄)) → motive₀ (UInt8:ofBitVec toBitVec₁)) → (t₁ : UInt8) → motive₀ t₁
+-- recursor
+UInt8:rec : {motive₀ : UInt8 → Set} → ((toBitVec₁ : BitVec (OfNat:ofNat {Nat} 8 ⦃ instOfNatNat 8 ⦄)) → motive₀ (UInt8:ofBitVec toBitVec₁)) → (t₁ : UInt8) → motive₀ t₁
+UInt8:rec {motive₀} ofBitVec₁ (UInt8:ofBitVec toBitVec₂) = ofBitVec₁ toBitVec₂
 
 record ByteArray : Set where
   constructor ByteArray:mk
   field
     data₀ : Array UInt8
 
-postulate ByteArray:rec : {motive₀ : ByteArray → Set} → ((data₁ : Array UInt8) → motive₀ (ByteArray:mk data₁)) → (t₁ : ByteArray) → motive₀ t₁
+-- recursor
+ByteArray:rec : {motive₀ : ByteArray → Set} → ((data₁ : Array UInt8) → motive₀ (ByteArray:mk data₁)) → (t₁ : ByteArray) → motive₀ t₁
+ByteArray:rec {motive₀} mk₁ (ByteArray:mk data₂) = mk₁ data₂
 
 record UInt32 : Set where
   constructor UInt32:ofBitVec
   field
     toBitVec₀ : BitVec (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)
 
-postulate UInt32:rec : {motive₀ : UInt32 → Set} → ((toBitVec₁ : BitVec (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)) → motive₀ (UInt32:ofBitVec toBitVec₁)) → (t₁ : UInt32) → motive₀ t₁
+-- recursor
+UInt32:rec : {motive₀ : UInt32 → Set} → ((toBitVec₁ : BitVec (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)) → motive₀ (UInt32:ofBitVec toBitVec₁)) → (t₁ : UInt32) → motive₀ t₁
+UInt32:rec {motive₀} ofBitVec₁ (UInt32:ofBitVec toBitVec₂) = ofBitVec₁ toBitVec₂
 
 Nat:isValidChar : Nat → Set
 Nat:isValidChar n₀ = Or (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)) (And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)))
@@ -916,7 +991,9 @@ record Char : Set where
     val₀ : UInt32
     valid₁ : UInt32:isValidChar val₀
 
-postulate Char:rec : {motive₀ : Char → Set} → ((val₁ : UInt32) → (valid₂ : UInt32:isValidChar val₁) → motive₀ (Char:mk val₁ valid₂)) → (t₁ : Char) → motive₀ t₁
+-- recursor
+Char:rec : {motive₀ : Char → Set} → ((val₁ : UInt32) → (valid₂ : UInt32:isValidChar val₁) → motive₀ (Char:mk val₁ valid₂)) → (t₁ : Char) → motive₀ t₁
+Char:rec {motive₀} mk₁ (Char:mk val₂ valid₃) = mk₁ val₂ valid₃
 
 List:append:match~u1 : {α₀ : Set} → (motive₁ : List α₀ → List α₀ → Set) → (x₂ : List α₀) → (x₃ : List α₀) → ((bs₄ : List α₀) → motive₁ (List:nil {α₀}) bs₄) → ((a₄ : α₀) → (as₅ : List α₀) → (bs₆ : List α₀) → motive₁ (List:cons {α₀} a₄ as₅) bs₆) → motive₁ x₂ x₃
 List:append:match~u1 {α₀} motive₁ x₂ x₃ h1₄ h2₅ = List:casesOn {α₀} {λ (x₆ : List α₀) → motive₁ x₆ x₃} x₂ (h1₄ x₃) (λ (head₆ : α₀) → λ (tail₇ : List α₀) → h2₅ head₆ tail₇ x₃)
@@ -983,7 +1060,9 @@ record HDiv (α₀ : Set) (β₁ : Set) (γ₂ : outParam Set) : Set where
   field
     hDiv₃ : α₀ → β₁ → γ₂
 
-postulate HDiv:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HDiv α₀ β₁ γ₂ → Set} → ((hDiv₄ : α₀ → β₁ → γ₂) → motive₃ (HDiv:mk {α₀} {β₁} {γ₂} hDiv₄)) → (t₄ : HDiv α₀ β₁ γ₂) → motive₃ t₄
+-- recursor
+HDiv:rec : {α₀ : Set} → {β₁ : Set} → {γ₂ : Set} → {motive₃ : HDiv α₀ β₁ γ₂ → Set} → ((hDiv₄ : α₀ → β₁ → γ₂) → motive₃ (HDiv:mk {α₀} {β₁} {γ₂} hDiv₄)) → (t₄ : HDiv α₀ β₁ γ₂) → motive₃ t₄
+HDiv:rec {α₀} {β₁} {γ₂} {motive₃} mk₄ (HDiv:mk hDiv₅) = mk₄ hDiv₅
 
 HDiv:hDiv : {α₀ : Set} → {β₁ : Set} → {γ₂ : outParam Set} → ⦃ _ : HDiv α₀ β₁ γ₂ ⦄ → α₀ → β₁ → γ₂
 HDiv:hDiv {α₀} {β₁} {γ₂} ⦃ self₃ ⦄ = HDiv.hDiv₃ {α₀} {β₁} {γ₂} self₃
@@ -993,7 +1072,9 @@ record Div (α₀ : Set) : Set where
   field
     div₁ : α₀ → α₀ → α₀
 
-postulate Div:rec : {α₀ : Set} → {motive₁ : Div α₀ → Set} → ((div₂ : α₀ → α₀ → α₀) → motive₁ (Div:mk {α₀} div₂)) → (t₂ : Div α₀) → motive₁ t₂
+-- recursor
+Div:rec : {α₀ : Set} → {motive₁ : Div α₀ → Set} → ((div₂ : α₀ → α₀ → α₀) → motive₁ (Div:mk {α₀} div₂)) → (t₂ : Div α₀) → motive₁ t₂
+Div:rec {α₀} {motive₁} mk₂ (Div:mk div₃) = mk₂ div₃
 
 Nat:div:go:~uf : (y₀ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₀ → (fuel₁ : Nat) → Nat:below {λ (fuel₂ : Nat) → (x₃ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₃ fuel₂ → Nat} fuel₁ → (x₂ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₂ fuel₁ → Nat
 Nat:div:go:~uf y₀ hy₁ fuel₂ f₃ x₄ hfuel₅ = Nat:div:go:match~u1 x₄ (λ (fuel₆ : Nat) → λ (hfuel₇ : LT:lt {Nat} ⦃ instLTNat ⦄ x₄ fuel₆) → Nat:below {λ (fuel₈ : Nat) → (x₉ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₉ fuel₈ → Nat} fuel₆ → Nat) fuel₂ hfuel₅ (λ (fuel₆ : Nat) → λ (hfuel₇ : LT:lt {Nat} ⦃ instLTNat ⦄ x₄ (Nat:succ fuel₆)) → λ (x₈ : Nat:below {λ (fuel₈ : Nat) → (x₉ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₉ fuel₈ → Nat} (Nat:succ fuel₆)) → dite {Nat} (LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄) ⦃ Nat:decLe y₀ x₄ ⦄ (λ (h₉ : LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (PProd.fst₂ {(λ (fuel₁₀ : Nat) → (x₁₁ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₁₁ fuel₁₀ → Nat) fuel₆} {Nat:rec {λ (t₁₀ : Nat) → Set} PUnit (λ (n₁₀ : Nat) → λ (nih₁₁ : Set) → PProd ((λ (fuel₁₂ : Nat) → (x₁₃ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₁₃ fuel₁₂ → Nat) n₁₀) nih₁₁) fuel₆} x₈ (HSub:hSub {Nat} {Nat} {Nat} ⦃ instHSub {Nat} ⦃ instSubNat ⦄ ⦄ x₄ y₀) (Nat:div~urec~ufuel~ulemma {x₄} {y₀} {fuel₆} hy₁ h₉ hfuel₇)) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)) (λ (x₉ : Not (LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄)) → OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) f₃
@@ -1028,14 +1109,18 @@ record ByteArray:IsValidUTF8 (b₀ : ByteArray) : Set where
     m₁ : List Char
     hm₂ : Eq {ByteArray} b₀ (List:utf8Encode m₁)
 
-postulate ByteArray:IsValidUTF8:rec : {b₀ : ByteArray} → {motive₁ : ByteArray:IsValidUTF8 b₀ → Set} → ((m₂ : List Char) → (hm₃ : Eq {ByteArray} b₀ (List:utf8Encode m₂)) → motive₁ (ByteArray:IsValidUTF8:intro {b₀} m₂ hm₃)) → (t₂ : ByteArray:IsValidUTF8 b₀) → motive₁ t₂
+-- recursor
+ByteArray:IsValidUTF8:rec : {b₀ : ByteArray} → {motive₁ : ByteArray:IsValidUTF8 b₀ → Set} → ((m₂ : List Char) → (hm₃ : Eq {ByteArray} b₀ (List:utf8Encode m₂)) → motive₁ (ByteArray:IsValidUTF8:intro {b₀} m₂ hm₃)) → (t₂ : ByteArray:IsValidUTF8 b₀) → motive₁ t₂
+ByteArray:IsValidUTF8:rec {b₀} {motive₁} intro₂ (ByteArray:IsValidUTF8:intro m₃ hm₄) = intro₂ m₃ hm₄
 
 record Inhabited (α₀ : Set) : Set where
   constructor Inhabited:mk
   field
     default₁ : α₀
 
-postulate Inhabited:rec : {α₀ : Set} → {motive₁ : Inhabited α₀ → Set} → ((default₂ : α₀) → motive₁ (Inhabited:mk {α₀} default₂)) → (t₂ : Inhabited α₀) → motive₁ t₂
+-- recursor
+Inhabited:rec : {α₀ : Set} → {motive₁ : Inhabited α₀ → Set} → ((default₂ : α₀) → motive₁ (Inhabited:mk {α₀} default₂)) → (t₂ : Inhabited α₀) → motive₁ t₂
+Inhabited:rec {α₀} {motive₁} mk₂ (Inhabited:mk default₃) = mk₂ default₃
 
 Inhabited:default : {α₀ : Set} → ⦃ _ : Inhabited α₀ ⦄ → α₀
 Inhabited:default {α₀} ⦃ self₁ ⦄ = Inhabited.default₁ {α₀} self₁

@@ -104,7 +104,7 @@ from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import Clock, FileRun, Outcome, Runner, check_file, real_clock
 from scaffold_check import (
     Checked, Event, Item, Module, State, check_module, code, is_theorem, listing, mentioned, parse_module,
-    reach, references, transparent, types_only, without_rewrites,
+    reach, references, render, transparent, types_only, without_rewrites,
 )
 
 DEFAULT_TIMEOUT: float = 3600.0
@@ -709,10 +709,21 @@ def prune_module(tree: Tree, scratch: Path, runner: MeasuredRunner, clock: Clock
     module = parsed.unwrap()
     gone = predropped(module, dead, frozenset(tree.modules))
     peaks: list[int] = []
-    outcome = check_module(metered(runner, heap, peaks), clock, agda, without(module, gone), timeout, scratch)
+    checked = without(module, gone)
+    outcome = check_module(metered(runner, heap, peaks), clock, agda, checked, timeout, scratch)
     if outcome.is_err:
         return Pruned(name, "", frozenset(), 0, 0.0, max(peaks, default=0), str(outcome.unwrap_err()))
     result: Checked = outcome.unwrap()
+    # The loop leaves its last copy with a marker definition before each
+    # declaration; the importing modules, and --keep, get the text without
+    # them, as the translator wrote it less what the loop refused.  (The
+    # parts of a split module open the earlier parts, which would bring
+    # their markers into scope beside the part's own.)
+    final, _ = render(checked, result.state)
+    rewritten = write_text(scratch / source.path, final)
+    if rewritten.is_err:
+        return Pruned(name, "", frozenset(), result.runs, result.seconds, max(peaks, default=0),
+                      str(rewritten.unwrap_err()))
     whole = merged(module, gone, result.state)
     drops = len(gone)
     state = replace(whole, events=whole.events[:drops] + injected + whole.events[drops:])
