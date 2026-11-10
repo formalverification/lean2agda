@@ -94,14 +94,28 @@ diff -r tests/expected/scaffolds/quotients-without-rewrite "$scratch/quotients-w
 # loop over `selected` checks module by module, as it is.
 python3 ../scripts/python/agda_check.py --agda "${AGDA:-agda}" -j "$jobs" "$scratch/kept-selected" > /dev/null
 
-# A split changes no outcome: nat-gcd-self's tree cut into parts of at
-# most 60 KB checks exactly what the uncut tree checks, so that what a
-# part drops is dropped from the later parts that open it.
-"$lake_cmd" exe lean2agda --split 60000 --out "$scratch/split" Init.Data.Nat.Gcd -- Nat.gcd_self > /dev/null
-find "$scratch/split" -path '*~p2.agda' | grep -q .
-python3 ../scripts/python/agda_check.py --refusals --agda "${AGDA:-agda}" -j "$jobs" \
-  --listings "$scratch/split-listed" "$scratch/split" > /dev/null
-diff -u tests/expected/scaffolds/nat-gcd-self/checked.txt "$scratch/split-listed/checked.txt"
+# A split changes no outcome: a tree cut into parts checks exactly what
+# the uncut tree checks, with the same counts and the same events, module
+# by module merged, without Agda's messages, which name what a part
+# opens as the module names it: nat-gcd-self's cut into parts of at most 60 KB, so
+# that what a part drops is dropped from the later parts that open it,
+# and kinds cut after every item, so that the fallback's unfolding of
+# KindFixtures.alias for useAlias crosses parts.
+events_of() {
+  find "$1" -name '*.checked.txt' -exec tail -q -n +3 {} + | sed 's/ | .*//' | sort
+}
+check_split() {
+  local name=$1 split=$2
+  shift 2
+  "$lake_cmd" exe lean2agda --split "$split" --out "$scratch/split-$name" "$@" > /dev/null
+  find "$scratch/split-$name" -path '*~p2.agda' | grep -q .
+  python3 ../scripts/python/agda_check.py --refusals --agda "${AGDA:-agda}" -j "$jobs" \
+    --listings "$scratch/split-$name-listed" "$scratch/split-$name" > /dev/null
+  diff -u "tests/expected/scaffolds/$name/checked.txt" "$scratch/split-$name-listed/checked.txt"
+  diff -u <(events_of "tests/expected/scaffolds/$name") <(events_of "$scratch/split-$name-listed")
+}
+check_split nat-gcd-self 60000 Init.Data.Nat.Gcd -- Nat.gcd_self
+check_split kinds 1 TranslatorTests.Input.Kinds
 
 # The acceptance criterion of issue M2-4: every inductive type of the
 # closure of Init.Core's declarations is declared and checks.  They are

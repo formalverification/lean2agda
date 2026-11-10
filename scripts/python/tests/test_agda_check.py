@@ -20,6 +20,7 @@ import tempfile
 import threading
 import time
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
@@ -27,11 +28,12 @@ from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_check import (
     Progress, Pruned, Source, Span, assemble, blocked, build_tree, capped, check_tree, dependents,
     execute, exit_status, find_cycle, foreign_names, named, format_summary, format_table, launchable,
-    keep_target, measured_run, merged, module_run, parse_args, parse_source, positive, predropped,
-    prune_tree, read_tree, simulate, skipped, strays, sum_counts, topological, types_only_tree, without,
+    Tree, Unfold, first_requests, injections, keep_target, measured_run, merged, module_run, parse_args,
+    parse_source, positive, predropped, prune_tree, read_tree, requests, simulate, skipped, strays, summed,
+    sum_counts, topological, types_only_tree, unfold_modules, without,
 )
 from agda_run import FileRun, Outcome
-from scaffold_check import State, parse_module
+from scaffold_check import Event, Module, State, listing, parse_item, parse_module, transparent
 
 HEADER = "{-# OPTIONS --type-in-type #-}\n-- a comment\n"
 
@@ -310,6 +312,59 @@ MODULE_B = module_text("U.B", ["U.A"], body=(
     "chain : U.A.Nat\nchain = user\n\n"
     "soft~uuse : U.A.Nat\nsoft~uuse = U.A.soft\n\n"
     "field~uuse : U.A.R → U.A.Nat\nfield~uuse r₀ = U.A.R.f₀ r₀\n"))
+
+
+class TestUnfoldingAcrossModules(unittest.TestCase):
+    """The fallback across modules: a refusal naming another module's
+    opaque theorem asks for it, the next pass makes it transparent there,
+    and the dependent's listing records the unfolding."""
+
+    theorem = parse_item("-- theorem\nopaque\n  thm : T\n  thm = t")
+    graph = {"U.A": frozenset(), "U.B": frozenset({"U.A"}), "U.C": frozenset()}
+    tree = Tree({}, graph)
+
+    def pruned(self, alive: bool = True, detail: str = "U.A.thm != x of type T") -> dict[str, Pruned]:
+        a = State((self.theorem,), (alive,), ())
+        user = parse_item("user : T\nuser = x")
+        b = State((user,), (True,), (Event("refused value", "user", "UnequalTerms", "thm != x", detail=detail),))
+        c = State((parse_item("-- theorem\nopaque\n  other : T\n  other = t"),), (True,), ())
+        return {m: Pruned(m, "", frozenset(), 1, 0.0, 0, "", s) for m, s in (("U.A", a), ("U.B", b), ("U.C", c))}
+
+    def test_requests(self) -> None:
+        self.assertEqual(requests(self.tree, self.pruned()),
+                         (Unfold("U.A", "thm", "U.B", "user", "UnequalTerms", "thm != x"),))
+        self.assertEqual(requests(self.tree, self.pruned(alive=False)), ())
+        # A theorem of a module U.B does not import is not its to unfold.
+        self.assertEqual(requests(self.tree, self.pruned(detail="other != x")), ())
+        self.assertEqual(requests(self.tree, self.pruned(detail="nothing named")), ())
+
+    def test_first_requests(self) -> None:
+        one = Unfold("U.A", "thm", "U.B", "user", "E", "m")
+        self.assertEqual(first_requests((one, replace(one, dependent="later"), replace(one, theorem="t2"))),
+                         (one, replace(one, theorem="t2")))
+
+    def test_unfold_modules(self) -> None:
+        module = Module("U.A", "header", (self.theorem, parse_item("thm2 : T\nthm2 = t")))
+        out = unfold_modules({"U.A": module}, (Unfold("U.A", "thm", "U.B", "user", "E", "m"),))["U.A"]
+        self.assertEqual(out.items[0], transparent(self.theorem, "user"))
+        self.assertEqual(out.items[1], module.items[1])
+
+    def test_the_listing_records_it(self) -> None:
+        unfold = Unfold("U.A", "thm", "U.B", "user", "UnequalTerms", "thm != x")
+        injected = injections((unfold,))["U.B"]
+        items = (parse_item("user : T\nuser = x"), parse_item("next : T\nnext = x"))
+        checked = listing(State(items, (True, True), injected), False)
+        self.assertIn("unfolded 1 of 0 theorems, 0 in vain\nunfolded UnequalTerms thm for user\n", checked)
+        refused = State(items, (True, True), injected + (Event("refused value", "user", "UnequalTerms", "again"),))
+        self.assertIn("unfolded UnequalTerms thm for user, in vain\n", listing(refused, False))
+        # Two such unfoldings in one module: neither is looked up there.
+        two = injected + injections((replace(unfold, theorem="thm2", dependent="next"),))["U.B"]
+        self.assertIn("unfolded 2 of 0 theorems, 0 in vain", listing(State(items, (True, True), two), False))
+
+    def test_summed(self) -> None:
+        first = {"U.A": Pruned("U.A", "one", frozenset(), 3, 1.5, 100)}
+        second = {"U.A": Pruned("U.A", "two", frozenset(), 2, 1.0, 80)}
+        self.assertEqual(summed((first, second)), {"U.A": Pruned("U.A", "two", frozenset(), 5, 2.5, 100)})
 
 
 class TestRefusalsOverATree(unittest.TestCase):

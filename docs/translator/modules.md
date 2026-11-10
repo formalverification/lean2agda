@@ -195,13 +195,26 @@ scheduler stays in one place.
    defect of that drop, and the run fails rather than count it as a
    refusal; the first version of the drop missed the bare names, and a
    split run counted 25 declarations as checked that were not.
-+  The fallback of [#20], which makes a theorem transparent when a
-   dependent's error names it, reaches only theorems of the module being
-   checked, since an imported module is final.  On the goldens this
-   differs from the single module once, on `kinds`: an unfolding of
-   `heq_of_eq` (an `Init.Core` theorem) for a declaration of the fixture's
-   module, which was in vain in the single module too, so the outcome is
-   the same.
++  The fallback of [#20] makes a theorem transparent when a dependent's
+   error names it.  Within a module the loop does that itself; across
+   modules, and across the parts of a split module, the driver does it
+   between passes over the tree.  When a pass ends with a refusal whose
+   message names a theorem still opaque in a module the refused
+   declaration's module imports, the driver checks the whole tree again
+   from a fresh copy with that theorem transparent in its own module,
+   under `-- theorem, unfolded for D`, and lists `unfolded T for D` in
+   the dependent's module, where its `in vain` mark is decided as in one
+   module.  Each pass adds a theorem, so the passes end; the summary line
+   counts them when there are more than one, and each module's runs and
+   seconds are summed over them.  A first version unfolded only within
+   the module, and lost two kinds of unfolding: on `kinds` and on the
+   quotients' `--without-rewrite` listing, an unfolding of an `Init`
+   theorem, in vain in the single module too; and, in the review of
+   [#84], on `kinds` cut with `--split 1`, the unfolding of `alias` for
+   `useAlias`, which turned `useAlias` into a postulate.  Every golden
+   tree now lists the counts and events of the single module it replaces
+   (as of [#83]), and the harness checks `kinds` cut after every item
+   against its uncut tree.
 +  `--listings OUT` writes each module's listing beside its path
    (`OUT/U/Init/Core.checked.txt`) and the sums of their count lines to
    `OUT/checked.txt`; `--keep OUT` copies the final tree, which the
@@ -314,6 +327,8 @@ python3 ../scripts/python/agda_check.py --fresh -j 8 kept
 [#20]: https://github.com/formalverification/lean2agda/issues/20
 [#21]: https://github.com/formalverification/lean2agda/issues/21
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#83]: https://github.com/formalverification/lean2agda/pull/83
+[#84]: https://github.com/formalverification/lean2agda/pull/84
 [naming]: naming.md
 [printing]: printing.md
 [related]: ../related-work.md

@@ -36,9 +36,13 @@ Description:
     a postulate for every module that imports it, and one that the loop
     dropped is dropped from every importing module before Agda runs,
     with what refers to it there, and counted as `dropped`, as Agda
-    would otherwise meet it as a name out of scope.  The listing of each
-    module is scaffold_check.py's, and a line per count sums them over
-    the tree.  `--listings OUT` writes each module's listing beside its
+    would otherwise meet it as a name out of scope.  A refusal whose
+    message names a theorem still opaque in an imported module, or an
+    earlier part, is the fallback's across modules: the tree is checked
+    again from a fresh copy with that theorem transparent in its module,
+    and the dependent's listing records the unfolding, until a pass asks
+    for nothing new (`requests`).  The listing of each module is
+    scaffold_check.py's, and a line per count sums them over the tree.  `--listings OUT` writes each module's listing beside its
     path under OUT (`U/Init/Core.checked.txt`) and the sums to
     OUT/checked.txt; `--keep OUT` copies the final tree there, which the
     default mode can then time without the loop (an OUT holding modules
@@ -91,7 +95,7 @@ import sys
 import tempfile
 import threading
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Mapping, Optional, Sequence, TypeVar
 
@@ -99,8 +103,8 @@ from _utils.file_ops import read_text, write_text, ensure_dir_exists
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import Clock, FileRun, Outcome, Runner, check_file, real_clock
 from scaffold_check import (
-    Checked, Event, Module, State, check_module, code, listing, parse_module, reach,
-    references, types_only, without_rewrites,
+    Checked, Event, Item, Module, State, check_module, code, is_theorem, listing, mentioned, parse_module,
+    reach, references, transparent, types_only, without_rewrites,
 )
 
 DEFAULT_TIMEOUT: float = 3600.0
@@ -659,6 +663,7 @@ class Pruned:
     seconds: float
     peak_kib: int
     error: str = ""
+    state: Optional[State] = field(default=None, compare=False)
 
 
 def rewrites_removed(modules: Mapping[str, Module]) -> dict[str, Module]:
@@ -687,9 +692,13 @@ def restrict_tree(tree: Tree, scratch: Path,
 
 
 def prune_module(tree: Tree, scratch: Path, runner: MeasuredRunner, clock: Clock, agda: str,
-                 timeout: float, heap: str, messages: bool, done: Mapping[str, Pruned], name: str) -> Pruned:
+                 timeout: float, heap: str, messages: bool, done: Mapping[str, Pruned], name: str,
+                 injected: tuple[Event, ...] = ()) -> Pruned:
     """Run scaffold_check's loop on one module of the scratch tree, after
-    dropping what takes a dead identifier from a module it imports."""
+    dropping what takes a dead identifier from a module it imports.  The
+    `injected` events, the unfoldings of other modules' theorems made for
+    this module's declarations (`requests`), join its listing after the
+    drops, where the loop would have recorded them in one module."""
     source = tree.modules[name]
     imported = reach(tree.graph[name], lambda m: tree.graph[m])
     dead = frozenset().union(*(done[m].dead for m in imported if m in done))
@@ -704,17 +713,102 @@ def prune_module(tree: Tree, scratch: Path, runner: MeasuredRunner, clock: Clock
     if outcome.is_err:
         return Pruned(name, "", frozenset(), 0, 0.0, max(peaks, default=0), str(outcome.unwrap_err()))
     result: Checked = outcome.unwrap()
-    state = merged(module, gone, result.state)
+    whole = merged(module, gone, result.state)
+    drops = len(gone)
+    state = replace(whole, events=whole.events[:drops] + injected + whole.events[drops:])
     lost = tuple(e.name for e in state.events if e.error == _NOT_IN_SCOPE)
     error = f"Agda found names out of scope, which the drop missed: {', '.join(lost)}" if lost else ""
     return Pruned(name, listing(state, messages), dead_names(state), result.runs, result.seconds,
-                  max(peaks, default=0), error)
+                  max(peaks, default=0), error, state)
 
 
-def format_pruned(tree: Tree, pruned: Mapping[str, Pruned], jobs: int, wall: float) -> str:
+@dataclass(frozen=True)
+class Unfold:
+    """A theorem of one module made transparent for a declaration of a
+    module that imports it: what scaffold_check's fallback does within a
+    module, across modules and parts.  The error is the dependent's, from
+    the pass in which it was refused."""
+
+    module: str
+    theorem: str
+    at: str
+    dependent: str
+    error: str
+    message: str
+
+
+def requests(tree: Tree, pruned: Mapping[str, Pruned]) -> tuple[Unfold, ...]:
+    """The unfoldings a pass asks for: for each refusal, in dependency
+    order and then the module's, the first word of its message that names
+    a theorem still opaque in a module its own imports, directly or not.
+    Within a module the loop has already unfolded any such theorem of its
+    own, so a refusal left naming one names a foreign theorem or none."""
+    def opaque(m: str) -> dict[str, str]:
+        state = pruned[m].state if m in pruned else None
+        if state is None:
+            return {}
+        return {item.names[0]: m for item, alive in zip(state.items, state.alive) if alive and is_theorem(item)}
+    found: list[Unfold] = []
+    for m in topological(tree.graph):
+        state = pruned[m].state if m in pruned else None
+        if state is None:
+            continue
+        theorems: dict[str, str] = {}
+        for n in sorted(reach(tree.graph[m], lambda x: tree.graph[x])):
+            theorems.update(opaque(n))
+        for e in state.events:
+            if e.action not in ("refused value", "refused type"):
+                continue
+            hit = next((w for w in mentioned(e.detail) if w in theorems), None)
+            if hit is not None:
+                found.append(Unfold(theorems[hit], hit, m, e.name, e.error, e.message))
+    return tuple(found)
+
+
+def first_requests(unfolds: Sequence[Unfold]) -> tuple[Unfold, ...]:
+    """One unfolding per theorem, the first that asked for it: once
+    transparent, a theorem serves every later dependent, as in one
+    module."""
+    seen: dict[tuple[str, str], Unfold] = {}
+    for u in unfolds:
+        seen.setdefault((u.module, u.theorem), u)
+    return tuple(seen.values())
+
+
+def unfold_modules(modules: Mapping[str, Module], unfolds: Sequence[Unfold]) -> dict[str, Module]:
+    """Each module with the theorems `unfolds` names made transparent, as
+    scaffold_check.transparent makes one, for the dependent that asked."""
+    wanted = {(u.module, u.theorem): u.dependent for u in unfolds}
+    def item_for(m: str, item: Item) -> Item:
+        dependent = wanted.get((m, item.names[0])) if item.names else None
+        return transparent(item, dependent) if dependent is not None and is_theorem(item) else item
+    return {m: replace(module, items=tuple(item_for(m, item) for item in module.items))
+            for m, module in modules.items()}
+
+
+def injections(unfolds: Sequence[Unfold]) -> dict[str, tuple[Event, ...]]:
+    """The unfolding events each dependent's module lists."""
+    events: dict[str, tuple[Event, ...]] = {}
+    for u in unfolds:
+        events[u.at] = events.get(u.at, ()) + (Event("unfolded", u.theorem, u.error, u.message, u.dependent),)
+    return events
+
+
+def summed(passes: Sequence[Mapping[str, Pruned]]) -> dict[str, Pruned]:
+    """The last pass's modules, with each one's Agda runs and seconds
+    summed over the passes and its peak the largest of them."""
+    last = passes[-1]
+    return {m: replace(p, runs=sum(q[m].runs for q in passes if m in q),
+                       seconds=sum(q[m].seconds for q in passes if m in q),
+                       peak_kib=max(q[m].peak_kib for q in passes if m in q))
+            for m, p in last.items()}
+
+
+def format_pruned(tree: Tree, pruned: Mapping[str, Pruned], jobs: int, wall: float, passes: int = 1) -> str:
     """The listings summed over the tree, then a row per module: its Agda
     runs, their seconds, its largest peak, and the first count line of
-    its listing."""
+    its listing; the passes over the tree, when there were more than one
+    (`requests`)."""
     order = topological(tree.graph)
     width = max([len("module")] + [len(m) for m in order])
     rows = tuple(
@@ -726,7 +820,8 @@ def format_pruned(tree: Tree, pruned: Mapping[str, Pruned], jobs: int, wall: flo
     runs = sum(p.runs for p in pruned.values())
     head = f"{'module':<{width}}  {'runs':>4}  {'seconds':>8}  {'peak MiB':>8}  listing"
     return (sum_counts([p.listing for p in pruned.values()])
-            + f"{len(order)} modules, {runs} Agda runs, {total:.1f} s in all, {wall:.1f} s wall with -j {jobs}\n\n"
+            + f"{len(order)} modules, {runs} Agda runs" + (f" in {passes} passes" if passes > 1 else "")
+            + f", {total:.1f} s in all, {wall:.1f} s wall with -j {jobs}\n\n"
             + "\n".join((head,) + rows) + "\n")
 
 
@@ -777,11 +872,14 @@ def write_listings(tree: Tree, pruned: Mapping[str, Pruned], out: Path) -> Resul
 
 
 def prune_tree(tree: Tree, root: Path, scratch: Path, runner: MeasuredRunner, clock: Clock,
-               agda: str, jobs: int, timeout: float, heap: str, messages: bool) -> tuple[dict[str, Pruned], float]:
+               agda: str, jobs: int, timeout: float, heap: str, messages: bool,
+               injected: Optional[Mapping[str, tuple[Event, ...]]] = None) -> tuple[dict[str, Pruned], float]:
     """The loop over every module of a scratch copy of the tree, in
     dependency order, `jobs` at a time, and the wall time it took."""
+    extra = injected or {}
     def work(name: str, done: Mapping[str, Pruned]) -> Pruned:
-        return prune_module(tree, scratch, runner, clock, agda, timeout, heap, messages, done, name)
+        return prune_module(tree, scratch, runner, clock, agda, timeout, heap, messages, done, name,
+                            extra.get(name, ()))
     start = clock()
     results = execute(tree.graph, jobs, work, lambda p: not p.error)
     return results, clock() - start
@@ -846,19 +944,38 @@ def main(argv: Sequence[str]) -> int:
     if target.is_err:
         print(f"agda_check: {target.unwrap_err()}", file=sys.stderr)
         return 1
-    with tempfile.TemporaryDirectory(prefix="agda-check-") as scratch:
-        copied = copy_tree(tree, root, Path(scratch)).and_then(
-            lambda _: restrict_tree(tree, Path(scratch), rewrites_removed) if args.without_rewrite
-            else Result.ok(None)).and_then(
-            lambda _: restrict_tree(tree, Path(scratch)) if args.types_only else Result.ok(None))
-        if copied.is_err:
-            print(f"agda_check: {copied.unwrap_err()}", file=sys.stderr)
-            return 1
-        pruned, wall = prune_tree(tree, root, Path(scratch), measured_run, real_clock, args.agda,
-                                  args.jobs, args.timeout, args.heap, args.messages)
-        kept = copy_tree(tree, Path(scratch), args.keep) if args.keep else Result.ok(None)
+    # Passes until no refusal names a theorem another module could unfold:
+    # each pass starts from a fresh copy, with the theorems earlier passes
+    # asked for transparent, and each adds at least one, so there are at
+    # most as many passes as theorems, and almost always one.
+    unfolds: tuple[Unfold, ...] = ()
+    passes: list[dict[str, Pruned]] = []
+    wall = 0.0
+    while True:
+        with tempfile.TemporaryDirectory(prefix="agda-check-") as scratch:
+            wanted = unfolds
+            copied = copy_tree(tree, root, Path(scratch)).and_then(
+                lambda _: restrict_tree(tree, Path(scratch), rewrites_removed) if args.without_rewrite
+                else Result.ok(None)).and_then(
+                lambda _: restrict_tree(tree, Path(scratch)) if args.types_only else Result.ok(None)).and_then(
+                lambda _: restrict_tree(tree, Path(scratch), lambda ms: unfold_modules(ms, wanted))
+                if wanted else Result.ok(None))
+            if copied.is_err:
+                print(f"agda_check: {copied.unwrap_err()}", file=sys.stderr)
+                return 1
+            done, seconds = prune_tree(tree, root, Path(scratch), measured_run, real_clock, args.agda,
+                                       args.jobs, args.timeout, args.heap, args.messages, injections(unfolds))
+            passes.append(done)
+            wall += seconds
+            asked = {(u.module, u.theorem) for u in unfolds}
+            new = tuple(u for u in first_requests(requests(tree, done)) if (u.module, u.theorem) not in asked)
+            if not new or any(p.error for p in done.values()):
+                kept = copy_tree(tree, Path(scratch), args.keep) if args.keep else Result.ok(None)
+                break
+            unfolds = unfolds + new
+    pruned = summed(passes)
     listed = write_listings(tree, pruned, args.listings) if args.listings else Result.ok(None)
-    print(format_pruned(tree, pruned, args.jobs, wall), end="")
+    print(format_pruned(tree, pruned, args.jobs, wall, len(passes)), end="")
     problems = [r.unwrap_err() for r in (kept, listed) if r.is_err]
     problems += [f"{p.name}: {p.error}" for p in pruned.values() if p.error]
     for problem in problems:
