@@ -30,6 +30,9 @@ The entries are as follows:
 +  Definitions, theorems in `opaque` blocks, opaque constants and axioms;
    the refusals of `sorryAx` and `unsafe`; the fallback that unfolds a
    theorem a dependent needs ([#81]).
++  The quotient's computation rules under profile U: `Quot.lift` and
+   `Quot.ind` on `Quot.mk` as rewrite rules over `Eq`, and the checker's
+   `--without-rewrite`, which shows where they fire ([#83]).
 +  The engineering standards: the module map and its test, the `File:`
    header test, `lake test`, `translator/VERSION` with `--version`, and
    this file ([#25]).
@@ -42,5 +45,6 @@ The entries are as follows:
 [#77]: https://github.com/formalverification/lean2agda/pull/77
 [#80]: https://github.com/formalverification/lean2agda/pull/80
 [#81]: https://github.com/formalverification/lean2agda/pull/81
+[#83]: https://github.com/formalverification/lean2agda/pull/83
 
 [map]: docs/translator/architecture.md

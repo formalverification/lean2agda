@@ -47,8 +47,11 @@ definition the pass order names renames it here.
    **auxiliary** definitions, which the closure then holds too, flagged
    `auxiliary`.
 +  The **scaffold** is the Agda module the translator writes for a
-   closure under profile U (`--type-in-type`, postulates allowed); a
-   **refusal** is a declaration the scaffold leaves out, with its reason.
+   closure under profile U (`--type-in-type --rewriting`, postulates
+   allowed); a **refusal** is a declaration the scaffold leaves out, with
+   its reason.  A **computation rule** is a postulated equation the
+   scaffold makes a rewrite rule, so that Agda reduces `Quot.lift` and
+   `Quot.ind` on `Quot.mk` as Lean's kernel does.
 +  A **sidecar** is the `.names.ndjson` file beside each module path,
    mapping every Agda identifier back to the Lean name it encodes.
 +  **Pure** means a function of its arguments: no effect monad, so no
@@ -62,7 +65,8 @@ One run of `lake exe lean2agda [--out DIR] [--stats] MODULE... [-- DECL...]`,
 from the command line to the files it writes, then the scaffold checker
 that the harness (or a person) runs on the scaffold.  Each row is one
 definition.  The rows from `addAuxiliaries` to `orderItems` run inside
-`scaffold`, and `inductiveDecl` inside `scaffoldItem`.  Without `--out`
+`scaffold`, and `inductiveDecl` inside `scaffoldItem`; `ruleItem` follows
+`scaffoldItem` for `Quot.lift` and `Quot.ind`.  Without `--out`
 the run stops after the listing; with `--stats` it appends the counts.
 
 | Definition | File | Consumes | Produces |
@@ -81,12 +85,14 @@ the run stops after the listing; with `--stats` it appends the counts.
 | `addAuxiliaries` | `translator/Lean2Agda/Core/Share.lean` | the environment and the shared closure | the environment with the auxiliary definitions added, checked by the kernel |
 | `refuseDeclarations` | `translator/Lean2Agda/Core/Scaffold.lean` | the closure's declarations | the refused ones, each with its `Refusal` |
 | `scaffoldItem` | `translator/Lean2Agda/Core/Scaffold.lean` | one kept declaration | its `ScaffoldItem`, by kind, through the printer's `Printer.type` and `Printer.clause` |
+| `ruleItem` | `translator/Lean2Agda/Core/Scaffold.lean` | a quotient primitive's computation rule, from `quotRule?` | its `ScaffoldItem`: the rule's postulate and its `REWRITE` pragma |
 | `inductiveDecl` | `translator/Lean2Agda/Core/Inductive.lean` | a block's `InductiveMember`s, from `blockMembers` | its `InductiveDecl`: `data` and `record` lines, shaped by `isAgdaRecord` and `agdaParamCount` |
 | `breakCycles` | `translator/Lean2Agda/Core/Scaffold.lean` | the items | the items, a cyclic definition postulated |
 | `orderItems` | `translator/Lean2Agda/Core/Scaffold.lean` | the items | the items, each after what it refers to |
 | `Scaffold.render` | `translator/Lean2Agda/Core/Scaffold.lean` | the scaffold and `scaffoldComment`'s line | the module's text, written at `Scaffold.filePath` |
 | `Scaffold.renderRefusals` | `translator/Lean2Agda/Core/Scaffold.lean` | the scaffold | `refusals.txt` |
 | `Closure.stats` | `translator/Lean2Agda/Core/Stats.lean` | the closure, not the shared one | `Stats`; `Stats.render` appends them with `--stats` |
+| `without_rewrites` | `scripts/python/scaffold_check.py` | a scaffold, parsed by `parse_module`, under `--without-rewrite` | the module without its `REWRITE` pragmas, its rules left to postulates that never fire |
 | `check_module` | `scripts/python/scaffold_check.py` | a scaffold, parsed by `parse_module` | the checked module, each refusal and unfolding an event, rendered by `listing` |
 | `check_file` | `scripts/python/agda_run.py` | one scratch copy of the module | Agda's verdict as a `FileRun`, through the injected `run_agda` |
 
@@ -162,7 +168,7 @@ and `translator/Lean2Agda/Main.lean`.
 | `translator/Lean2Agda/Core/InductiveShape.lean` | emit: inductives | an inductive type | record or data, the parameters kept, a field's binder | pure | [`inductives.md`][inductives] |
 | `translator/Lean2Agda/Core/Print.lean` | emit: printer | a kernel expression | `AgdaTerm`, its text, a clause, `PrintCounts` | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/Inductive.lean` | emit: inductives | a block of inductive types | its Agda declaration | pure | [`inductives.md`][inductives] |
-| `translator/Lean2Agda/Core/Scaffold.lean` | emit: scaffold | the shared closure | the scaffold and its refusals | pure | [`printing.md`][printing] |
+| `translator/Lean2Agda/Core/Scaffold.lean` | emit: scaffold | the shared closure | the scaffold, its quotient computation rules, and its refusals | pure | [`printing.md`][printing] |
 | `scripts/python/scaffold_check.py` | check | a scaffold | its listing of refusals and unfoldings | IO in `check_module` and `main`; the rest pure | [`printing.md`][printing] |
 | `scripts/python/agda_run.py` | check | a file and a directory | Agda's verdict, classified | IO in `run_agda`, `check_file` and `real_clock`; the rest pure | [`printing.md`][printing] |
 
@@ -201,7 +207,7 @@ named checks only.
 | `translator/tests/Inductives.lean` | `lake test` (`inductives`) | record or data, parameters kept, the declarations of core types and the fixtures, projections, sharing in constructor types |
 | `translator/tests/Naming.lean` | `lake test` (`naming`) | identifiers, reverse maps, injectivity over samples and `Init`, module paths; writes `NamingLexical.agda` and `NamingImport.agda` to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/Printing.lean` | `lake test` (`printing`) | the layout, binder names, constructors, telescopes, repairs, sharing; writes `PrintingLexical.agda` to `PRINTING_AGDA_TEST_DIR` |
-| `translator/tests/Scaffold.lean` | `lake test` (`scaffold`) | each kind's item, refusals, `unsafe` and sharing, cycles, builtins |
+| `translator/tests/Scaffold.lean` | `lake test` (`scaffold`) | each kind's item, refusals, `unsafe` and sharing, cycles, builtins, the quotient's computation rules against `Quot.liftBeta` and `Quot.indBeta` |
 | `translator/tests/NamingAtlasFixture.lean` | `run.sh`, `lake env lean` | writes the NDJSON fixtures `naming-check-atlas` runs on, valid and defective, to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/NamingGolden.lean` | `run.sh`, `lake env lean` | prints the names `Init.Data.Nat.Gcd` owns, diffed with `tests/expected/naming-init.txt` |
 | `translator/tests/NamingSidecars.lean` | `run.sh`, `lake env lean` | the sidecars a run wrote to `NAMING_OUTPUT_DIR`, under `NAMING_ROOT`, against the closure's |
@@ -213,7 +219,8 @@ named checks only.
 | `translator/tests/TranslatorTests/Input/Inductives.lean` | fixture | one inductive type per rule of [`inductives.md`][inductives] |
 | `translator/tests/TranslatorTests/Input/Kinds.lean` | fixture | every kind the scaffold emits or refuses |
 | `translator/tests/TranslatorTests/Input/Printing.lean` | fixture | every expression constructor and binder visibility, the repairs, a sharing blowup |
-| `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden scaffolds and refusal listings through `scaffold_check.py`; `Init.Core`'s inductive types; the golden listings and sidecars; `--version`; the command line's failures |
+| `translator/tests/TranslatorTests/Input/Quotients.lean` | fixture | theorems that hold by `rfl` only through a quotient's computation rule |
+| `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden scaffolds and refusal listings through `scaffold_check.py`; the `quotients` scaffold with its rewrite rules removed; `Init.Core`'s inductive types; the golden listings and sidecars; `--version`; the command line's failures |
 
 The fixture `Consumer.lean` declares an `initialize`, so it mentions `IO`;
 the fixtures and tests carry no Effects cell, since every test does IO.
