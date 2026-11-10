@@ -84,6 +84,9 @@ DEFAULT_TIMEOUT: float = 600.0
 # delimiters.  A dot never occurs in the scaffold's names: it separates a
 # record from its field in a projection `R.f`, which mentions `R`.
 _TOKEN = re.compile(r"[^\s(){}⦃⦄;.]+")
+# An Agda string literal: no newline inside, and a backslash escapes the
+# next character, a quote among them.
+_STRING = re.compile(r'"(?:[^"\\\n]|\\.)*"')
 # "<path>:<line>.<column>-<end>: error: [Name]", where the end is a
 # column or a line.column.
 _ERROR = re.compile(r":(\d+)\.\d+-(?:\d+\.)?\d+: error: \[(\w+)\]")
@@ -225,9 +228,11 @@ def parse_module(text: str) -> Result[Module, PipelineError]:
 
 
 def code(item: Item) -> str:
-    """The item's text without its comment lines, whose words are not
-    references."""
-    return "\n".join(line for line in item.text.split("\n") if not line.startswith("--"))
+    """The item's text without its comment lines and with each string
+    literal emptied, since the words of neither are references (a string
+    may well hold an identifier's spelling)."""
+    lines = (line for line in item.text.split("\n") if not line.startswith("--"))
+    return "\n".join(_STRING.sub('""', line) for line in lines)
 
 
 def references(items: tuple[Item, ...]) -> tuple[frozenset[int], ...]:

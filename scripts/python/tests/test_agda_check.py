@@ -331,6 +331,13 @@ class TestRefusalsOverATree(unittest.TestCase):
         gone = predropped(part, frozenset({"bad"}), self.modules)
         self.assertEqual([part.items[i].names[0] for i in gone], ["user", "chain"])
 
+    def test_predropped_reads_no_string(self) -> None:
+        module = parse_module(module_text("U.B", ["U.A"], body=(
+            'greeting : U.A.Str\ngreeting = "prefix U.A.bad bad suffix"\n\n'
+            "uses : U.A.Str\nuses = greeting\n\nuser : Nat\nuser = U.A.bad\n"))).unwrap()
+        gone = predropped(module, frozenset({"bad"}), self.modules)
+        self.assertEqual([module.items[i].names[0] for i in gone], ["user"])
+
     def test_predropped_takes_local_dependents(self) -> None:
         module = parse_module(MODULE_B).unwrap()
         gone = predropped(module, frozenset({"bad", "R"}), self.modules)
