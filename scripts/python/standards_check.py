@@ -30,7 +30,9 @@ Description:
     "Definition" or "Type" must be defined, by `def`, `structure`,
     `inductive`, `abbrev` or `class`, in the file its row's "File" cell
     names, so that the pass order and the data types name what the code
-    has;
+    has; a Lean file's comments and strings are blanked first, and a
+    Python file's definitions are read from its syntax tree, so that a
+    name left only in a comment, a docstring or a string does not count;
   - every relative link of the document must name an existing file.
 
   It also checks that translator/VERSION holds one version,
@@ -47,6 +49,7 @@ Design Principles:
 """
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from dataclasses import dataclass
@@ -261,10 +264,28 @@ def uses_effects(source: str) -> bool:
     return re.search(pattern, lean_code(source)) is not None
 
 
-def defines(source: str, name: str) -> bool:
-    """Whether a Lean or Python source defines `name`."""
+def python_definitions(source: str) -> frozenset[str]:
+    """The names of the functions and classes a Python source defines, at
+    any depth; none if it does not parse.  The syntax tree is the one
+    reading of Python that a comment, a docstring or a string cannot
+    fool."""
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        # A file that does not parse defines nothing the map can rely on;
+        # the problem then names each of its definitions.
+        return frozenset()
+    kinds = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    return frozenset(node.name for node in ast.walk(tree) if isinstance(node, kinds))
+
+
+def defines(path: str, source: str, name: str) -> bool:
+    """Whether the Lean or Python source at `path` defines `name`, outside
+    its comments and strings."""
+    if path.endswith(".py"):
+        return name in python_definitions(source)
     pattern = r"(?:^|\s)(?:def|abbrev|structure|inductive|class)\s+" + re.escape(name) + r"(?![\w.'?!])"
-    return re.search(pattern, source, re.MULTILINE) is not None
+    return re.search(pattern, lean_code(source), re.MULTILINE) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +337,7 @@ def definition_problems(rows: tuple[DefinitionRow, ...], sources: Mapping[str, s
         f"{row.path}: the map names {name}, which the file does not define"
         if row.path in sources else f"{row.path}: the map names it for {name}, and it does not exist"
         for row in rows for name in row.names
-        if row.path not in sources or not defines(sources[row.path], name)
+        if row.path not in sources or not defines(row.path, sources[row.path], name)
     )
 
 

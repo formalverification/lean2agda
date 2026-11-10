@@ -35,6 +35,7 @@ from standards_check import (
     named_paths,
     newest_entry,
     parse_tables,
+    python_definitions,
     relative_links,
     required_paths,
     split_row,
@@ -139,12 +140,30 @@ class TestLeanSource(unittest.TestCase):
 
     def test_defines(self) -> None:
         source = "partial def printExpr (s : Scope)\nstructure Closure where\ndef Closure.size (c) :="
-        self.assertTrue(defines(source, "printExpr"))
-        self.assertTrue(defines(source, "Closure"))
-        self.assertTrue(defines(source, "Closure.size"))
-        self.assertFalse(defines(source, "print"))
-        self.assertFalse(defines(source, "Scope"))
-        self.assertTrue(defines("def check_module(\n", "check_module"))
+        self.assertTrue(defines("a.lean", source, "printExpr"))
+        self.assertTrue(defines("a.lean", source, "Closure"))
+        self.assertTrue(defines("a.lean", source, "Closure.size"))
+        self.assertFalse(defines("a.lean", source, "print"))
+        self.assertFalse(defines("a.lean", source, "Scope"))
+        self.assertTrue(defines("a.lean", "def quotRule? (n : Name)", "quotRule?"))
+
+    def test_defines_ignores_lean_comments_and_strings(self) -> None:
+        source = '/- def oldPass -/\n/-- def oldDoc -/\n-- def oldLine\ndef s := "def oldString"\n'
+        for name in ("oldPass", "oldDoc", "oldLine", "oldString"):
+            self.assertFalse(defines("a.lean", source, name), name)
+        self.assertTrue(defines("a.lean", source, "s"))
+
+    def test_defines_reads_python_by_its_syntax(self) -> None:
+        source = ('"""def old_doc"""\n# def old_comment\nX = "def old_string"\n'
+                  "class Module:\n    def parse(self):\n        pass\nasync def run():\n    pass\n")
+        for name in ("old_doc", "old_comment", "old_string"):
+            self.assertFalse(defines("a.py", source, name), name)
+        for name in ("Module", "parse", "run"):
+            self.assertTrue(defines("a.py", source, name), name)
+
+    def test_python_definitions_of_unparsable_source(self) -> None:
+        self.assertEqual(python_definitions("def f(:\n"), frozenset())
+        self.assertEqual(python_definitions("def f(): pass\nclass C: pass\n"), frozenset({"f", "C"}))
 
 
 class TestMapChecks(unittest.TestCase):
