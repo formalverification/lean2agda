@@ -1,6 +1,7 @@
 /-
 File: translator/Lean2Agda/Core/Scaffold.lean
 -/
+import Lean2Agda.Core.Arithmetic
 import Lean2Agda.Core.Recursor
 import Lean2Agda.Core.Share
 
@@ -18,6 +19,12 @@ refuse, by kind, as follows:
    that literals print as decimals;
 +  `String`, a postulate bound to `BUILTIN STRING`, which needs one, and
    so its constructor and recursor are postulates too;
++  the recursive cores of Lean's accelerated operations on `Nat`, by the
+   operation table (`Arithmetic.lean`): Agda's builtins and Lean's
+   equations over them, with the helpers they use, the rewrite rule that
+   restores `Nat.sub`'s equation at a successor, and `Bool` bound to
+   `BUILTIN BOOL`; or, under `--arithmetic lean`, Lean's compiled
+   definitions as any other;
 +  the recursors of each block of inductive types as one definition by
    pattern matching (`Recursor.lean`), whose clauses are the kernel's
    computation rules, under the comment `-- recursor`;
@@ -227,6 +234,33 @@ def opaqueItem (p : Printer) (decl : Declaration) (label : String) :
     Except String (ScaffoldItem × PrintCounts) :=
   valueItem p decl fun signature clause => s!"-- {label}\nopaque\n  {signature}\n  {clause}\n"
 
+/-! ## The operation table -/
+
+/-- A row of the operation table: Lean's signature, printed, and the
+table's clauses in place of the value, under the comment
+`-- operation table`.  It refers to the helpers its clauses use and is
+structural, since several of the clauses recur, as a recursor's do. -/
+def tableItem (p : Printer) (helperName : String → String) (decl : Declaration) (entry : TableEntry) :
+    Except String (ScaffoldItem × PrintCounts) := do
+  let (t, counts) ← p.type decl.info.type
+  let name := agdaIdent decl.name
+  let q : TableNaming := ⟨p.naming.constant, helperName⟩
+  let signature := s!"{name} : {t.render}"
+  let references := (t.references p.naming ++ entry.uses.map helperName ++
+    entry.mentions.map p.naming.constant).foldl (fun acc n =>
+      if acc.contains n || n == name then acc else acc.push n) #[]
+  let lines := #["-- operation table", signature] ++ entry.clauses q name
+  return ({ provides := #[name], references, text := "\n".intercalate lines.toList ++ "\n",
+            fallback := some (t.references p.naming, s!"postulate {signature}\n"), structural := true }, counts)
+
+/-- A helper of the operation table, or its rewrite rule, as an item of
+its home module, naming what it mentions as `q` says. -/
+def helperItem (q : TableNaming) (h : Helper) : ScaffoldItem :=
+  let references := (h.uses.map q.helper ++ h.mentions.map q.constant).foldl (fun acc n =>
+    if acc.contains n || n == h.name then acc else acc.push n) #[]
+  { provides := #[h.name], references, structural := true,
+    text := "\n".intercalate ("-- operation table" :: (h.lines q).toList) ++ "\n" }
+
 /-- `String`, a postulate, since `BUILTIN STRING` binds Agda's string
 literals to a postulated type, whether or not it is a root. -/
 def stringItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
@@ -300,11 +334,14 @@ def ruleItem (p : Printer) (name : String) (type : Expr) : Except String (Scaffo
 
 /-- A block of inductive types as one item, declaring its types and
 constructors. -/
-def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : InductiveVal) :
-    Except String (ScaffoldItem × PrintCounts) := do
+def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : InductiveVal)
+    (arithmetic : Arithmetic) : Except String (ScaffoldItem × PrintCounts) := do
   let d ← inductiveDecl p (← blockMembers (fun n => byName[n]?.map (·.info)) v)
+  -- The operation table binds `Bool` to Agda's builtin booleans, which
+  -- `NATEQUALS` and `NATLESS` need.
+  let lines := if v.name == ``Bool && arithmetic == .agda then d.lines ++ boolPragmas else d.lines
   return ({ provides := d.provides, references := d.references,
-            text := "\n".intercalate d.lines.toList ++ "\n" }, d.counts)
+            text := "\n".intercalate lines.toList ++ "\n" }, d.counts)
 
 /-- The recursors of a block of inductive types as one structural item
 under the comment `-- recursor`, with the postulates of their types as
@@ -332,15 +369,18 @@ def recursorBlocks (decls : Array Declaration) : Std.HashMap Name (Array Recurso
 
 /-- The scaffold's item for one declaration, by its kind, or none for one
 that its block's item declares: a constructor, a type of a mutual block
-other than its first, or a recursor other than its block's first. -/
+other than its first, or a recursor other than its block's first.  Under
+`--arithmetic agda` a definition with a row in the operation table is
+that row's item. -/
 def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration)
-    (recursors : Std.HashMap Name (Array RecursorVal)) (decl : Declaration) :
+    (recursors : Std.HashMap Name (Array RecursorVal)) (decl : Declaration)
+    (arithmetic : Arithmetic := .agda) (helperName : String → String := id) :
     Except String (Option (ScaffoldItem × PrintCounts)) := do
   match decl.info with
   | .inductInfo v =>
     if v.name == ``String then return some (← stringItem p decl)
     if v.all.head? != some v.name then return none
-    return some (← inductiveItem p byName v)
+    return some (← inductiveItem p byName v arithmetic)
   | .ctorInfo c =>
     if c.induct == ``String then return some (← postulateItem p decl)
     return none
@@ -350,7 +390,11 @@ def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration)
     let members := (r.all.head?.bind (recursors[·]?)).getD #[r]
     if members[0]?.map (·.name) != some r.name then return none
     return some (← recursorItem p members)
-  | .defnInfo _ => return some (← definitionItem p decl)
+  | .defnInfo _ =>
+    if arithmetic == .agda then
+      if let some entry ← tableEntry? decl.name decl.info.type then
+        return some (← tableItem p helperName decl entry)
+    return some (← definitionItem p decl)
   | .thmInfo _ => return some (← opaqueItem p decl "theorem")
   | .opaqueInfo _ => return some (← opaqueItem p decl "opaque constant")
   | _ => return some (← postulateItem p decl)

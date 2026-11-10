@@ -1,0 +1,4 @@
+checked 37 of 37 declarations, 0 of 0 data types and records
+unfolded 0 of 37 theorems, 0 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms ArithmeticFixtures:bitwise~uzero~uleft | U.Init.Data.Nat.Bitwise.Basic.Nat:bitwise-pick

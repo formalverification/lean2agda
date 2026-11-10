@@ -5,6 +5,7 @@ import Lean2Agda.Core.Types
 import Lean2Agda.Core.Naming
 import Lean2Agda.Core.Share
 import Lean2Agda.Core.Modules
+import Lean2Agda.Core.Arithmetic
 import Lean.Syntax
 
 namespace Lean2Agda
@@ -12,7 +13,8 @@ namespace Lean2Agda
 open Lean
 
 def usage : String :=
-  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--split BYTES] [--stats] MODULE... [-- DECL...]\n" ++
+  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--split BYTES]\n" ++
+  "                 [--arithmetic agda|lean] [--stats] MODULE... [-- DECL...]\n" ++
   "       lean2agda --help | --version"
 
 structure Args where
@@ -24,6 +26,9 @@ structure Args where
   /-- The bytes of printed Agda past which a module is split into parts;
   zero never splits. -/
   split : Nat := defaultSplitThreshold
+  /-- Which definitions of Lean's accelerated operations on `Nat` the
+  scaffold emits: the operation table's, or Lean's compiled ones. -/
+  arithmetic : Arithmetic := .agda
   stats : Bool := false
   help : Bool := false
   version : Bool := false
@@ -59,6 +64,9 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--split" :: n :: rest => do
     let some split := n.toNat? | throw "--split needs a natural number"
     parseArgsAux { args with split } rest
+  | "--arithmetic" :: value :: rest => do
+    let some arithmetic := Arithmetic.parse? value | throw "--arithmetic needs agda or lean"
+    parseArgsAux { args with arithmetic } rest
   | "--stats" :: rest => parseArgsAux { args with stats := true } rest
   | "--help" :: rest => parseArgsAux { args with help := true } rest
   | "--version" :: rest => parseArgsAux { args with version := true } rest
@@ -67,6 +75,7 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--out" :: [] => throw "--out needs a directory"
   | "--share" :: [] => throw "--share needs a natural number"
   | "--split" :: [] => throw "--split needs a natural number"
+  | "--arithmetic" :: [] => throw "--arithmetic needs agda or lean"
   | arg :: rest => do
     if arg.startsWith "-" then throw s!"unknown option {arg}"
     let name ← parseName arg

@@ -41,7 +41,13 @@ Description:
     earlier part, is the fallback's across modules: the tree is checked
     again from a fresh copy with that theorem transparent in its module,
     and the dependent's listing records the unfolding, until a pass asks
-    for nothing new (`requests`).  The listing of each module is
+    for nothing new (`requests`).  Every dependent that names a theorem
+    claims it, so that dependents' chains of unfoldings run side by side.
+    An unfolding whose dependent the pass refuses all the same, asking
+    for nothing more, is in vain, and once no claim on its theorem is
+    left the next pass leaves it opaque again, as scaffold_check.py does
+    within a module (`in_vain_unfolds`); another dependent may then ask
+    for it.  The listing of each module is
     scaffold_check.py's, and a line per count sums them over the tree.  `--listings OUT` writes each module's listing beside its
     path under OUT (`U/Init/Core.checked.txt`) and the sums to
     OUT/checked.txt; `--keep OUT` copies the final tree there, which the
@@ -776,19 +782,43 @@ def requests(tree: Tree, pruned: Mapping[str, Pruned]) -> tuple[Unfold, ...]:
     return tuple(found)
 
 
-def first_requests(unfolds: Sequence[Unfold]) -> tuple[Unfold, ...]:
-    """One unfolding per theorem, the first that asked for it: once
-    transparent, a theorem serves every later dependent, as in one
-    module."""
-    seen: dict[tuple[str, str], Unfold] = {}
-    for u in unfolds:
-        seen.setdefault((u.module, u.theorem), u)
-    return tuple(seen.values())
+def unfold_key(u: Unfold) -> tuple[str, str, str]:
+    """An unfolding by its theorem and the dependent that asked for it."""
+    return (u.module, u.theorem, u.dependent)
+
+
+def in_vain_unfolds(active: Sequence[Unfold], pending: Sequence[Unfold],
+                    pruned: Mapping[str, Pruned]) -> frozenset[tuple[str, str, str]]:
+    """The active unfoldings made in vain: those whose dependent the pass
+    refused or dropped all the same while asking for nothing new.  The
+    next pass leaves a theorem opaque once no active unfolding claims it,
+    as scaffold_check.py puts a theorem unfolded in vain back in its
+    opaque block, so that no later declaration sees a proof that helped
+    nothing."""
+    gone = {(m, e.name) for m, p in pruned.items() if p.state is not None
+            for e in p.state.events if e.action in ("refused value", "refused type", "dropped")}
+    asking = {(u.at, u.dependent) for u in pending}
+    return frozenset(unfold_key(u) for u in active
+                     if (u.at, u.dependent) in gone and (u.at, u.dependent) not in asking)
+
+
+def next_requests(tree: Tree, pruned: Mapping[str, Pruned], unfolds: Sequence[Unfold],
+                  inactive: frozenset[tuple[str, str, str]]) -> tuple[tuple[Unfold, ...], frozenset[tuple[str, str, str]]]:
+    """What the next pass changes: the unfoldings it adds, every request
+    of a dependent that has not asked for that theorem before (several
+    dependents may claim one theorem, so that their chains run side by
+    side and each records its own), and the active ones it undoes, made in
+    vain."""
+    asked = {unfold_key(u) for u in unfolds}
+    pending = tuple(u for u in requests(tree, pruned) if unfold_key(u) not in asked)
+    active = tuple(u for u in unfolds if unfold_key(u) not in inactive)
+    return pending, in_vain_unfolds(active, pending, pruned)
 
 
 def unfold_modules(modules: Mapping[str, Module], unfolds: Sequence[Unfold]) -> dict[str, Module]:
     """Each module with the theorems `unfolds` names made transparent, as
-    scaffold_check.transparent makes one, for the dependent that asked."""
+    scaffold_check.transparent makes one, for a dependent that asked (the
+    last, when several claim one)."""
     wanted = {(u.module, u.theorem): u.dependent for u in unfolds}
     def item_for(m: str, item: Item) -> Item:
         dependent = wanted.get((m, item.names[0])) if item.names else None
@@ -955,16 +985,19 @@ def main(argv: Sequence[str]) -> int:
     if target.is_err:
         print(f"agda_check: {target.unwrap_err()}", file=sys.stderr)
         return 1
-    # Passes until no refusal names a theorem another module could unfold:
-    # each pass starts from a fresh copy, with the theorems earlier passes
-    # asked for transparent, and each adds at least one, so there are at
-    # most as many passes as theorems, and almost always one.
+    # Passes until no refusal names a theorem another module could unfold
+    # and no unfolding is in vain: each pass starts from a fresh copy, with
+    # the theorems earlier passes asked for transparent but those undone,
+    # and each adds an unfolding or undoes one, never the same twice, so
+    # the passes end; dependents' chains run side by side, so there are
+    # about as many passes as the longest chain has steps.
     unfolds: tuple[Unfold, ...] = ()
+    inactive: frozenset[tuple[str, str, str]] = frozenset()
     passes: list[dict[str, Pruned]] = []
     wall = 0.0
     while True:
         with tempfile.TemporaryDirectory(prefix="agda-check-") as scratch:
-            wanted = unfolds
+            wanted = tuple(u for u in unfolds if unfold_key(u) not in inactive)
             copied = copy_tree(tree, root, Path(scratch)).and_then(
                 lambda _: restrict_tree(tree, Path(scratch), rewrites_removed) if args.without_rewrite
                 else Result.ok(None)).and_then(
@@ -978,12 +1011,11 @@ def main(argv: Sequence[str]) -> int:
                                        args.jobs, args.timeout, args.heap, args.messages, injections(unfolds))
             passes.append(done)
             wall += seconds
-            asked = {(u.module, u.theorem) for u in unfolds}
-            new = tuple(u for u in first_requests(requests(tree, done)) if (u.module, u.theorem) not in asked)
-            if not new or any(p.error for p in done.values()):
+            new, vain = next_requests(tree, done, unfolds, inactive)
+            if (not new and not vain) or any(p.error for p in done.values()):
                 kept = copy_tree(tree, Path(scratch), args.keep) if args.keep else Result.ok(None)
                 break
-            unfolds = unfolds + new
+            unfolds, inactive = unfolds + new, inactive | vain
     pruned = summed(passes)
     listed = write_listings(tree, pruned, args.listings) if args.listings else Result.ok(None)
     print(format_pruned(tree, pruned, args.jobs, wall, len(passes)), end="")

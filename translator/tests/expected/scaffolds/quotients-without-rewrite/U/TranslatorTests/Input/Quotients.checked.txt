@@ -1,7 +1,9 @@
 checked 6 of 6 declarations, 0 of 0 data types and records
-unfolded 1 of 4 theorems, 1 in vain
+unfolded 3 of 4 theorems, 3 in vain
 defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
 unfolded UnequalTerms congrArg for QuotFixtures:eta~umk, in vain | U.Init.Prelude.Quot:lift (λ g₂ → g₂ x₁)
+unfolded UnequalTerms congrArg for QuotFixtures:over~umk, in vain | U.Init.Prelude.Quot:lift (λ a₀ x₁ → a₀)
+unfolded UnequalTerms congrArg for QuotFixtures:succ~umk, in vain | U.Init.Prelude.Quot:lift U.Init.Prelude.Nat:succ
 refused value UnequalTerms QuotFixtures:eta~umk | U.Init.Prelude.Quot:lift (λ g₂ → g₂ x₁)
 refused value UnequalTerms QuotFixtures:ind~umk | U.Init.Prelude.Quot:ind (λ x₁ → U.Init.Prelude.rfl)
 refused value UnequalTerms QuotFixtures:over~umk | U.Init.Prelude.Quot:lift (λ a₀ x₁ → a₀)

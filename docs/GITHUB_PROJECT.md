@@ -976,7 +976,7 @@ Translate inductive declarations: structure-like inductives (one constructor, no
 
 ---
 
-### Issue M2-5: Recursors by pattern matching (#19)
+### Issue M2-5: Recursors by pattern matching (#19, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -1017,7 +1017,7 @@ Definitions must stay transparent (Lean terms rely on unfolding them); theorems 
 
 ---
 
-### Issue M2-7: Quotients under profile U (#21)
+### Issue M2-7: Quotients under profile U (#21, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`
 
@@ -1037,7 +1037,7 @@ Lean's `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` are kernel primitives with a c
 
 ---
 
-### Issue M2-8: Multi-module emission and the import graph (#22)
+### Issue M2-8: Multi-module emission and the import graph (#22, closed)
 
 **Labels:** `milestone-2-translator-core`, `translator`, `agda-output`
 
@@ -1097,7 +1097,7 @@ lyphyser's tool reached roughly where M2 ends.  Run it (at its pinned toolchain,
 
 ---
 
-### Issue M2-11: Translator engineering standards (#25)
+### Issue M2-11: Translator engineering standards (#25, closed)
 
 **Labels:** `documentation`, `milestone-2-translator-core`, `translator`
 
@@ -1230,7 +1230,7 @@ In profiles K and CC the target has no quotients, so the quotient primitives bec
 
 ## Description
 
-Lean's kernel computes `Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.div`, `Nat.mod`, `Nat.gcd`, `Nat.beq`, `Nat.ble`, the bitwise operations, `Nat.pow` and `Nat.log2` on literals with GMP, and identifies a literal with its `Nat.succ` form.  Agda's builtins cover most of these through `BUILTIN NATURAL` and the primitive operations, with different definitional behavior at the edges.  `Nat.gcd` is special: Lean4Less cannot treat it as primitive because its defining equation needs K-like reduction in Lean.  Map each operation, decide what to do about `gcd`, and measure proofs by `decide` that evaluate large terms.
+Lean's kernel computes `Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.div`, `Nat.mod`, `Nat.gcd`, `Nat.beq`, `Nat.ble`, the bitwise operations and the shifts, and `Nat.pow` on literals with GMP, and identifies a literal with its `Nat.succ` form.  Agda's builtins cover most of these through `BUILTIN NATURAL` and the primitive operations, with different definitional behavior at the edges.  `Nat.gcd` is special: Lean4Less cannot treat it as primitive because its defining equation needs K-like reduction in Lean.  Map each operation, decide what to do about `gcd`, and measure proofs by `decide` that evaluate large terms.
 
 ## Tasks
 
@@ -1241,7 +1241,7 @@ Lean's kernel computes `Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.div`, `Nat.mod`, `N
 
 ## Acceptance criteria
 
-- [ ] `Init.Data.Nat.Gcd` and `Init.Data.String.Basic` check under profile K; the operation table is in `docs/foundations/`.
+- [ ] The operation table is in `docs/foundations/`, with each row's definition for profiles K and CC; the translator uses it under profile U, and `Init.Data.Nat.Gcd` and `Init.Data.String.Basic` are measured under profile U, the latter as M2-8's tree of modules.  The check under profile K is M3-8's.
 
 ---
 

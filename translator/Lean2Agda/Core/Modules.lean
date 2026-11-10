@@ -207,9 +207,15 @@ do its auxiliaries.  The computation rules of `Quot.lift` and `Quot.ind`
 join their postulates' module, which `orderItems` keeps after `Quot.mk`
 and `Eq` too.  Within a module the items are ordered as the single
 scaffold ordered them; a module none of whose declarations is emitted is
-not written. -/
+not written.  Under `--arithmetic agda` (`arithmetic`) each helper the
+operation table's rows use joins its home's module (`Helper.home`),
+where `orderItems` puts it before its first user there, and other
+modules name it by that module's path; the rewrite rules of `Nat.sub`
+come just before `Nat.sub`, which refers to them, when the closure holds
+what they mention (`Nat.pred` and `Eq`). -/
 def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
-    (split : Nat := defaultSplitThreshold) : Except String ScaffoldTree := do
+    (split : Nat := defaultSplitThreshold) (arithmetic : Arithmetic := .agda) :
+    Except String ScaffoldTree := do
   let env ← addAuxiliaries env closure
   let decls := closure.declarations
   let byName : Std.HashMap Name Declaration := decls.foldl (fun m d => m.insert d.name d) {}
@@ -231,8 +237,21 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
       let m := owner[decl.name]!
       unless groups.contains m do order := order.push m
       groups := groups.insert m ((groups.getD m #[]).push decl)
+  -- The operation table's helpers: those the emitted rows use, each in
+  -- the module of its home constant, and the rewrite rule of `Nat.sub`.
+  let mut uses : Array String := #[]
+  if arithmetic == .agda then
+    for decl in kept do
+      if let some entry ← tableEntry? decl.name decl.info.type then uses := uses ++ entry.uses
+  let wanted := helperClosure uses
+  let withRule := uses.contains subBuiltin && subRules.all fun r => r.mentions.all fun n => kept.any (·.name == n)
+  let mut home : Std.HashMap String ModuleName := {}
+  for h in (if withRule then wanted ++ subRules else wanted) do
+    let some m := owner[h.home]? | throw s!"the operation table's {h.name} needs {h.home} in the closure"
+    home := home.insert h.name m
   let qualifiedOwner : Std.HashMap String ModuleName :=
     owner.fold (fun acc n m => acc.insert (qualifiedName root m (agdaIdent n)) m) {}
+  let qualifiedOwner := home.fold (fun acc h m => acc.insert (qualifiedName root m h) m) qualifiedOwner
   let refusedIn : Std.HashMap ModuleName Nat := refused.fold (fun acc n _ =>
     if byName[n]!.auxiliary then acc else
     let m := owner[n]!
@@ -242,15 +261,28 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
   let mut provided : Std.HashSet String := {}
   for m in order do
     let p : Printer := { env, naming := Naming.qualified root fun n => (owner[n]?).filter (· != m) }
+    let helperName (h : String) : String := match home[h]? with
+      | some hm => if hm == m then h else qualifiedName root hm h
+      | none => h
+    let q : TableNaming := ⟨p.naming.constant, helperName⟩
     let mut items := #[]
     for decl in groups[m]! do
-      if let some (item, c) ← scaffoldItem p byName recursors decl then
+      if let some (item, c) ← scaffoldItem p byName recursors decl arithmetic helperName then
         items := items.push item
         counts := counts.add c
       if let some (name, type) := quotRule? decl.name then
         let (item, c) ← ruleItem p name type
         items := items.push item
         counts := counts.add c
+      -- `Nat.sub` refers to the rule that carries the pragma, so that the
+      -- rules come before it and every module or part that uses `Nat.sub`
+      -- imports them: Agda applies a rewrite rule only where its module is
+      -- imported.
+      if withRule && decl.name == ``Nat.sub then
+        if let some last := items.back? then
+          items := items.pop.push { last with references := last.references.push subPredSuccName }
+        items := items ++ subRules.map (helperItem q)
+    items := items ++ (wanted.filter (home[·.name]? == some m)).map (helperItem q)
     let ordered ← orderItems (breakCycles items)
     provided := ordered.foldl (fun s i => i.provides.foldl (fun s x => s.insert (qualifiedName root m x)) s) provided
     modules := modules ++ (← moduleParts root qualifiedOwner split m ordered (refusedIn.getD m 0))

@@ -25,8 +25,9 @@ from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import FileRun, Outcome
 from scaffold_check import (
     Event, Item, Module, Refusal, State, capped, charged, check_module, code, dependents, in_vain, listing,
-    locate, main, marker, parse_exhaustion, parse_item, parse_module, parse_refusal, postulated, recursors,
-    references, render, step, theorems, transparent, types_only, unfoldable, without_rewrites,
+    locate, main, marker, opaque_again, parse_exhaustion, parse_item, parse_module, parse_refusal, postulated,
+    recursors, references, render, reverted, step, theorems, transparent, types_only, unfoldable,
+    without_rewrites,
 )
 
 SCAFFOLD = """{-# OPTIONS --type-in-type #-}
@@ -380,6 +381,39 @@ class TestFallback(unittest.TestCase):
         again = step(after, 6, 1, Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T"))
         self.assertEqual(again.items[6].kind, "postulate")
         self.assertEqual(again.events[-1], Event("refused value", "root", "UnequalTerms", "two~uok != x"))
+
+    def test_opaque_again_inverts_transparent(self) -> None:
+        _, state = module_and_state()
+        self.assertEqual(opaque_again(transparent(state.items[4], "root")), state.items[4])
+
+    def test_reverted_undoes_only_the_dependents_unfoldings(self) -> None:
+        _, state = module_and_state()
+        unfolded = state.items[:4] + (transparent(state.items[4], "root"),) + state.items[5:]
+        self.assertEqual(reverted(unfolded, frozenset(("root",))), state.items)
+        self.assertEqual(reverted(unfolded, frozenset(("two",))), unfolded)
+
+    def test_a_refusal_undoes_the_unfoldings_made_for_it(self) -> None:
+        _, state = module_and_state()
+        stuck = Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T")
+        vain = step(step(state, 6, 1, stuck), 6, 1, stuck)
+        # The theorem is back in its opaque block, and the listing still
+        # counts the unfolding, in vain.
+        self.assertEqual(vain.items[4], state.items[4])
+        self.assertEqual(vain.items[6], postulate("root", "postulate root : Eq {Nat} two 2"))
+        self.assertIn("unfolded 1 of 1 theorems, 1 in vain\n", listing(vain, False))
+
+    def test_another_refusal_keeps_the_unfolding(self) -> None:
+        _, state = module_and_state()
+        helped = step(state, 6, 1, Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T"))
+        after = step(helped, 5, 0, Refusal(24, "UnequalTerms", "m", "m"))
+        self.assertEqual(after.items[4], helped.items[4])
+        self.assertEqual(after.alive, (True,) * 5 + (False, True))
+
+    def test_a_dropped_dependent_undoes_its_unfoldings(self) -> None:
+        _, state = module_and_state()
+        helped = step(state, 6, 1, Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T"))
+        after = step(helped, 3, 0, Refusal(15, "UnequalTerms", "m", "m"))
+        self.assertEqual(after.items[4], state.items[4])
 
     def test_in_vain(self) -> None:
         position = {"t": 0, "u": 0, "c": 1, "d": 2, "e": 3}
