@@ -1,6 +1,7 @@
 /-
 File: translator/tests/UnitTests.lean
 -/
+import Arithmetic
 import Check
 import Inductives
 import Modules
@@ -28,7 +29,7 @@ previous run's output, or a golden file stay in `run.sh`.
 
 /-- The checks, by the names `lake test -- NAME` selects them by. -/
 def checks : List (String × IO Unit) :=
-  [("check", CheckTests.runChecks), ("inductives", InductiveTests.run),
+  [("arithmetic", ArithmeticTests.run), ("check", CheckTests.runChecks), ("inductives", InductiveTests.run),
    ("modules", ModulesTests.run), ("naming", NamingTests.run), ("printing", PrintingTests.run),
    ("recursors", RecursorTests.run), ("scaffold", ScaffoldTests.run)]
 

@@ -46,8 +46,16 @@ The entries are as follows:
    tree in dependency order with per-module time and peak memory, and
    runs the refusal loop over it, unfolding theorems across modules
    ([#84]).
++  The operation table under profile U (`--arithmetic agda`, the
+   default; `lean` keeps Lean's definitions): Agda's builtins and Lean's
+   own clauses in place of the recursive cores of the operations Lean's
+   kernel accelerates on `Nat`, `Bool` bound to Agda's booleans, and
+   `Nat.sub`'s equation at a successor as a rewrite rule, with two that
+   make the rules confluent; the checker and the tree driver undo an
+   unfolding made in vain ([#31]).
 
 [#25]: https://github.com/formalverification/lean2agda/issues/25
+[#31]: https://github.com/formalverification/lean2agda/issues/31
 [#64]: https://github.com/formalverification/lean2agda/pull/64
 [#71]: https://github.com/formalverification/lean2agda/pull/71
 [#73]: https://github.com/formalverification/lean2agda/pull/73

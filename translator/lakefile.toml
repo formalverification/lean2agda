@@ -82,7 +82,7 @@ srcDir = "tests"
 [[lean_lib]]
 name = "UnitChecks"
 srcDir = "tests"
-roots = ["Check", "Inductives", "Modules", "Naming", "Printing", "Recursors", "Scaffold"]
+roots = ["Arithmetic", "Check", "Inductives", "Modules", "Naming", "Printing", "Recursors", "Scaffold"]
 
 # The test driver: tests/UnitTests.lean runs the checks, or those named
 # after `lake test --`.  supportInterpreter lets the imports run the

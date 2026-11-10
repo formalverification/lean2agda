@@ -89,6 +89,13 @@ check_tree kinds TranslatorTests.Input.Kinds
 check_tree recursors TranslatorTests.Input.Recursors
 check_tree quotients TranslatorTests.Input.Quotients
 
+# The operation table (issue M3-6): Lean's equations for the accelerated
+# operations, on variables, and computations on numerals past 2^64,
+# under the table; and the equations again under Lean's compiled
+# definitions, the control (numerals there would run in unary).
+check_tree arithmetic TranslatorTests.Input.Arithmetic TranslatorTests.Input.Numerals
+check_tree arithmetic-lean --arithmetic lean TranslatorTests.Input.Arithmetic
+
 # Where the quotient's computation rules fire (issue M2-7): the same
 # tree with its REWRITE pragmas removed, so that the rules never fire,
 # refuses every root, each of which holds in Lean only because the
@@ -207,6 +214,8 @@ expect_failure 2 '--root needs a Lean name' --root
 expect_failure 2 '--root needs a Lean name' --root --stats Init
 expect_failure 2 '--share needs a natural number' --share x Init
 expect_failure 2 '--share needs a natural number' --share
+expect_failure 2 '--arithmetic needs agda or lean' --arithmetic binary Init
+expect_failure 2 '--arithmetic needs agda or lean' --arithmetic
 expect_failure 2 '--split needs a natural number' --split x Init
 expect_failure 2 '--split needs a natural number' --split
 expect_failure 1 'unknown declaration' Init.Data.Nat.Gcd -- DoesNotExist
