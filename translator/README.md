@@ -13,17 +13,22 @@ expression printer, the sharing pass, and the profile U scaffold
 as records and data types (`../docs/translator/inductives.md`); and issue
 M2-6 gave the scaffold its rules for definitions, theorems, opaque
 constants and axioms, its refusals, and the fallback that unfolds a
-theorem a dependent needs.  The
-architecture it implements is described in the Description section of
-`../docs/GITHUB_PROJECT.md` and in `../docs/architecture.md`, the companion
-note of ADR 0001 (`../docs/adr/0001-translation-architecture.md`).
+theorem a dependent needs; issue M2-11 wrote down its standards, as the
+module map, `lake test`, and the version.  The architecture it implements
+is described in the Description section of `../docs/GITHUB_PROJECT.md`
+and in `../docs/architecture.md`, the companion note of ADR 0001
+(`../docs/adr/0001-translation-architecture.md`); which file does what, in
+what order and on what data is in [`architecture.md`], the module map,
+which a test keeps true of this directory.
 
 ## Layout
 
 +  `lakefile.toml`: the package, its libraries `Lean2Agda` and `Atlas`,
-   the executables `lean2agda` and `atlas`, and its two requirements,
-   Mathlib (tag
-   v4.33.1) and lean4export (tag v4.33.0).
+   the executables `lean2agda` and `atlas`, the test driver `unittests`
+   with the fixtures and checks it builds, and its two requirements,
+   Mathlib (tag v4.33.1) and lean4export (tag v4.33.0).
++  `VERSION`: the translator's version, which `lean2agda --version`
+   prints ([`architecture.md`], "The version").
 +  `lake-manifest.json`: the commit each requirement resolved to,
    Mathlib's own dependencies included; committed, never edited by hand.
 +  `lean-toolchain`: a symlink to `../lean-toolchain`, so that the flake,
@@ -35,12 +40,15 @@ note of ADR 0001 (`../docs/adr/0001-translation-architecture.md`).
    (`Print.lean`), the sharing pass (`Share.lean`), the inductive types'
    shapes (`InductiveShape.lean`) and declarations (`Inductive.lean`), and
    the scaffold (`Scaffold.lean`).
++  `Main.lean`: the executable's root, `main`, which parses the command
+   line and prints the usage or the version or runs the shell.
 +  `Lean2Agda/Main.lean`: the IO shell, which loads compiled modules and
    writes the closure listing, the reverse-map sidecars, and the scaffold.
-+  `tests/`: compiled Lean inputs, semantic checks, atlas and golden
-   fixtures, the printer's checks (`Printing.lean`), the inductive types'
-   checks (`Inductives.lean`), golden scaffolds (`expected/scaffolds/`),
-   and the shell harness.
++  `tests/`: compiled Lean inputs, the unit checks `lake test` runs
+   (`UnitTests.lean`, the driver, and `Check.lean`, `Inductives.lean`,
+   `Naming.lean`, `Printing.lean` and `Scaffold.lean`), atlas and golden
+   fixtures, golden scaffolds (`expected/scaffolds/`), and the shell
+   harness.
 +  `Atlas/`: the axiom atlas (`../atlas/README.md`).  `Record.lean`
    and `Graph.lean` are the pure core (the record and its line, the
    dependency graph and the exact axiom sets), `AutoDecl.lean` is
@@ -99,6 +107,7 @@ The translator's command line is as follows:
 ```sh
 lake exe lean2agda --profile U --out out Init.Data.Nat.Gcd -- Nat.gcd_self
 lake exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self
+lake exe lean2agda --version
 ```
 
 It prints an ordered closure of Lean declarations.  `--out DIR` also
@@ -117,14 +126,27 @@ declarations owned by the named modules.  Only profile U is available.
 The closure API, dependencies, cycle handling, and output format are in
 [`loading.md`].
 
+`--version` prints `lean2agda` and the version in `VERSION`, read when
+the executable is built.
+
+`lake test`, here, builds and runs the unit checks: the executable
+`unittests` (root `tests/UnitTests.lean`) runs `Check.lean`,
+`Inductives.lean`, `Naming.lean`, `Printing.lean` and `Scaffold.lean` in
+turn, each against environments it imports when it runs, and exits 1 if
+any fails.  Every check runs at every invocation; `lake test -- printing
+naming` runs the named ones.  Run it from this directory, where the checks
+find their fixtures.  `make test-unit` runs it from the repository root.
+
 Run `make test-translator` from the repository root, or
-`bash tests/run.sh` here.  It builds core Lean fixtures, checks the pure
-core, and diffs three golden outputs, including `Nat.gcd_self` and the
-names owned by `Init.Data.Nat.Gcd`.  It also checks reverse maps and
-generated lexical fixtures with Agda.  It needs
-no Mathlib cache; Lake still clones the source dependencies named in the
-manifest on a fresh checkout.  `make test` includes both this harness and
-the Python suite; `make test-python` runs the Python suite alone.
+`bash tests/run.sh` here.  It builds core Lean fixtures, runs `lake test`,
+and diffs the golden outputs, including `Nat.gcd_self`, the names owned by
+`Init.Data.Nat.Gcd`, and the scaffolds with their refusal listings.  It
+also checks reverse maps and generated lexical fixtures with Agda, and
+that `--version` prints `VERSION`.  It needs no Mathlib cache; Lake still
+clones the source dependencies named in the manifest on a fresh checkout.
+`make test` includes both this harness and the Python suite;
+`make test-python` runs the Python suite alone, which also checks the
+module map against this directory.
 
 The atlas runs as `lake exe atlas` (or `make atlas` from the root,
 which also writes its report); `lake exe atlas --import MODULE --out
@@ -145,6 +167,7 @@ Conventions for everything that lands here are as follows:
 +  small named definitions over large ones;
 +  a golden test for every translation feature, under `tests/`.
 
+[`architecture.md`]: ../docs/translator/architecture.md
 [`loading.md`]: ../docs/translator/loading.md
 [`naming.md`]: ../docs/translator/naming.md
 [`printing.md`]: ../docs/translator/printing.md

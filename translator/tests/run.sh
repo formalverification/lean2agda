@@ -9,10 +9,23 @@ lean_cmd="${LEAN:-lean}"
 # These targets compile against Lean only.  Lake may clone its pinned
 # dependencies on a fresh checkout, but no Mathlib cache is needed.
 "$lake_cmd" build lean2agda TranslatorTests Atlas.Graph naming-check-atlas
-"$lake_cmd" env "$lean_cmd" tests/Check.lean
 
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
+
+# The unit checks (tests/UnitTests.lean names them): `lake test` builds
+# the executable unittests and runs every check.  The printer's and the
+# naming checks also write the lexical files Agda checks here.
+PRINTING_AGDA_TEST_DIR="$scratch" NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" test
+(cd "$scratch" && "${AGDA:-agda}" PrintingLexical.agda)
+(cd "$scratch" && "${AGDA:-agda}" NamingLexical.agda && "${AGDA:-agda}" NamingImport.agda)
+
+# --version prints VERSION's line, which Lake must carry into the binary
+# when the file changes (the executable's `needs`, in lakefile.toml).
+[[ "$("$lake_cmd" exe lean2agda --version)" == "lean2agda $(cat VERSION)" ]] || {
+  echo "lean2agda --version disagrees with VERSION ($(cat VERSION))" >&2
+  exit 1
+}
 
 NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/NamingAtlasFixture.lean
 "$lake_cmd" exe naming-check-atlas "$scratch/atlas-valid.ndjson" > "$scratch/atlas-check.json"
@@ -28,12 +41,6 @@ for defect in truncated count duplicate trailing pin malformed; do
   grep -F 'naming-check-atlas:' "$scratch/stderr" > /dev/null
   [[ ! -s "$scratch/stdout" ]]
 done
-
-PRINTING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Printing.lean
-(cd "$scratch" && "${AGDA:-agda}" PrintingLexical.agda)
-
-"$lake_cmd" env "$lean_cmd" tests/Inductives.lean
-"$lake_cmd" env "$lean_cmd" tests/Scaffold.lean
 
 # A scaffold (the profile U module --out writes) must scope-check (the
 # acceptance criterion of issue M2-3) and type-check except for the
@@ -105,11 +112,9 @@ check_refusals init-core-inductives Init.Core -- "${init_core_inductives[@]}"
 (cd "$scratch/module-selection" && "${AGDA:-agda}" --only-scope-checking \
   U/TranslatorTests/Input/Printing.agda > /dev/null)
 
-NAMING_AGDA_TEST_DIR="$scratch" "$lake_cmd" env "$lean_cmd" tests/Naming.lean
 "$lake_cmd" env "$lean_cmd" tests/NamingGolden.lean > "$scratch/naming-init.txt"
 tail -n +2 tests/expected/naming-init.txt > "$scratch/expected-naming-init.txt"
 diff -u "$scratch/expected-naming-init.txt" "$scratch/naming-init.txt"
-(cd "$scratch" && "${AGDA:-agda}" NamingLexical.agda && "${AGDA:-agda}" NamingImport.agda)
 
 timeout 60 "$lake_cmd" exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self > "$scratch/gcd.txt"
 tail -n +2 tests/expected/gcd-self.txt > "$scratch/expected-gcd.txt"
