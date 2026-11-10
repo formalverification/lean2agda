@@ -39,6 +39,11 @@ python3 ../scripts/python/agda_check.py --refusals --messages --listings listed 
 `--split BYTES` sets the size past which a module is cut into parts,
 1,000,000 bytes of printed Agda by default; `--split 0` never cuts.
 
+`--arithmetic agda`, the default, emits the operation table of [#31] for
+the operations Lean's kernel accelerates on `Nat`, and `--arithmetic
+lean` emits Lean's compiled definitions of them as any other, the control
+of the table's measurements ([`nat-operations.md`][nat-operations]).
+
 `--share N` sets the sharing threshold, 32 by default; `--share 0` turns
 the pass off.  The listing, `closure.txt` and standard output are as
 before.  The sidecars are those of the shared closure, so that they map the
@@ -307,7 +312,21 @@ emitted, as follows:
    other, `Nat` among them, bound to `BUILTIN NATURAL`
    ([`inductives.md`][inductives]);
 +  `String`, a postulate bound to `BUILTIN STRING`, with its constructor
-   and recursor;
+   and recursor ([`nat-operations.md`][nat-operations] gives the design
+   that would emit Lean's structure instead);
++  the recursive cores of the operations Lean's kernel accelerates on
+   `Nat` (`Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.pow`, `Nat.beq`,
+   `Nat.ble`, `Nat.div.go`, `Nat.modCore.go`, `Nat.bitwise`,
+   `Nat.shiftLeft`, `Nat.shiftRight`), under the comment `-- operation
+   table`, as Agda's builtins or as Lean's clauses over them, with the
+   helpers they use, each before its first user in its home module, a
+   rewrite rule for `Nat.sub`'s equation at a successor, with two that
+   make the rules confluent, just before `Nat.sub`, which refers to them
+   so that its users import the rules,
+   and `Bool` bound to `BUILTIN BOOL` ([#31],
+   [`nat-operations.md`][nat-operations]); Lean's wrappers around the
+   cores (`Nat.div`, `Nat.mod`, `Nat.gcd`, `Nat.land`) are definitions as
+   any other;
 +  a definition (`defnInfo`) is a transparent definition, its signature
    and its printed clause, since Lean's terms rely on unfolding it; the
    projection functions of records, whose values print as the records'
@@ -503,7 +522,13 @@ data types and records among them), the theorems unfolded, and the recursors
 still defined by pattern matching with those the termination checker
 refused, and says of an unfolding that it was `in vain` when the declaration
 it was made for was refused or dropped all the same, which the first later
-event at or beyond that declaration decides.  A closure whose every
+event at or beyond that declaration decides.  Since [#31] the checker then
+puts the theorem back in its opaque block, so that no later declaration
+sees a proof that helped nothing: before, `Nat.modCoreGo_lt`'s three
+unfoldings in vain left `Nat.decLe`'s proofs transparent, and the
+positivity check of `ByteArray.IsValidUTF8`, which compares numerals
+through `Nat.decLe`, normalized through them until the heap ran out
+([`nat-operations.md`][nat-operations]).  A closure whose every
 declaration is refused (`lcProof` as the root) gives a module with a header
 and nothing else, which Agda and the checker both accept.  The fallback
 re-emits the theorem transparently rather than putting the dependent in an
@@ -717,3 +742,4 @@ It assumes the following of its callers:
 [recursors]: recursors.md
 [related]: ../related-work.md
 [catalog-let]: ../foundations/gap-catalog.md#projections-and-let
+[nat-operations]: ../foundations/nat-operations.md

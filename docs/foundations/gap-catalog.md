@@ -788,16 +788,31 @@ literals**.
    accelerated sets differ: Agda has builtin `+`, `-`, `*`, `div`, `mod`,
    `≡ᵇ` and `<ᵇ` and no builtin `gcd`, `pow`, shifts or bitwise operations.
    By profile, as follows.
-   +  U: as K.
-   +  K: as described.
-   +  CC: as described (probe `P11Literals` runs under it).
+   +  U: as K, and `Nat.sub`'s equation at a successor, which the builtin
+      monus loses, holds through rewrite rules, three that Agda's local
+      confluence check accepts together (probe `P31NatSubRewrite`).
+   +  K: as described; the operation table's definitions are `--safe`
+      (probe `P29NatOperations`).
+   +  CC: as described (probes `P11Literals` and `P29NatOperations` run
+      under it).
    +  CU: the same builtins through `Agda.Builtin.Nat` and
       `Agda.Builtin.String` (probe `P28CubicalLiterals`).
 +  **Translation strategy**.  Literals through `BUILTIN NATURAL` and the
-   builtin string type in the printer ([#17]); the operation table ([#31]): for
-   each accelerated Lean operation, its Agda counterpart, what a closed
-   computation costs after translation, and the treatment of `Nat.gcd` and of
-   `String.ofList` against the primitive string.  The corpus expects
+   builtin string type in the printer ([#17]); the operation table ([#31],
+   [`nat-operations.md`][nat-operations]): the recursive core of each
+   accelerated operation is an Agda builtin with its arguments swapped or
+   shifted (`Nat.add`, `Nat.mul`, `Nat.ble`, `Nat.beq`, `Nat.sub`, the
+   fuel cores `Nat.div.go` and `Nat.modCore.go`) or Lean's clauses over the
+   builtins (`Nat.pow`, the shifts, `Nat.bitwise` by fuel), Lean's
+   wrappers stay its own, and every equation the kernel accepts on
+   variables holds by conversion but four: `Nat.sub`'s at a successor
+   (restored under U by rewrite rules), the two fuel cores' equations at a
+   successor of the fuel, and `Nat.bitwise`'s at zero for an unknown `f`.
+   `Nat.gcd` needs nothing of its own: Lean's definition computes once
+   `Nat.modCore.go` is the builtin.  Under profile U the translator emits
+   the table by default (`--arithmetic agda`).  Literals of `String` should
+   be emitted as the kernel expands them, over Lean's structures, which
+   serves every profile; that is a follow-up of [#31].  The corpus expects
    `nat-gcd-self` and `nat-gcd-succ` to exercise this entry.
 +  **Predecessors**.  lean2dk value-stubs three classes of constants whose cost
    "is inherent to the encoding rather than the kernel", bignum `Nat`
@@ -809,8 +824,10 @@ literals**.
 +  **References**.  [kernel-type-checker] lines 421, 702 to 733, 1058 to 1086,
    1145 to 1156 and 1342; [lean-gcd-source]; [lean-manual-nat],
    [lean-manual-strings], [lean-manual-recursion]; [vaishnav-thesis] section
-   7.1.3; [agda-builtins]; [stdlib-gcd]; probes `P11Literals`,
-   `P28CubicalLiterals`, `probes/lean/Gcd.lean`, `probes/lean/Strings.lean`.
+   7.1.3; [agda-builtins]; [stdlib-gcd]; [`nat-operations.md`][nat-operations];
+   probes `P11Literals`, `P28CubicalLiterals`, `P29NatOperations` to
+   `P32CharRecord`, `probes/lean/Gcd.lean`, `probes/lean/NatOps.lean`,
+   `probes/lean/Strings.lean`.
 
 ### `trust-escape-hatches`
 
@@ -1134,6 +1151,10 @@ accepted one checked with no output beyond Agda's `Checking` line.
 | `P26AccPropU` | `--type-in-type --prop` | `P02bAccProp` under profile U's flags | rejected, `[SplitInProp]` |
 | `P27CubicalInductives` | `--safe --cubical --guardedness` | nested, mutual, induction-recursion | accepted |
 | `P28CubicalLiterals` | `--safe --cubical --guardedness` | builtin naturals and strings | accepted |
+| `P29NatOperations` | `--safe --cubical-compatible` | the operation table: Lean's equations by `refl`, numerals past 2^64 | accepted, 0.19 s |
+| `P30NatSubMonus` | `--safe --cubical-compatible` | the builtin monus against `Nat.sub`'s equation at a successor | rejected, `[UnequalTerms]` |
+| `P31NatSubRewrite` | `--type-in-type --rewriting --local-confluence-check` | the same equation as a rewrite rule, with two that make the rules confluent | accepted, 0.07 s |
+| `P32CharRecord` | `--safe --cubical-compatible` | Lean's `Char` as a record under `BUILTIN CHAR` | rejected, `[BuiltinMustBePostulate]` |
 
 The Lean files are `DefEq.lean` (the definitional equalities, the recursor
 flags, `Classical.propDecidable`, `Nat.gcd`), `Hatches.lean` (`sorryAx`, the
@@ -1141,11 +1162,13 @@ native-reduction family and its deprecation, `lcProof`, a `native_decide`
 theorem, a `partial` and an `unsafe` definition), `Strings.lean` (`String` and
 `Char` at the pin, `Lists'.Subset` and `Lists.Equiv`, `Nat.gcd_succ`),
 `Gcd.lean` (`WellFounded.Nat.fix`, the failed `rfl` tests, `String.mk`),
+`NatOps.lean` (the accelerated operations' definitions and the kernel's
+verdict on 54 of their equations on variables, added 2026-11-10),
 `Recursors.lean` (`WellFounded.Nat.fix.go`, large elimination of `Iff`,
 `Nonempty`, `Exists` and `Acc`, UIP on types, `HEq`), and `Scan.lean` and
 `ScanByRoot.lean` (the table of the section "What exists at the pin").  Each
 file carries, in a comment at its end, the output it produced on 2026-10-08
-when run by that command from its committed path, the scan's 1,765-name list of
+(`NatOps.lean` on 2026-11-10) when run by that command from its committed path, the scan's 1,765-name list of
 Mathlib's large-eliminating propositions excepted.
 
 ## References
@@ -1345,3 +1368,4 @@ Mathlib's large-eliminating propositions excepted.
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
 [inductives]: ../translator/inductives.md
 [recursors]: ../translator/recursors.md
+[nat-operations]: nat-operations.md

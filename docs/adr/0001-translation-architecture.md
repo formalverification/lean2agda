@@ -380,8 +380,10 @@ optional eliminations of structure-like reduction and unit eta switched off.
 
 **Status**.  Proposed; nothing of the normalizer is built.  [#26] integrates it
 and measures the cast overhead on the corpus and `Init`; [#30] extends it to
-`Quot.lift`; [#36] carries the cast counts; [#14] asks for the license; [#31]
-decides what to do about `Nat.gcd`, and its description still says the equation
+`Quot.lift`; [#36] carries the cast counts; [#14] asks for the license.  [#31]
+found that `Nat.gcd` needs nothing of its own in the operation table: Lean's
+definition computes once `Nat.modCore.go` is Agda's builtin
+([`foundations/nat-operations.md`]); its description still says the equation
 needs K-like reduction, which LF-6 refutes.
 
 ---
@@ -850,6 +852,14 @@ built, the rest are the roadmap's plan.
    Lean's `opaque` is Agda's `opaque`; axioms are postulates under U and
    parameters from Milestone 3; the quotient primitives are postulates with a
    `REWRITE` rule under U** ([#18] to [#21]).
++  **The operations Lean's kernel accelerates on `Nat` are Agda's builtins**:
+   the recursive core of each is the operation table's definition, a builtin
+   with its arguments swapped or shifted or Lean's clauses over the builtins,
+   and Lean's non-recursive wrappers stay its own; `Bool` is bound to Agda's
+   booleans, and under profile U the one equation of Lean's `Nat.sub` that the
+   builtin monus loses is a rewrite rule, with two that make the rules
+   confluent with the monus's own clauses ([#31],
+   [`foundations/nat-operations.md`]).
 
 **Evidence**.
 
@@ -902,6 +912,14 @@ built, the rest are the roadmap's plan.
    K-like one are the emitters' work, and that one waits for the normalizer
    (§ 2); none is a wrong visibility, a scope error or a parse error
    ([`translator/printing.md`], What Agda checks).
++  **Accelerated operations**.  With Lean's compiled definitions, which Agda
+   computes in unary, the positivity check of `ByteArray.IsValidUTF8`
+   exhausted an 8G heap; with the operation table its closure checks in 11 s
+   and 311 MiB, and `Init.Core`'s closure checks 1,635 of its 1,660 values
+   against 1,570, the largest Agda process at 2,291 MiB against the heap
+   bound.  Every equation Lean's kernel accepts on variables holds by
+   conversion but four, which the kernel's counters bound by 663, 53, 4 and
+   167 users in `Init` ([`foundations/nat-operations.md`]).
 +  **Records, recursors, opaque**.  Agda's records have eta, recursive ones
    included where the positivity checker permits (probe `P10cRecursiveRecord`),
    and Lean's structure eta is used in the mathematics of three corpus closures
@@ -1040,6 +1058,7 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 | 16 | Twelve hand-translated entries as the oracle | Adopted ([#6] to [#10]) | Four assumptions corrected and one finding; coverage flat by closure (§ 8) |
 | 17 | One pinned toolchain, Mathlib never rebuilt; Lean4Less's pin waits for [#26] | Adopted ([#3], PR [#64]) | `.olean` files per release; the symlink trap (§ 8) |
 | 18 | Apache-2.0 for the translator and the libraries generated from Mathlib, the source's own license for other libraries; unlicensed predecessors as external tools | Adopted ([#13], PR [#62]) | The predecessors' licenses (§ 8) |
+| 19 | The operations Lean's kernel accelerates on `Nat` by an operation table of Agda builtins and Lean's clauses over them, Lean's wrappers kept; `Nat.sub`'s lost equation a rewrite rule under U, with two that make the rules confluent | Proposed ([#31]); K and CC take the table without the rules ([#33]) | `ByteArray.IsValidUTF8` from the heap bound to 311 MiB; 1,635 of 1,660 values of `Init.Core`'s closure against 1,570; four equations lost, bounded by the kernel's counters (§ 7) |
 
 ---
 
@@ -1153,6 +1172,7 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 [`pinning.md`]: ../pinning.md
 [`licensing.md`]: ../licensing.md
 [`foundations/gap-catalog.md`]: ../foundations/gap-catalog.md
+[`foundations/nat-operations.md`]: ../foundations/nat-operations.md
 [`foundations/gap-report-corpus.md`]: ../foundations/gap-report-corpus.md
 [`reports/atlas-mathlib-v4.33.1-0df444a.md`]: ../reports/atlas-mathlib-v4.33.1-0df444a.md
 [`reports/printing-blowup-2026-10-12.md`]: ../reports/printing-blowup-2026-10-12.md
