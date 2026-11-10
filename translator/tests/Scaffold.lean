@@ -25,11 +25,11 @@ def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
 def scaffoldOf (env : Environment) (roots : Array Name) (threshold : Nat := defaultShareThreshold) :
-    IO Scaffold := do
+    IO ScaffoldTree := do
   let closure ← IO.ofExcept (dependencyClosure env roots)
-  IO.ofExcept (scaffold env `U (← IO.ofExcept (shareClosure env threshold closure)))
+  IO.ofExcept (scaffoldTree env `U (← IO.ofExcept (shareClosure env threshold closure)))
 
-def itemOf (s : Scaffold) (n : Name) : IO ScaffoldItem := do
+def itemOf (s : ScaffoldTree) (n : Name) : IO ScaffoldItem := do
   let some item := s.items.find? (·.provides.contains (agdaIdent n))
     | throw (IO.userError s!"no item for {n}")
   return item
@@ -40,26 +40,26 @@ def checkKinds (env : Environment) : IO Unit := do
   -- A definition is transparent, an instance among them, with no
   -- `instance` keyword: the printer passes every instance argument itself.
   let plain ← itemOf s ``KindFixtures.plain
-  require (plain.text.startsWith "KindFixtures:plain : Nat → Nat\nKindFixtures:plain n₀ = ")
+  require (plain.text.startsWith "KindFixtures:plain : U.Init.Prelude.Nat → U.Init.Prelude.Nat\nKindFixtures:plain n₀ = ")
     s!"a definition: {plain.text}"
   let inst ← itemOf s ``KindFixtures.instMarkerNat
-  require (inst.text.startsWith "KindFixtures:instMarkerNat : KindFixtures:Marker Nat\nKindFixtures:instMarkerNat = ")
+  require (inst.text.startsWith "KindFixtures:instMarkerNat : KindFixtures:Marker U.Init.Prelude.Nat\nKindFixtures:instMarkerNat = ")
     s!"an instance: {inst.text}"
   -- A theorem sits in an opaque block of its own, under its label.
   let base ← itemOf s ``KindFixtures.base
-  require (base.text == "-- theorem\nopaque\n  KindFixtures:base : Eq {Nat} Nat:zero Nat:zero\n  KindFixtures:base = rfl {Nat} {Nat:zero}\n")
+  require (base.text == "-- theorem\nopaque\n  KindFixtures:base : U.Init.Prelude.Eq {U.Init.Prelude.Nat} U.Init.Prelude.Nat:zero U.Init.Prelude.Nat:zero\n  KindFixtures:base = U.Init.Prelude.rfl {U.Init.Prelude.Nat} {U.Init.Prelude.Nat:zero}\n")
     s!"a theorem: {base.text}"
   -- Lean's opaque constants, a `partial` definition among them, sit in
   -- opaque blocks with their values; the `_unsafe_rec` companion, which
   -- refers to itself, is postulated.
   let hidden ← itemOf s ``KindFixtures.hidden
-  require (hidden.text.startsWith "-- opaque constant\nopaque\n  KindFixtures:hidden : Nat\n  KindFixtures:hidden = ")
+  require (hidden.text.startsWith "-- opaque constant\nopaque\n  KindFixtures:hidden : U.Init.Prelude.Nat\n  KindFixtures:hidden = ")
     s!"an opaque constant: {hidden.text}"
   let loop ← itemOf s ``KindFixtures.loop
-  require (loop.text.startsWith "-- opaque constant\nopaque\n  KindFixtures:loop : Nat → Nat\n  KindFixtures:loop n₀ = ")
+  require (loop.text.startsWith "-- opaque constant\nopaque\n  KindFixtures:loop : U.Init.Prelude.Nat → U.Init.Prelude.Nat\n  KindFixtures:loop n₀ = ")
     s!"a partial definition: {loop.text}"
   let companion ← itemOf s ``KindFixtures.loop._unsafe_rec
-  require (companion.text == "-- cyclic definition, postulated\npostulate KindFixtures:loop:~uunsafe~urec : Nat → Nat\n")
+  require (companion.text == "-- cyclic definition, postulated\npostulate KindFixtures:loop:~uunsafe~urec : U.Init.Prelude.Nat → U.Init.Prelude.Nat\n")
     s!"a partial definition's companion: {companion.text}"
   -- An axiom is a postulate, and a recursor is defined by its rule
   -- (`Recursor.lean`); the class is a record, which declares its
@@ -86,12 +86,18 @@ def checkKinds (env : Environment) : IO Unit := do
     require (s.items.all fun i => !i.provides.contains (agdaIdent n)) s!"refused {n} has an item"
   require (s.renderRefusals.startsWith "definition\tKindFixtures.danger\tunsafe: exempt from Lean's kernel\n")
     s!"refusals.txt: {s.renderRefusals}"
-  require ((s.render "c").startsWith s!"{profileUOptions}\n-- c\n-- refused 6 declarations; refusals.txt names each with its reason\nmodule ")
-    "the module's header does not count the refusals"
+  -- Each module's header counts the refusals of its own declarations:
+  -- `sorryAx` is Init.Prelude's, the five others the fixture's.
+  let some kinds := s.module? `TranslatorTests.Input.Kinds | throw (IO.userError "no module Kinds")
+  let some prelude := s.module? `Init.Prelude | throw (IO.userError "no module Init.Prelude")
+  require ((kinds.render "c").startsWith s!"{profileUOptions}\n-- c\n-- Lean module TranslatorTests.Input.Kinds\n-- refused 5 declarations; refusals.txt names each with its reason\nmodule ")
+    "the module's header does not count its refusals"
+  require (((prelude.render "c").splitOn "-- refused 1 declarations;").length == 2)
+    "Init.Prelude's header does not count sorryAx"
   -- A closure with nothing to refuse writes no refusal and no such comment.
   let clean ← scaffoldOf env #[``KindFixtures.plain]
   require (clean.refused.isEmpty && clean.renderRefusals.isEmpty
-    && ((clean.render "c").splitOn "refused").length == 1) "a clean closure reports refusals"
+    && clean.modules.all fun m => ((m.render "c").splitOn "refused").length == 1) "a clean closure reports refusals"
   -- The sharing pass leaves an unsafe declaration alone: at threshold 2,
   -- `wide`'s repeated `Nat.succ danger` would otherwise become an auxiliary
   -- definition that the kernel refuses as safe.
@@ -99,7 +105,7 @@ def checkKinds (env : Environment) : IO Unit := do
   let shared ← IO.ofExcept (shareClosure env 2 closure)
   require (shared.declarations.all fun d => !(toString d.name).startsWith "KindFixtures.wide._share")
     "an unsafe declaration was shared"
-  let _ ← IO.ofExcept (scaffold env `U shared)
+  let _ ← IO.ofExcept (scaffoldTree env `U shared)
 
 def checkCyclesAndBuiltins (env : Environment) : IO Unit := do
   -- Mutually recursive partial companions fall back to postulates, and a

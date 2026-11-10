@@ -26,11 +26,11 @@ def require (condition : Bool) (message : String) : IO Unit :=
 def expectText (actual expected label : String) : IO Unit :=
   require (actual == expected) s!"{label}:\nexpected {expected}\nactual   {actual}"
 
-def scaffoldOf (env : Environment) (roots : Array Name) : IO Scaffold := do
+def scaffoldOf (env : Environment) (roots : Array Name) : IO ScaffoldTree := do
   let closure ← IO.ofExcept (dependencyClosure env roots)
-  IO.ofExcept (scaffold env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
+  IO.ofExcept (scaffoldTree env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
 
-def itemOf (s : Scaffold) (n : Name) : IO ScaffoldItem := do
+def itemOf (s : ScaffoldTree) (n : Name) : IO ScaffoldItem := do
   let some item := s.items.find? (·.provides.contains (agdaIdent n))
     | throw (IO.userError s!"no item for {n}")
   return item

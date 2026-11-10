@@ -170,8 +170,8 @@ Use UTF-8 NDJSON sidecars, one beside each future generated `.agda` file,
 with the same stem and suffix `.names.ndjson`.  The `--out DIR` command
 emits these sidecars for the dependency closure after the sharing pass of
 [#17], so that they cover its auxiliary definitions, beside `closure.txt`
-and the profile U scaffold, one Agda module for the whole closure at the
-stem of its first root's sidecar ([`printing.md`][printing]).  `--root
+and the profile U scaffold, one Agda module per source module at the stem
+of that module's sidecar ([`modules.md`][modules]).  `--root
 NAME` supplies the tree root.  The diagnostic default is `U`, without a layer
 assignment; the future emitter will pass the root selected by [#37].
 
@@ -237,3 +237,4 @@ samples and the direct `Init` scan cover cases absent from that format.
 [agda-lex]: https://agda.readthedocs.io/en/v2.8.0/language/lexical-structure.html
 [agda-lexer]: https://github.com/agda/agda/blob/v2.8.0/src/full/Agda/Syntax/Parser/Lexer.x#L159-L207
 [printing]: printing.md
+[modules]: modules.md

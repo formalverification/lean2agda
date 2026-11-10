@@ -4,6 +4,7 @@ File: translator/Lean2Agda/Core/CommandLine.lean
 import Lean2Agda.Core.Types
 import Lean2Agda.Core.Naming
 import Lean2Agda.Core.Share
+import Lean2Agda.Core.Modules
 import Lean.Syntax
 
 namespace Lean2Agda
@@ -11,7 +12,7 @@ namespace Lean2Agda
 open Lean
 
 def usage : String :=
-  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--stats] MODULE... [-- DECL...]\n" ++
+  "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--split BYTES] [--stats] MODULE... [-- DECL...]\n" ++
   "       lean2agda --help | --version"
 
 structure Args where
@@ -20,6 +21,9 @@ structure Args where
   out : Option System.FilePath := none
   /-- The sharing pass's threshold; zero turns the pass off. -/
   share : Nat := defaultShareThreshold
+  /-- The bytes of printed Agda past which a module is split into parts;
+  zero never splits. -/
+  split : Nat := defaultSplitThreshold
   stats : Bool := false
   help : Bool := false
   version : Bool := false
@@ -52,6 +56,9 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--share" :: n :: rest => do
     let some share := n.toNat? | throw "--share needs a natural number"
     parseArgsAux { args with share } rest
+  | "--split" :: n :: rest => do
+    let some split := n.toNat? | throw "--split needs a natural number"
+    parseArgsAux { args with split } rest
   | "--stats" :: rest => parseArgsAux { args with stats := true } rest
   | "--help" :: rest => parseArgsAux { args with help := true } rest
   | "--version" :: rest => parseArgsAux { args with version := true } rest
@@ -59,6 +66,7 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--root" :: [] => throw "--root needs a Lean name"
   | "--out" :: [] => throw "--out needs a directory"
   | "--share" :: [] => throw "--share needs a natural number"
+  | "--split" :: [] => throw "--split needs a natural number"
   | arg :: rest => do
     if arg.startsWith "-" then throw s!"unknown option {arg}"
     let name ← parseName arg

@@ -21,6 +21,9 @@
 #                                        **Repository**: header)
 #   PYTHON         interpreter          (default: python3)
 #   CORPUS_TIMEOUT seconds corpus-check allows each Agda file (default: 300)
+#   OUT            a tree `lake exe lean2agda --out` wrote, for check-output
+#   JOBS           Agda processes check-output runs at once (default: half
+#                  the processors)
 #   GHPROJECT_DIR  engine checkout path (checkout channel only)
 #   NO_ENV_PREFIX  set (to anything) wherever gh authenticates *through*
 #                  GH_TOKEN/GITHUB_TOKEN; GitHub Actions included.
@@ -33,6 +36,8 @@ AGDA   ?= agda
 LEAN   ?= lean
 LAKE   ?= lake
 CORPUS_TIMEOUT ?= 300
+OUT ?=
+JOBS ?=
 ATLAS ?=
 
 FLAGS := $(if $(REPO),--repo $(REPO)) $(if $(NO_ENV_PREFIX),--no-env-prefix)
@@ -57,7 +62,7 @@ else
 endif
 
 .PHONY: help populate-dry populate update update-check lint \
-        doctor check test test-python test-translator test-unit corpus-check corpus-tables atlas \
+        doctor check check-output test test-python test-translator test-unit corpus-check corpus-tables atlas \
 	scaffold-corpus \
 	test-naming-atlas \
         lean-cache lean-build lean-smoke \
@@ -135,8 +140,10 @@ doctor: ## Print tool versions; fail, naming each missing tool or Agda library o
 	  echo "agda libraries: standard-library and cubical resolve"
 
 # check grows with the project: the emitted-Agda checker of issue M2-8
-# joins corpus-check here.
-check: corpus-check ## Type-check the corpus (corpus-check); the emitted Agda joins with M2-8
+# joins corpus-check when OUT names a tree.  No tree checks whole yet:
+# until the recursors and quotients compute, every closure's scaffold
+# holds declarations Agda refuses, which agda_check.py --refusals lists.
+check: corpus-check $(if $(OUT),check-output) ## Type-check the corpus, and the tree OUT when set
 
 test: test-python test-translator ## Run the Python suite and translator tests
 
@@ -153,6 +160,14 @@ test-unit: ## Run the translator's Lean unit checks alone (lake test in translat
 test-naming-atlas: ## Check injectivity on a pinned atlas (set ATLAS=path/to/file.ndjson)
 	@test -n "$(ATLAS)" || { echo 'error: set ATLAS to the pinned atlas NDJSON file'; exit 2; }
 	cd translator && $(LAKE) exe naming-check-atlas "$(abspath $(ATLAS))"
+
+# The driver of issue M2-8 (docs/translator/modules.md): check the tree
+# that `lake exe lean2agda --out DIR` wrote, one Agda process per module,
+# each once the modules it imports have checked, JOBS at a time, with
+# each module's time and peak memory.  Run inside the Nix shell.
+check-output: ## Check an emitted Agda tree module by module (OUT=dir, JOBS=n)
+	@test -n "$(OUT)" || { echo 'error: set OUT to a directory lake exe lean2agda --out wrote'; exit 2; }
+	$(PYTHON) scripts/python/agda_check.py --agda $(AGDA) $(if $(JOBS),-j $(JOBS)) "$(OUT)"
 
 # Run inside the Nix shell: the checker runs `agda` from each translated
 # entry's agda/ directory with no flags of its own, so each file checks
@@ -178,13 +193,15 @@ atlas: ## Write the axiom atlas of the pinned Mathlib (atlas/) and its report (d
 	$(PYTHON) scripts/python/atlas_report.py
 
 # Issue M2-3's acceptance over the whole corpus (docs/translator/printing.md):
-# print every entry's profile U scaffold and scope-check it.  Most entries
+# print every entry's profile U scaffold as a tree of modules and run the
+# refusal loop over it (agda_check.py --refusals), since Agda scope-checks
+# a module of a tree only once its imports type-check.  Most entries
 # import Mathlib, so it needs Mathlib's cache in translator/.lake (make
-# lean-cache), and it takes about half an hour, most of it Agda reading
-# real-sqrt-nonneg's scaffold.  No CI job runs it: the cache is several
-# gigabytes.  The three core-Lean entries run in make test-translator.
-scaffold-corpus: ## Print and scope-check every corpus entry's scaffold (needs make lean-cache)
-	LAKE="$(LAKE)" AGDA="$(AGDA)" bash translator/scripts/scaffold-corpus.sh
+# lean-cache); the single-module scope check it replaces took about half
+# an hour.  No CI job runs it: the cache is several gigabytes.  The three
+# core-Lean entries run in make test-translator.
+scaffold-corpus: ## Print every corpus entry's scaffold and check it module by module (needs make lean-cache)
+	LAKE="$(LAKE)" AGDA="$(AGDA)" JOBS="$(JOBS)" bash translator/scripts/scaffold-corpus.sh
 
 # ---- lean ----------------------------------------------------------------
 

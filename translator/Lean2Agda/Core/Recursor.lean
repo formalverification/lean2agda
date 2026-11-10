@@ -152,7 +152,8 @@ where
 
 /-- A recursor block's declaration: its lines, the identifiers it
 declares, those its text refers to (the constructors it matches among
-them), and the postulates of its members' types, which stand for it when
+them, each as the printer's naming spells it, qualified when another
+module declares it), and the postulates of its members' types, which stand for it when
 Agda refuses it.  A lone recursor is its signature and clauses; several
 are one `mutual` block, the signatures first. -/
 structure RecursorDecl where
@@ -171,13 +172,13 @@ def recursorDecl (p : Printer) (members : Array RecursorVal) : Except String Rec
   let clauses := (names.zip printed).foldl (fun acc (n, (_, cs)) => acc ++ cs.map (·.render n)) #[]
   let lines := if members.size == 1 then signatures ++ clauses
     else #["mutual"] ++ (signatures ++ clauses).map ("  " ++ ·)
-  let ctors := members.foldl (fun acc r => acc ++ r.rules.toArray.map (agdaIdent ·.ctor)) #[]
+  let ctors := members.foldl (fun acc r => acc ++ r.rules.toArray.map (p.naming.constant ·.ctor)) #[]
   let terms := printed.foldl (fun acc (t, cs) => (acc.push t) ++ cs.filterMap (·.body)) #[]
   let distinct (ns : Array String) : Array String := ns.foldl (fun acc n =>
     if acc.contains n || names.contains n then acc else acc.push n) #[]
   return { lines, provides := names, counts,
-           references := distinct (terms.foldl (fun acc t => acc ++ t.constants) ctors),
+           references := distinct (terms.foldl (fun acc t => acc ++ t.references p.naming) ctors),
            postulates := signatures.map ("postulate " ++ ·),
-           typeReferences := distinct (printed.foldl (fun acc (t, _) => acc ++ t.constants) #[]) }
+           typeReferences := distinct (printed.foldl (fun acc (t, _) => acc ++ t.references p.naming) #[]) }
 
 end Lean2Agda

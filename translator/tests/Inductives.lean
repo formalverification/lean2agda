@@ -168,7 +168,7 @@ def checkSharing (env : Environment) : IO Unit := do
   require (!outsideBlock [`T] (mkApp (mkConst `T) x) && !outsideBlock [`T] (.proj `T 0 x) &&
     outsideBlock [`T] (.proj `U 0 x) && outsideBlock [] (.proj `T 0 x)) "outsideBlock"
   let closure ← IO.ofExcept (dependencyClosure env #[``InductiveFixtures.Wide])
-  let s ← IO.ofExcept (scaffold env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
+  let s ← IO.ofExcept (scaffoldTree env `U (← IO.ofExcept (shareClosure env defaultShareThreshold closure)))
   let position (n : String) : IO Nat := do
     let some i := s.items.findIdx? (·.provides.contains n) | throw (IO.userError s!"no item {n}")
     return i

@@ -240,6 +240,12 @@ class TestReferences(unittest.TestCase):
                          (frozenset(), frozenset({0})))
         self.assertEqual(references((record, user))[1], frozenset({0}))
 
+    def test_strings_are_not_references(self) -> None:
+        item = Item("definition", "", ("g",), 0, 'g : S\ng = "a t \\" still t" ++ u')
+        self.assertEqual(code(item), 'g : S\ng = "" ++ u')
+        defs = tuple(Item("definition", "", (n,), 0, f"{n} : A\n{n} = a") for n in ("t", "u"))
+        self.assertEqual(references(defs + (item,))[2], frozenset({1}))
+
     def test_comments_are_not_references(self) -> None:
         item = Item("definition", "theorem, unfolded for root", ("t",), 1, "-- theorem, unfolded for root\nt : A\nt = a")
         self.assertEqual(code(item), "t : A\nt = a")

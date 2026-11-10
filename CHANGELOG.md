@@ -40,6 +40,12 @@ The entries are as follows:
    clause per rule of the kernel's and a `mutual` block for several; the
    printer's eta repair; the checker's heap bound and its markers, which
    charge an exhausted run to the declaration Agda died in ([#82]).
++  The scaffold as a tree of Agda modules, one per Lean module, with
+   qualified references, exact imports, the split rule (`--split`),
+   `U.agda-lib` and `U/Everything.agda`; `agda_check.py`, which checks a
+   tree in dependency order with per-module time and peak memory, and
+   runs the refusal loop over it, unfolding theorems across modules
+   ([#84]).
 
 [#25]: https://github.com/formalverification/lean2agda/issues/25
 [#64]: https://github.com/formalverification/lean2agda/pull/64
@@ -51,5 +57,6 @@ The entries are as follows:
 [#81]: https://github.com/formalverification/lean2agda/pull/81
 [#82]: https://github.com/formalverification/lean2agda/pull/82
 [#83]: https://github.com/formalverification/lean2agda/pull/83
+[#84]: https://github.com/formalverification/lean2agda/pull/84
 
 [map]: docs/translator/architecture.md

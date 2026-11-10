@@ -12,8 +12,9 @@ Description:
   injected, so the classification is tested without Agda.
 
   The corpus checker (corpus_check.py) runs every file of every
-  translated entry through check_file; the driver of issue M2-8
-  (agda_check.py) is meant to reuse it for emitted modules.
+  translated entry through check_file, and the driver of issue M2-8
+  (agda_check.py) runs every module of an emitted tree through it, with
+  a runner of its own that also measures each process's peak memory.
 
 Design Principles:
   - The edge is check_file: one call of the runner, timed by the clock.

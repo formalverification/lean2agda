@@ -91,7 +91,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import reduce
 from itertools import accumulate, groupby, takewhile
 from operator import itemgetter
@@ -109,6 +109,9 @@ DEFAULT_HEAP: str = "8G"
 # delimiters.  A dot never occurs in the scaffold's names: it separates a
 # record from its field in a projection `R.f`, which mentions `R`.
 _TOKEN = re.compile(r"[^\s(){}⦃⦄;.]+")
+# An Agda string literal: no newline inside, and a backslash escapes the
+# next character, a quote among them.
+_STRING = re.compile(r'"(?:[^"\\\n]|\\.)*"')
 # "<path>:<line>.<column>-<end>: error: [Name]", where the end is a
 # column or a line.column.
 _ERROR = re.compile(r":(\d+)\.\d+-(?:\d+\.)?\d+: error: \[(\w+)\]")
@@ -179,13 +182,15 @@ class Refusal:
 class Event:
     """What the checker did to a declaration: "unfolded" (a theorem, for
     the dependent that needed it), "refused type", "refused value" or
-    "dropped"."""
+    "dropped"; a refusal keeps the message proper too, which may name a
+    theorem another module could unfold (agda_check.py)."""
 
     action: str
     name: str
     error: str
     message: str
     dependent: str = ""
+    detail: str = field(default="", compare=False)
 
 
 @dataclass(frozen=True)
@@ -280,9 +285,11 @@ def parse_module(text: str) -> Result[Module, PipelineError]:
 
 
 def code(item: Item) -> str:
-    """The item's text without its comment lines, whose words are not
-    references."""
-    return "\n".join(line for line in item.text.split("\n") if not line.startswith("--"))
+    """The item's text without its comment lines and with each string
+    literal emptied, since the words of neither are references (a string
+    may well hold an identifier's spelling)."""
+    lines = (line for line in item.text.split("\n") if not line.startswith("--"))
+    return "\n".join(_STRING.sub('""', line) for line in lines)
 
 
 def references(items: tuple[Item, ...]) -> tuple[frozenset[int], ...]:
@@ -439,11 +446,17 @@ def dependents(index: int, refs: tuple[frozenset[int], ...], alive: tuple[bool, 
     return (index,) + tuple(sorted(reach(frozenset((index,)), lambda i: users.get(i, frozenset())) - {index}))
 
 
+def mentioned(detail: str) -> list[str]:
+    """The words of an error's message that may be identifiers, in order:
+    a qualified name gives each of its components."""
+    return _TOKEN.findall(detail)
+
+
 def unfoldable(items: tuple[Item, ...], alive: tuple[bool, ...], index: int, refusal: Refusal) -> Optional[int]:
     """The first theorem the error's message names that is still opaque
     and alive, other than the refused declaration itself."""
     owner = {name: i for i, item in enumerate(items) for name in item.names}
-    return next((i for i in (owner.get(t) for t in _TOKEN.findall(refusal.detail))
+    return next((i for i in (owner.get(t) for t in mentioned(refusal.detail))
                  if i is not None and i != index and alive[i] and is_theorem(items[i])), None)
 
 
@@ -494,11 +507,11 @@ def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
         return State(items, state.alive, state.events + (event,))
     if has_value(item) and offset > item.signature:
         items = state.items[:index] + (postulated(item),) + state.items[index + 1:]
-        event = Event("refused value", item.names[0], refusal.error, refusal.message)
+        event = Event("refused value", item.names[0], refusal.error, refusal.message, detail=refusal.detail)
         return State(items, state.alive, state.events + (event,))
     gone = dependents(index, references(state.items), state.alive)
     alive = tuple(a and i not in gone for i, a in enumerate(state.alive))
-    first = Event("refused type", item.names[0], refusal.error, refusal.message)
+    first = Event("refused type", item.names[0], refusal.error, refusal.message, detail=refusal.detail)
     rest = tuple(Event("dropped", state.items[i].names[0], "", "") for i in gone[1:])
     return State(state.items, alive, state.events + (first,) + rest)
 
@@ -523,11 +536,12 @@ def in_vain(events: tuple[Event, ...], index: int, position: dict[str, int]) -> 
     was refused or dropped all the same.  The first later event at or
     beyond that declaration in module order decides, since an event at an
     earlier declaration says nothing about it; further unfoldings for it
-    are passed over too."""
+    are passed over too, as is the unfolding of another module's theorem,
+    which agda_check.py lists in the dependent's module."""
     dependent = events[index].dependent
     later = (e for e in events[index + 1:]
              if not (e.action == "unfolded" and e.dependent == dependent)
-             and position[e.name] >= position[dependent])
+             and position.get(e.name, -1) >= position[dependent])
     following = next(later, None)
     return following is not None and following.name == dependent
 

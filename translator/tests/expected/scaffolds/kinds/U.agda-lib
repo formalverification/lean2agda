@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of KindFixtures:Marker KindFixtures:Marker:casesOn KindFixtures:Marker:ctorIdx KindFixtures:Marker:mark KindFixtures:Marker:mk and 22 more
+name: U
+include: .

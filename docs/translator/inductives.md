@@ -226,8 +226,8 @@ closure of `Init.Core` emits and checks under profile U.  That closure has
 115 types with one constructor and no indices, 28 of them propositions.
 `translator/scripts/InductiveTypes.lean` lists them, and a scaffold with
 them as its roots declares each one, with the definitions and theorems
-its types need as postulates; `tests/run.sh` checks it against the listing
-`tests/expected/scaffolds/init-core-inductives.refusals.txt`:
+its types need as postulates; `tests/run.sh` checks it against the listings
+under `tests/expected/scaffolds/init-core-inductives/`:
 
 | Scaffold | Roots | Declarations, checked | Data types and records, checked | Refused |
 | --- | --- | --- | --- | --- |
@@ -247,7 +247,7 @@ which, in a copy of the `nat-gcd-self` scaffold, all four check.
 
 The other two rows were printed from every inductive type declared under
 `Init`, and from the nested or mutual ones under `Init`, `Std` and `Lean` in
-`import Lean`; `scaffold_check.py --types-only` checks only the data types and
+`import Lean`; `scaffold_check.py --types-only` checked only the data types and
 records and what they mention, since Agda's time grows faster than a module:
 the 4.1 MB scaffold of `Init`'s types took 4 min 48 s to scope-check at a load
 average near 16, and its `--types-only` part of 335 KB took 21 s for all five
@@ -270,8 +270,15 @@ The commands, from `translator/` in the dev shell, are as follows:
 ```sh
 lake env lean scripts/InductiveTypes.lean > init.txt
 lake exe lean2agda --out out Init -- $(cat init.txt)
-python3 ../scripts/python/scaffold_check.py --messages --types-only out/U/Init/WF.agda
+python3 ../scripts/python/agda_check.py --refusals --messages --types-only out
 ```
+
+The last line is the tree's form ([`modules.md`][modules]): the runs above
+predate [#22] and checked one module, `out/U/Init/WF.agda`, with
+`scaffold_check.py --types-only`.  They also predate [#20]'s printing of
+every value: on 2026-11-08 the same `lean2agda` call wrote a tree of 370
+modules and 937 MB, every proof of the closure included, and its
+`--types-only` run was stopped unfinished after ten minutes.
 
 ## Recursors
 
@@ -321,8 +328,9 @@ one data type.
    the other definitions are postulates, and the refusals above are
    theirs: `instLENat` for the four matchers, and the definitions the
    positivity runs name.
-+  The scaffold still holds the closure in one module, and [#22] splits
-   it; Agda's time on the whole of `Init`'s types is one more reason.
++  [#22] split the scaffold into one module per Lean module
+   ([`modules.md`][modules]); Agda's time on the whole of `Init`'s types
+   was one more reason.
 
 [#17]: https://github.com/formalverification/lean2agda/issues/17
 [#18]: https://github.com/formalverification/lean2agda/issues/18
@@ -330,6 +338,7 @@ one data type.
 [#20]: https://github.com/formalverification/lean2agda/issues/20
 [#22]: https://github.com/formalverification/lean2agda/issues/22
 [printing]: printing.md
+[modules]: modules.md
 [recursors]: recursors.md
 [printing-checks]: printing.md#what-agda-checks-and-the-fallback
 [probes]: probes/

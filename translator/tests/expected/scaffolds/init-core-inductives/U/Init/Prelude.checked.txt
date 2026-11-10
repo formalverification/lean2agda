@@ -1,0 +1,9 @@
+checked 422 of 426 declarations, 89 of 90 data types and records
+unfolded 0 of 48 theorems, 0 in vain
+defined 91 of 92 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms eq~uof~uheq | Eq:rec x₆ x₉ != x₆ of type x₄
+refused value UnequalTerms Nat:modCore~ult | hy₂ != h₃ of type Nat:le (Nat:succ (OfNat:ofNat _)) y₁
+refused type HeapExhausted ByteArray:IsValidUTF8 | Command failed with exit code 251
+dropped ByteArray:IsValidUTF8:rec
+dropped String:ofByteArray
+dropped String:rec

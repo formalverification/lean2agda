@@ -7,9 +7,10 @@ import Lean2Agda.Core.Share
 /-!
 # The profile U scaffold
 
-One Agda module per closure, the test of the printer and the emitters.
-It declares every constant of the closure that it does not refuse, by
-kind, as follows:
+The Agda declarations of a closure, the test of the printer and the
+emitters; `Modules.lean` lays them out as one Agda module per Lean
+module.  It declares every constant of the closure that it does not
+refuse, by kind, as follows:
 
 +  the inductive types, each block of them one declaration
    (`Inductive.lean`): a record for each structure-like type and a data
@@ -44,9 +45,9 @@ itself, or to a definition that refers back to it, is postulated instead
 (`breakCycles`); a recursor refers to itself through its recursive
 calls, which Agda's termination checker decides, and is exempt.
 
-Agda parses and scope-checks the whole module, and `scaffold_check.py`
-type-checks it declaration by declaration; `docs/translator/printing.md`
-says what it refuses, and why.
+`scripts/python/agda_check.py --refusals` type-checks the modules
+declaration by declaration, with `scaffold_check.py`'s loop;
+`docs/translator/printing.md` says what it refuses, and why.
 -/
 
 namespace Lean2Agda
@@ -125,34 +126,7 @@ def refuseDeclarations (decls : Array Declaration) : Std.HashMap Name Refusal :=
           changed := true
   return refused
 
-/-! ## The module -/
-
-structure Scaffold where
-  path : List String
-  items : Array ScaffoldItem
-  counts : PrintCounts
-  /-- The refused declarations, in the closure's order, auxiliary
-  definitions left out: an auxiliary is refused only with its owner. -/
-  refused : Array Refusal := #[]
-  deriving Inhabited
-
-def Scaffold.moduleName (s : Scaffold) : String := ".".intercalate s.path
-
-def Scaffold.filePath (s : Scaffold) (dir : System.FilePath) : System.FilePath :=
-  s.path.foldl (· / ·) dir |>.addExtension "agda"
-
-/-- The module's text: the profile's options, a comment, a count of the
-refused declarations when there are any, the header, and the
-declarations, separated by blank lines. -/
-def Scaffold.render (s : Scaffold) (comment : String) : String :=
-  let refused := if s.refused.isEmpty then "" else
-    s!"-- refused {s.refused.size} declarations; refusals.txt names each with its reason\n"
-  s.items.foldl (fun out item => out ++ "\n" ++ item.text)
-    s!"{profileUOptions}\n-- {comment}\n{refused}module {s.moduleName} where\n"
-
-/-- One tab-separated line per refused declaration: kind, name, reason. -/
-def Scaffold.renderRefusals (s : Scaffold) : String :=
-  s.refused.foldl (fun out r => out ++ s!"{r.kind.label}\t{r.name}\t{r.reason}\n") ""
+/-! ## Order -/
 
 /-- The auxiliary definitions reachable from `starts` through the types
 and values of auxiliary definitions. -/
@@ -170,17 +144,15 @@ def reachableAuxiliaries (auxiliaries : Std.HashMap Name Declaration) (starts : 
         queue := queue ++ (expressionDependencies e).filter auxiliaries.contains
   return seen
 
-/-- Order items so that each follows every item providing an identifier it
-refers to, keeping the closure's order otherwise.  The closure orders its
-groups, but inside a group (an inductive type with its constructors and
-recursor) only the printed references decide. -/
+/-- Order the items of one module so that each follows every item
+providing an identifier it refers to, keeping the closure's order
+otherwise.  The closure orders its groups, but inside a group (an
+inductive type with its constructors and recursor) only the printed
+references decide.  A reference no item provides names another module's
+constant, which `Modules.lean` checks. -/
 partial def orderItems (items : Array ScaffoldItem) : Except String (Array ScaffoldItem) := do
   let provider : Std.HashMap String Nat := (List.range items.size).foldl (fun m i =>
     items[i]!.provides.foldl (fun m n => m.insert n i) m) {}
-  for item in items do
-    for r in item.references do
-      unless provider.contains r do
-        throw s!"the scaffold refers to {r}, which nothing declares"
   let rec visit (i : Nat) (state : Std.HashSet Nat × Array Nat × Std.HashSet Nat) :
       Except String (Std.HashSet Nat × Array Nat × Std.HashSet Nat) := do
     let (done, order, active) := state
@@ -225,7 +197,7 @@ def breakCycles (items : Array ScaffoldItem) : Array ScaffoldItem := Id.run do
 def postulateItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type decl.info.type
   let name := agdaIdent decl.name
-  return ({ provides := #[name], references := t.constants,
+  return ({ provides := #[name], references := t.references p.naming,
             text := s!"postulate {name} : {t.render}\n" }, counts)
 
 /-- A declaration with its printed signature and clause, laid out by
@@ -238,10 +210,10 @@ def valueItem (p : Printer) (decl : Declaration) (layout : String → String →
   let (clause, c₂) ← p.clause decl.info.type value
   let name := agdaIdent decl.name
   let signature := s!"{name} : {t.render}"
-  let references := clause.body.constants.foldl (fun acc n => if acc.contains n then acc else acc.push n)
-    t.constants
+  let references := (clause.body.references p.naming).foldl (fun acc n => if acc.contains n then acc else acc.push n)
+    (t.references p.naming)
   return ({ provides := #[name], references, text := layout signature (clause.render name),
-            fallback := some (t.constants, s!"postulate {signature}\n") }, c₁.add c₂)
+            fallback := some (t.references p.naming, s!"postulate {signature}\n") }, c₁.add c₂)
 
 /-- A transparent definition: its signature and its clause. -/
 def definitionItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) :=
@@ -323,7 +295,7 @@ always declares: `directDependencies` gives every quotient primitive all
 four, and `Quot.lift`'s type mentions `Eq`. -/
 def ruleItem (p : Printer) (name : String) (type : Expr) : Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type type
-  return ({ provides := #[name], references := t.constants,
+  return ({ provides := #[name], references := t.references p.naming,
             text := s!"-- computation rule\npostulate {name} : {t.render}\n\{-# REWRITE {name} #-}\n" }, counts)
 
 /-- A block of inductive types as one item, declaring its types and
@@ -382,41 +354,5 @@ def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration)
   | .thmInfo _ => return some (← opaqueItem p decl "theorem")
   | .opaqueInfo _ => return some (← opaqueItem p decl "opaque constant")
   | _ => return some (← postulateItem p decl)
-
-/-- The scaffold of a closure that the sharing pass has already rewritten.
-Its path is the one its names sidecar has, from the source module of the
-closure's first root.  An auxiliary definition appears when something the
-scaffold prints uses it; a refused declaration does not appear, nor do
-its auxiliaries.  The computation rules of `Quot.lift` and `Quot.ind`
-follow their postulates, which `orderItems` keeps after `Quot.mk` and
-`Eq` too. -/
-def scaffold (env : Environment) (root : Root) (closure : Closure) : Except String Scaffold := do
-  let env ← addAuxiliaries env closure
-  let some first := closure.roots[0]? | throw "the closure has no roots"
-  let decls := closure.declarations
-  let some owner := decls.find? (·.name == first) | throw s!"root {first} missing"
-  let some module := owner.sourceModule | throw s!"no source module assigned to {first}"
-  let byName : Std.HashMap Name Declaration := decls.foldl (fun m d => m.insert d.name d) {}
-  let refused := refuseDeclarations decls
-  let kept := decls.filter fun d => !refused.contains d.name
-  let auxiliaries : Std.HashMap Name Declaration :=
-    kept.foldl (fun m d => if d.auxiliary then m.insert d.name d else m) {}
-  let needed := reachableAuxiliaries auxiliaries <| kept.foldl (fun acc d =>
-    if d.auxiliary then acc else acc ++ constantExprs d.info) #[]
-  let p : Printer := { env }
-  let recursors := recursorBlocks kept
-  let mut counts : PrintCounts := {}
-  let mut items := #[]
-  for decl in kept do
-    unless decl.auxiliary && !needed.contains decl.name do
-      if let some (item, c) ← scaffoldItem p byName recursors decl then
-        items := items.push item
-        counts := counts.add c
-      if let some (name, type) := quotRule? decl.name then
-        let (item, c) ← ruleItem p name type
-        items := items.push item
-        counts := counts.add c
-  return { path := agdaModule root module, items := ← orderItems (breakCycles items), counts,
-           refused := decls.filterMap fun d => if d.auxiliary then none else refused[d.name]? }
 
 end Lean2Agda

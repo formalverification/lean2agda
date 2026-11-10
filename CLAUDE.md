@@ -35,11 +35,12 @@ section before changing anything structural.
    `--library-file`, so a bare system `agda` would see no libraries.
 +  `make help` lists every target.  `make corpus-check` type-checks every
    translated corpus entry under the flags its files declare
-   (`corpus/README.md`); `make check` runs it, and the emitted-Agda check
-   joins with M2-8.  `make test` runs the Python suite under
-   `scripts/python/tests/` and the translator's semantic and golden tests
-   under `translator/tests/`; `make test-python` and
-   `make test-translator` run them separately.  The translator's harness,
+   (`corpus/README.md`); `make check` runs it, and with `OUT=DIR` also
+   `make check-output`, which checks the tree `lake exe lean2agda --out
+   DIR` emitted, module by module (`docs/translator/modules.md`).
+   `make test` runs the Python suite under `scripts/python/tests/` and
+   the translator's semantic and golden tests under `translator/tests/`;
+   `make test-python` and `make test-translator` run them separately.  The translator's harness,
    `translator/tests/run.sh`, runs `lake test` (`make test-unit`), which
    builds and runs the executable `unittests` over the Lean unit checks
    (`translator/tests/UnitTests.lean` names them), every check at every

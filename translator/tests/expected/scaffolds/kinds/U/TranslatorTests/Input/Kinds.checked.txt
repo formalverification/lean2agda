@@ -1,0 +1,4 @@
+checked 21 of 21 declarations, 1 of 1 data types and records
+unfolded 1 of 2 theorems, 0 in vain
+defined 1 of 1 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms KindFixtures:alias for KindFixtures:useAlias | KindFixtures:alias != KindFixtures:base of type

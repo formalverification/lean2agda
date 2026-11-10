@@ -14,6 +14,7 @@ import Lean2Agda.Core.Inductive
 import Lean2Agda.Core.Recursor
 import Lean2Agda.Core.Share
 import Lean2Agda.Core.Scaffold
+import Lean2Agda.Core.Modules
 
 /-!
 # Lean2Agda

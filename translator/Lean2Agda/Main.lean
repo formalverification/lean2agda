@@ -31,25 +31,51 @@ def scaffoldComment (closure : Closure) : String :=
   let more := if closure.roots.size > 5 then s!" and {closure.roots.size - 5} more" else ""
   s!"lean2agda, profile U: the scaffold of the closure of {" ".intercalate shown}{more}"
 
+/-- Write `text` to `file`, making its directory first. -/
+def writeMaking (file : System.FilePath) (text : String) : IO Unit := do
+  if let some parent := file.parent then IO.FS.createDirAll parent
+  IO.FS.writeFile file text
+
+/-- The `.agda` files under `dir`, outside `_build/`, that are not in
+`written`: modules an earlier run left, which a check of `dir` would
+read as part of the tree. -/
+def strayModules (dir : System.FilePath) (written : Array System.FilePath) :
+    IO (Array System.FilePath) := do
+  if !(← dir.isDir) then return #[]
+  let own := written.map toString
+  let found ← dir.walkDir (enter := fun p => pure (p.fileName != some "_build"))
+  return found.filter fun p => p.extension == some "agda" && !own.contains (toString p)
+
 /-- With `--out DIR`, write the listing, the names sidecars of the shared
-closure (so that they cover its auxiliary definitions), the scaffold at
-the path of its root's sidecar, and `refusals.txt`, one line per
-declaration the scaffold refuses, with its reason. -/
+closure (so that they cover its auxiliary definitions), the scaffold's
+tree of modules, each at the path of its source module's sidecar (a part
+beside it, in a directory of the module's name), the library file and a
+`libraries` file naming it by its absolute path, the module importing
+every module, and `refusals.txt`, one line per declaration the scaffold
+refuses, with its reason.  A `DIR` holding a module this run does not
+write is refused before anything is written, since a check of `DIR`
+would read it as part of the tree; nothing in it is deleted. -/
 def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (closure : Closure)
     (listing : String) : IO Unit := do
   let shared ← IO.ofExcept (shareClosure env args.share closure)
   let maps ← IO.ofExcept <| moduleNameMaps args.root shared
-  let s ← IO.ofExcept (scaffold env args.root shared)
+  let tree ← IO.ofExcept (scaffoldTree env args.root shared args.split)
+  let comment := scaffoldComment closure
+  let everything := tree.everythingPath.foldl (· / ·) dir |>.addExtension "agda"
+  let strays ← strayModules dir (tree.modules.map (·.filePath dir) |>.push everything)
+  if h : 0 < strays.size then
+    let more := if strays.size > 1 then s!" and {strays.size - 1} more" else ""
+    throw <| IO.userError s!"--out {dir} holds modules this closure does not emit ({strays[0]}{more}); remove them or choose another directory"
   IO.FS.createDirAll dir
   IO.FS.writeFile (dir / "closure.txt") listing
   for map in maps do
-    let filename := map.sidecarPath dir
-    IO.FS.createDirAll filename.parent.get!
-    IO.FS.writeFile filename map.render
-  let file := s.filePath dir
-  IO.FS.createDirAll file.parent.get!
-  IO.FS.writeFile file (s.render (scaffoldComment closure))
-  IO.FS.writeFile (dir / "refusals.txt") s.renderRefusals
+    writeMaking (map.sidecarPath dir) map.render
+  for m in tree.modules do
+    writeMaking (m.filePath dir) (m.render comment)
+  writeMaking everything (tree.renderEverything comment)
+  IO.FS.writeFile (dir / tree.libraryFile) (tree.renderLibrary comment)
+  IO.FS.writeFile (dir / "libraries") s!"{← IO.FS.realPath (dir / tree.libraryFile)}\n"
+  IO.FS.writeFile (dir / "refusals.txt") tree.renderRefusals
 
 def run (args : Args) : IO Unit := do
   let env ← importEnvironment args.modules

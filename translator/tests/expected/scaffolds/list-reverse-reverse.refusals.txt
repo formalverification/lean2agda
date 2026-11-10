@@ -1,4 +1,0 @@
-# File: translator/tests/expected/scaffolds/list-reverse-reverse.refusals.txt
-checked 34 of 34 declarations, 6 of 6 data types and records
-unfolded 0 of 10 theorems, 0 in vain
-defined 6 of 6 recursors by pattern matching, 0 refused by the termination checker

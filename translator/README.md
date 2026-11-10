@@ -38,16 +38,18 @@ which a test keeps true of this directory.
    dependency closure and ordering, diagnostic rendering, statistics,
    name encoding, module paths, reverse maps, the expression printer
    (`Print.lean`), the sharing pass (`Share.lean`), the inductive types'
-   shapes (`InductiveShape.lean`) and declarations (`Inductive.lean`), and
-   the scaffold (`Scaffold.lean`).
+   shapes (`InductiveShape.lean`) and declarations (`Inductive.lean`), the
+   scaffold's declarations (`Scaffold.lean`), and its tree of modules
+   (`Modules.lean`).
 +  `Main.lean`: the executable's root, `main`, which parses the command
    line and prints the usage or the version or runs the shell.
 +  `Lean2Agda/Main.lean`: the IO shell, which loads compiled modules and
    writes the closure listing, the reverse-map sidecars, and the scaffold.
 +  `tests/`: compiled Lean inputs, the unit checks `lake test` runs
    (`UnitTests.lean`, the driver, and `Check.lean`, `Inductives.lean`,
-   `Naming.lean`, `Printing.lean` and `Scaffold.lean`), atlas and golden
-   fixtures, golden scaffolds (`expected/scaffolds/`), and the shell
+   `Modules.lean`, `Naming.lean`, `Printing.lean` and `Scaffold.lean`),
+   atlas and golden fixtures, golden scaffold trees
+   (`expected/scaffolds/<name>/`), and the shell
    harness.
 +  `Atlas/`: the axiom atlas (`../atlas/README.md`).  `Record.lean`
    and `Graph.lean` are the pure core (the record and its line, the
@@ -113,14 +115,19 @@ lake exe lean2agda --version
 It prints an ordered closure of Lean declarations.  `--out DIR` also
 writes the listing to `DIR/closure.txt`, a `.names.ndjson` sidecar per
 source module under the supplied `--root NAME` (default `U`), and the
-profile U scaffold, an Agda module declaring the closure's constants with
-their printed types and values (definitions transparent, theorems and
-opaque constants in `opaque` blocks, the rest postulated), beside
-`DIR/refusals.txt`, which names the declarations the scaffold refuses
-(`sorryAx`, `unsafe`, and their dependents) with the reason; `--share N`
-sets the sharing pass's threshold.  The
-naming API and sidecar schema are in [`naming.md`], and the printer, the
-sharing pass and the scaffold in [`printing.md`].  `--stats` appends
+profile U scaffold, a tree of Agda modules, one per source module,
+declaring the closure's constants with their printed types and values
+(definitions transparent, theorems and opaque constants in `opaque`
+blocks, the rest postulated), with `DIR/U.agda-lib`, `DIR/libraries` and
+`DIR/U/Everything.agda`, beside `DIR/refusals.txt`, which names the
+declarations the scaffold refuses (`sorryAx`, `unsafe`, and their
+dependents) with the reason; `--share N` sets the sharing pass's
+threshold, and `--split BYTES` the size past which a module is cut into
+parts (1 MB by default).  A `DIR` holding a module the run does not write
+is refused.  The naming API and sidecar schema are in [`naming.md`], the
+printer, the sharing pass and the scaffold's declarations in
+[`printing.md`], and the tree of modules, its split rule and the tree
+checker `scripts/python/agda_check.py` in [`modules.md`].  `--stats` appends
 counts to standard output.  Omit declarations after `--` to select all
 declarations owned by the named modules.  Only profile U is available.
 The closure API, dependencies, cycle handling, and output format are in
@@ -131,8 +138,8 @@ the executable is built.
 
 `lake test`, here, builds and runs the unit checks: the executable
 `unittests` (root `tests/UnitTests.lean`) runs `Check.lean`,
-`Inductives.lean`, `Naming.lean`, `Printing.lean` and `Scaffold.lean` in
-turn, each against environments it imports when it runs, and exits 1 if
+`Inductives.lean`, `Modules.lean`, `Naming.lean`, `Printing.lean` and
+`Scaffold.lean` in turn, each against environments it imports when it runs, and exits 1 if
 any fails.  Every check runs at every invocation; `lake test -- printing
 naming` runs the named ones.  Run it from this directory, where the checks
 find their fixtures.  `make test-unit` runs it from the repository root.
@@ -140,7 +147,7 @@ find their fixtures.  `make test-unit` runs it from the repository root.
 Run `make test-translator` from the repository root, or
 `bash tests/run.sh` here.  It builds core Lean fixtures, runs `lake test`,
 and diffs the golden outputs, including `Nat.gcd_self`, the names owned by
-`Init.Data.Nat.Gcd`, and the scaffolds with their refusal listings.  It
+`Init.Data.Nat.Gcd`, and the scaffold trees with their listings.  It
 also checks reverse maps and generated lexical fixtures with Agda, and
 that `--version` prints `VERSION`.  It needs no Mathlib cache; Lake still
 clones the source dependencies named in the manifest on a fresh checkout.
@@ -170,4 +177,5 @@ Conventions for everything that lands here are as follows:
 [`architecture.md`]: ../docs/translator/architecture.md
 [`loading.md`]: ../docs/translator/loading.md
 [`naming.md`]: ../docs/translator/naming.md
+[`modules.md`]: ../docs/translator/modules.md
 [`printing.md`]: ../docs/translator/printing.md

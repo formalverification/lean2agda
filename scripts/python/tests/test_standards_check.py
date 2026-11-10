@@ -171,7 +171,7 @@ class TestMapChecks(unittest.TestCase):
         tracked = ("translator/A.lean", "translator/t.sh", "translator/README.md",
                    "atlas/probes/P.lean", "scripts/python/corpus_check.py")
         self.assertEqual(required_paths(tracked), (
-            "scripts/python/agda_run.py", "scripts/python/scaffold_check.py",
+            "scripts/python/agda_check.py", "scripts/python/agda_run.py", "scripts/python/scaffold_check.py",
             "translator/A.lean", "translator/t.sh"))
 
     def test_coverage_missing_absent_and_twice(self) -> None:
@@ -213,10 +213,12 @@ class TestMapChecks(unittest.TestCase):
     def test_map_problems_on_a_small_tree(self) -> None:
         sources = {"translator/A.lean": "def Closure.size := 0\ndef sortNames := 1",
                    "translator/B.lean": "def run : IO Unit := pure ()"}
-        present = files("translator/A.lean", "translator/B.lean", "scripts/python/agda_run.py",
-                        "scripts/python/scaffold_check.py", "docs/translator/notes/a.md", "docs/b.md")
+        present = files("translator/A.lean", "translator/B.lean", "scripts/python/agda_check.py",
+                        "scripts/python/agda_run.py", "scripts/python/scaffold_check.py",
+                        "docs/translator/notes/a.md", "docs/b.md")
         tracked = ("translator/A.lean", "translator/B.lean", "translator/C.lean")
         self.assertEqual(map_problems(DOCUMENT, tracked, sources, present), (
+            f"scripts/python/agda_check.py: no row in {MAP_PATH}",
             f"scripts/python/agda_run.py: no row in {MAP_PATH}",
             f"scripts/python/scaffold_check.py: no row in {MAP_PATH}",
             f"translator/C.lean: no row in {MAP_PATH}"))

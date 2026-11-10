@@ -73,6 +73,7 @@ CHANGELOG_PATH: str = "CHANGELOG.md"
 TRANSLATOR_PYTHON: tuple[str, ...] = (
     "scripts/python/agda_run.py",
     "scripts/python/scaffold_check.py",
+    "scripts/python/agda_check.py",
 )
 
 # The monads in which a Lean function can do more than compute.  `ST`,
