@@ -18,6 +18,8 @@ values compute.
 
 open Lean Lean2Agda
 
+namespace RecursorTests
+
 def require (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -106,10 +108,12 @@ def checkCycles : IO Unit := do
   require (result.map (·.text) == #["r", "-- cyclic definition, postulated\npostulate d"])
     s!"breakCycles: {result.map (·.text)}"
 
-#eval show IO Unit from do
+def run : IO Unit := do
   let env ← importEnvironment #[`Init, `TranslatorTests.Input.Recursors]
   checkPatterns
   checkCoreRecursors env
   checkBlocks env
   checkCycles
   IO.println "recursor checks: patterns, clauses, promoted parameters, absurd clauses, blocks, and cycles passed"
+
+end RecursorTests

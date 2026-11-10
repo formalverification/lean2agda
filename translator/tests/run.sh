@@ -42,8 +42,6 @@ for defect in truncated count duplicate trailing pin malformed; do
   [[ ! -s "$scratch/stdout" ]]
 done
 
-"$lake_cmd" env "$lean_cmd" tests/Recursors.lean
-
 # A scaffold (the profile U module --out writes) must scope-check (the
 # acceptance criterion of issue M2-3) and type-check except for the
 # refusals its golden listing names, which also counts the theorems the

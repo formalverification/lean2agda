@@ -245,7 +245,8 @@ fuel-based in any case, its recursion `Nat.rec` on the fuel;
 
 ## Verification
 
-`make test-translator` runs the following:
+`make test-translator` runs the following, the first three under
+`lake test` (`lake test -- recursors scaffold printing` runs them alone):
 
 +  `tests/Recursors.lean`: the clauses of `Nat.rec` (a recursive field),
    `Eq.rec` and `HEq.rec` (a parameter Agda keeps as an index), `Acc.rec`
@@ -300,6 +301,9 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 +  [#21], merged first: nothing here touches the quotient primitives or
    their rules, and with both every quotient refusal of the goldens and of
    `Init.Core`'s closure checks.
++  [#25], merged first too: the recursor checks are `lake test`'s
+   `recursors`, and the module map has rows for `Recursor.lean`, its
+   types and passes, the checks and the fixture.
 +  [#22]: a recursor block is one `mutual` item and must stay in one
    module; it refers to its types' constructors, so it can sit in the
    module of its block's types or in one that imports it.
@@ -315,6 +319,7 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 [#19]: https://github.com/formalverification/lean2agda/issues/19
 [#21]: https://github.com/formalverification/lean2agda/issues/21
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#25]: https://github.com/formalverification/lean2agda/issues/25
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#31]: https://github.com/formalverification/lean2agda/issues/31
