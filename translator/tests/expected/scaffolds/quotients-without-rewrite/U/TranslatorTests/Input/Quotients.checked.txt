@@ -1,5 +1,6 @@
 checked 6 of 6 declarations, 0 of 0 data types and records
-unfolded 0 of 4 theorems, 0 in vain
+unfolded 1 of 4 theorems, 1 in vain
+unfolded UnequalTerms congrArg for QuotFixtures:eta~umk, in vain | U.Init.Prelude.Quot:lift (λ g₂ → g₂ x₁)
 refused value UnequalTerms QuotFixtures:eta~umk | U.Init.Prelude.Quot:lift (λ g₂ → g₂ x₁)
 refused value UnequalTerms QuotFixtures:ind~umk | U.Init.Prelude.Quot:ind (λ x₁ → U.Init.Prelude.rfl)
 refused value UnequalTerms QuotFixtures:over~umk | U.Init.Prelude.Quot:lift (λ a₀ x₁ → a₀)
