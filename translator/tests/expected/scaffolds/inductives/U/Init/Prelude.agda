@@ -18,6 +18,9 @@ Add:add {α₀} ⦃ self₁ ⦄ = Add.add₁ {α₀} self₁
 data Bool : Set where
   Bool:false : Bool
   Bool:true : Bool
+{-# BUILTIN BOOL Bool #-}
+{-# BUILTIN FALSE Bool:false #-}
+{-# BUILTIN TRUE Bool:true #-}
 
 -- recursor
 Bool:rec : {motive₀ : Bool → Set} → motive₀ Bool:false → motive₀ Bool:true → (t₁ : Bool) → motive₀ t₁
@@ -166,8 +169,15 @@ Nat:brecOn:go {motive₀} t₁ F1₂ = Nat:rec {λ (t₃ : Nat) → PProd (motiv
 Nat:brecOn : {motive₀ : Nat → Set} → (t₁ : Nat) → ((t₂ : Nat) → Nat:below {motive₀} t₂ → motive₀ t₂) → motive₀ t₁
 Nat:brecOn {motive₀} t₁ F1₂ = PProd.fst₂ {motive₀ t₁} {Nat:below {motive₀} t₁} (Nat:brecOn:go {motive₀} t₁ F1₂)
 
+-- operation table
+Nat:add-builtin : Nat → Nat → Nat
+Nat:add-builtin Nat:zero m₁ = m₁
+Nat:add-builtin (Nat:succ n₀) m₁ = Nat:succ (Nat:add-builtin n₀ m₁)
+{-# BUILTIN NATPLUS Nat:add-builtin #-}
+
+-- operation table
 Nat:add : Nat → Nat → Nat
-Nat:add x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Nat} x₁ Nat:add:~uf x₀
+Nat:add x₀ x₁ = Nat:add-builtin x₁ x₀
 
 instAddNat : Add Nat
 instAddNat = Add:mk {Nat} Nat:add
