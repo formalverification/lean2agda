@@ -1,5 +1,5 @@
 -- File: translator/tests/expected/scaffolds/inductives.agda
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of InductiveFixtures:Bad InductiveFixtures:Packed InductiveFixtures:Packed:fits InductiveFixtures:Packed:measured InductiveFixtures:Packed:value and 12 more
 -- refused 3 declarations; refusals.txt names each with its reason
 module U.TranslatorTests.Input.Inductives where

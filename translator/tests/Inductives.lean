@@ -61,7 +61,8 @@ def checkShapes (env : Environment) : IO Unit := do
 /-- The declarations, each as `run.sh` has Agda check it. -/
 def checkDeclarations (env : Environment) : IO Unit := do
   let cases : List (Name × String) := [
-    (``Eq, "data Eq {α₀ : Set} : α₀ → α₀ → Set where\n  Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁"),
+    (``Eq, "data Eq {α₀ : Set} : α₀ → α₀ → Set where\n  Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁\n" ++
+      "{-# BUILTIN REWRITE Eq #-}"),
     (``HEq, "data HEq {α₀ : Set} : α₀ → {β₁ : Set} → β₁ → Set where\n" ++
       "  HEq:refl : (a₁ : α₀) → HEq {α₀} a₁ {α₀} a₁"),
     (``Acc, "data Acc {α₀ : Set} (r₁ : α₀ → α₀ → Set) : α₀ → Set where\n" ++

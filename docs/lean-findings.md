@@ -44,6 +44,7 @@ entry adds its row here too.
 | LF-9 | S2 | hygienic names printed without escapes fail the name-literal decoder |
 | LF-10 | S2 | `by_cases` makes a proof classical without saying so, `Finset.image` among them |
 | LF-11 | S2 | lean4export gives terms that differ only in binder information one record |
+| LF-12 | Checked | the kernel's diagnostics name exactly the declarations that need the quotient's computation rules |
 | LF-13 | S2 | Lake does not track a file that `include_str` reads |
 | LF-14 | S2 | `testDriver` cannot name an executable whose name has a hyphen |
 
@@ -532,6 +533,37 @@ entry adds its row here too.
    uses as the measure of a term's size, counts subterms up to binder names
    and information.
 
+## LF-12: the kernel's diagnostics name exactly the declarations that need the quotient's computation rules
+
++  **Severity**.  Checked.
++  **Found**.  2026-11-08, by issue [#21]'s session, at Lean v4.33.1 and
+   Agda 2.8.0.
++  **What was asked**.  Whether the reduction counters of the kernel's
+   diagnostics (`Kernel.Environment.enableDiag`, `unfoldCounter`) are a
+   trustworthy record of where Lean's kernel applies the computation rules
+   of `Quot.lift` and `Quot.ind`, which the safe profiles must replace by
+   casts ([#30]), or whether a declaration can rely on a rule without the
+   counters showing it.
++  **The answer**.  They agree with an independent measurement.  The profile
+   U scaffold states the two rules as Agda rewrite rules, and
+   `scaffold_check.py --without-rewrite` checks it again without them; the
+   declarations Agda then refuses in addition are exactly those whose
+   kernel re-check counts a reduction of `Quot.lift` or `Quot.ind`: `funext`
+   in the two gcd closures, `Multiset.map_map` and `funext` in the corpus
+   entry, seven declarations of `Init.Core` (`funext`, `Quot.liftBeta`,
+   `Quot.indBeta`, `Quot.liftIndepPr1`, `Quotient.lift₂._proof_2`,
+   `Quotient.rel.refl`, `Quotient.exact`), and the four theorems of the
+   test fixture, with no declaration on one side only.  One caveat: of
+   twelve runs of the probe, eleven gave this list and the first, made
+   while nine `lake exe` processes and a `lake build` started in the same
+   package, listed only `funext` and `Quotient.rel.refl`; three runs under
+   the same condition did not reproduce it, so the cause is unknown, and
+   the agreement above rests on the eleven.
++  **To rerun**.  The probe printed in the Remarks of
+   [`reports/quotient-rules-2026-11-08.md`][report-quot], and the two
+   checker runs its To rerun section lists.
++  **Upstream**.  Nothing filed: the short run could not be reproduced.
+
 ## LF-13: Lake does not track a file that `include_str` reads
 
 +  **Severity**.  S2.  Lake documents `input_file` targets and `needs` as
@@ -634,7 +666,10 @@ entry adds its row here too.
 [export-visited]: https://github.com/leanprover/lean4export/blob/v4.33.0/Export.lean#L38
 [export-format]: https://github.com/leanprover/lean4export/blob/v4.33.0/format_ndjson.md
 [expr-eqv]: https://github.com/leanprover/lean4/blob/v4.33.1/src/Lean/Expr.lean#L804-L812
+[#21]: https://github.com/formalverification/lean2agda/issues/21
 [#25]: https://github.com/formalverification/lean2agda/issues/25
+[#30]: https://github.com/formalverification/lean2agda/issues/30
+[report-quot]: reports/quotient-rules-2026-11-08.md
 [lake-toml-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Load/Toml.lean#L447
 [lake-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Util/Name.lean#L24-L25
 [lake-test-driver]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/CLI/Actions.lean#L75-L87

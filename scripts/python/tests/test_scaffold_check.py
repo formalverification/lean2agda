@@ -5,7 +5,8 @@ Description:
   Tests of scaffold_check.py.  The pure functions are tested on a small
   scaffold written by hand in the shape Scaffold.render produces, with a
   theorem in an opaque block and a postulated cyclic definition, on the
-  record, mutual and pragma blocks of the emitter of issue M2-4, and
+  record, mutual and pragma blocks of the emitter of issue M2-4, on the
+  rewrite rules of issue M2-7, and
   check_module with a fake runner that plays Agda's answers in turn
   (errors shaped as Agda 2.8.0 prints them) and a fake clock.
 """
@@ -21,7 +22,7 @@ from _utils.pipeline_types import ErrorType, PipelineError, Result
 from scaffold_check import (
     Event, Item, Module, Refusal, State, check_module, code, dependents, in_vain, listing, locate,
     parse_item, parse_module, parse_refusal, postulated, references, render, step, theorems,
-    transparent, types_only, unfoldable,
+    transparent, types_only, unfoldable, without_rewrites,
 )
 
 SCAFFOLD = """{-# OPTIONS --type-in-type #-}
@@ -120,6 +121,50 @@ class TestParse(unittest.TestCase):
         self.assertEqual(render(module, state), (module.header + "\n", ()))
         self.assertEqual(listing(state, False),
                          "checked 0 of 0 declarations, 0 of 0 data types and records\nunfolded 0 of 0 theorems, 0 in vain\n")
+
+
+RULES = """{-# OPTIONS --type-in-type --rewriting #-}
+-- a comment
+module U.Q where
+
+data Eq {α₀ : Set} : α₀ → α₀ → Set where
+  Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
+{-# BUILTIN REWRITE Eq #-}
+
+postulate f : Set → Set
+
+-- computation rule
+postulate f-β : (a₀ : Set) → Eq {Set} (f a₀) a₀
+{-# REWRITE f-β #-}
+
+{-# REWRITE f-β #-}
+
+root : Eq {Set} (f Set) Set
+root = Eq:refl Set
+"""
+
+
+class TestRewriteRules(unittest.TestCase):
+    def test_a_rule_is_a_postulate_with_its_label(self) -> None:
+        rule = parse_module(RULES).unwrap().items[2]
+        self.assertEqual((rule.kind, rule.label, rule.names, rule.signature),
+                         ("postulate", "computation rule", ("f-β",), 1))
+
+    def test_without_rewrites_drops_the_pragmas_only(self) -> None:
+        module = parse_module(RULES).unwrap()
+        stripped = without_rewrites(module)
+        self.assertEqual((stripped.name, stripped.header), (module.name, module.header))
+        # The rule stays a postulate under its label, the builtin stays in
+        # Eq's block, and a block of nothing but the pragma goes.
+        self.assertEqual([i.names for i in stripped.items], [("Eq", "Eq:refl"), ("f",), ("f-β",), ("root",)])
+        self.assertEqual(stripped.items[2], Item("postulate", "computation rule", ("f-β",), 1,
+                                                 "-- computation rule\npostulate f-β : (a₀ : Set) → Eq {Set} (f a₀) a₀"))
+        self.assertIs(stripped.items[0], module.items[0])
+        self.assertNotIn("REWRITE f-β", render(stripped, State(stripped.items, (True,) * 4, ()))[0])
+
+    def test_without_rewrites_keeps_a_module_without_rules(self) -> None:
+        module, _ = module_and_state()
+        self.assertEqual(without_rewrites(module), module)
 
 
 class TestReferences(unittest.TestCase):

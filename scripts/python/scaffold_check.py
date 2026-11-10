@@ -8,9 +8,9 @@ Description:
 
   Agda stops at the first error in a module, and a scaffold holds
   hundreds of declarations, some of which cannot check until the
-  emitters of issues M2-5 and M2-7 supply the definitional unfolding
-  they need.  The checker therefore runs Agda on a scratch copy of the
-  module repeatedly, and at each error does one of three things.  When
+  emitter of issue M2-5 supplies the definitional unfolding they need.
+  The checker therefore runs Agda on a scratch copy of the module
+  repeatedly, and at each error does one of three things.  When
   the error's message names a theorem, which the scaffold keeps in an
   `opaque` block, the theorem is re-emitted as a transparent
   definition, so that what needed it to unfold can see its value: the
@@ -27,15 +27,21 @@ Description:
   declaration decides, and the listing says so.
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
-        [--timeout SECONDS] [--messages] [--types-only] MODULE.agda
+        [--timeout SECONDS] [--messages] [--types-only]
+        [--without-rewrite] MODULE.agda
 
   The listing is deterministic, so a test compares it with an expected
   one; `--messages` adds the first line of each error message.
   `--types-only` checks the data types and records alone, with the
   declarations they mention, directly or through each other: what
   Agda's positivity checker sees, in a module a fraction of the size,
-  since Agda's time grows faster than a module.  The number of Agda runs
-  and their times go to standard error.
+  since Agda's time grows faster than a module.  `--without-rewrite`
+  checks the module with its `REWRITE` pragmas removed, the rules left as
+  postulates that never fire: the declarations that check with the
+  pragmas and are refused without them are the ones a rewrite rule fired
+  for, which is how issue M2-7 records where the quotient's computation
+  rules are needed.  The number of Agda runs and their times go to
+  standard error.
 
 Design Principles:
   - The module is never edited in place: the checker writes its copies
@@ -84,6 +90,8 @@ _ERROR = re.compile(r":(\d+)\.\d+-(?:\d+\.)?\d+: error: \[(\w+)\]")
 _MODULE = re.compile(r"^module (\S+) where$", re.MULTILINE)
 # The lines of an opaque block are indented under its keyword.
 _INDENT = "  "
+# The pragma that makes a postulated equation a rewrite rule.
+_REWRITE = "{-# REWRITE "
 
 
 @dataclass(frozen=True)
@@ -241,6 +249,20 @@ def reach(start: frozenset[int], successors: Callable[[int], frozenset[int]]) ->
         frontier = frozenset().union(*(successors(i) for i in frontier)) - found
         found = found | frontier
     return found
+
+
+def without_rewrites(module: Module) -> Module:
+    """The module with every `REWRITE` pragma removed, so that its rules
+    are postulates that never fire.  A block left with no line at all is
+    dropped; one left with lines is classified anew."""
+    def strip(item: Item) -> Optional[Item]:
+        lines = item.text.split("\n")
+        kept = tuple(line for line in lines if not line.startswith(_REWRITE))
+        if len(kept) == len(lines):
+            return item
+        return parse_item("\n".join(kept)) if kept else None
+    stripped = (strip(item) for item in module.items)
+    return Module(module.name, module.header, tuple(item for item in stripped if item is not None))
 
 
 def types_only(module: Module) -> Module:
@@ -435,9 +457,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     parser.add_argument("--messages", action="store_true")
     parser.add_argument("--types-only", action="store_true")
+    parser.add_argument("--without-rewrite", action="store_true")
     args = parser.parse_args(argv)
     with tempfile.TemporaryDirectory(prefix="scaffold-check-") as scratch:
         outcome = read_text(args.module).and_then(parse_module).map(
+            lambda m: without_rewrites(m) if args.without_rewrite else m).map(
             lambda m: types_only(m) if args.types_only else m).and_then(
             lambda m: check_module(run_agda, real_clock, args.agda, m, args.timeout, Path(scratch)))
     if outcome.is_err:

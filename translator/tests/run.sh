@@ -86,6 +86,16 @@ check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
 check_scaffold kinds TranslatorTests.Input.Kinds
+check_scaffold quotients TranslatorTests.Input.Quotients
+
+# Where the quotient's computation rules fire (issue M2-7): the same
+# scaffold with its REWRITE pragmas removed, so that the rules never
+# fire, refuses every root, each of which holds in Lean only because the
+# kernel reduces Quot.lift or Quot.ind on Quot.mk.
+python3 ../scripts/python/scaffold_check.py --agda "${AGDA:-agda}" --messages --without-rewrite \
+  "$(find "$scratch/scaffold-quotients" -name '*.agda')" > "$scratch/quotients-without-rewrite.txt"
+tail -n +2 tests/expected/scaffolds/quotients.without-rewrite.refusals.txt \
+  | diff -u - "$scratch/quotients-without-rewrite.txt"
 
 # The acceptance criterion of issue M2-4: every inductive type of the
 # closure of Init.Core's declarations is declared and checks.  They are

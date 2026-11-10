@@ -227,6 +227,12 @@ motive at `[ l ]` without a rewrite, as Lean's term does.  In Lean, the three
 reductions of item 1 are checked by `rfl` at the pin, for instance
 `Multiset.map g (Multiset.map f ↑l) = ↑((l.map f).map g) := rfl`.
 
+The translator's profile U scaffold makes none of the five explicit
+either: since [#21] it states the kernel's rule as an Agda rewrite rule,
+and with it Agda checks the scaffold's `Multiset.map_map` and `funext`,
+both of which it refuses when the rule is removed
+([`quotient-rules-2026-11-08`][report-quot]).
+
 ## Instance arguments
 
 None in the statement.  The term's one instance is `List.isSetoid α`
@@ -461,6 +467,7 @@ the injectivity theorems Lean generates for each constructor
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#11]: https://github.com/formalverification/lean2agda/issues/11
+[#21]: https://github.com/formalverification/lean2agda/issues/21
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28
@@ -478,3 +485,4 @@ the injectivity theorems Lean generates for each constructor
 [cat-universe-levels]: ../../docs/foundations/gap-catalog.md#universe-levels
 [lean4#15226]: https://github.com/leanprover/lean4/issues/15226
 [p24]: ../../docs/foundations/probes/agda/P24QuotParam.agda
+[report-quot]: ../../docs/reports/quotient-rules-2026-11-08.md
