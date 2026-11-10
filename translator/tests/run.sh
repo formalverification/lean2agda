@@ -138,10 +138,14 @@ check_listings init-core-inductives Init.Core -- "${init_core_inductives[@]}"
 diff -r tests/expected/scaffolds/init-core-inductives "$scratch/actual-init-core-inductives"
 
 # Every declaration of a module, mutual partial definitions included,
-# makes a tree that the refusal loop gets through.
+# makes a tree whose types and recursors the refusal loop gets through.
+# Types only: with every body kept, the loop over this closure had not
+# finished after 50 minutes, each of Init.Prelude's heap refusals (#31)
+# costing a run to the cap; types only, it takes 68 s under the default
+# 8G and 14 s under 2G, with the same listing (2026-11-10).
 "$lake_cmd" exe lean2agda --out "$scratch/module-selection" TranslatorTests.Input.Printing > /dev/null
-python3 ../scripts/python/agda_check.py --refusals --agda "${AGDA:-agda}" -j "$jobs" \
-  "$scratch/module-selection" > /dev/null
+python3 ../scripts/python/agda_check.py --refusals --types-only --heap 2G --agda "${AGDA:-agda}" \
+  -j "$jobs" "$scratch/module-selection" > /dev/null
 
 "$lake_cmd" env "$lean_cmd" tests/NamingGolden.lean > "$scratch/naming-init.txt"
 tail -n +2 tests/expected/naming-init.txt > "$scratch/expected-naming-init.txt"

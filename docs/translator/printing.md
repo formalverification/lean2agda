@@ -632,7 +632,10 @@ broke each rule in turn and showed which checks fail:
    `REWRITE` pragmas, which leaves a rule a postulate under its label and
    `BUILTIN REWRITE` in place;
 +  the scaffold of the printing fixture's whole module, mutual `partial`
-   definitions included, which the refusal loop gets through.
+   definitions included, whose types and recursors the refusal loop gets
+   through (`--types-only`, under a 2G heap: with every body kept, the
+   closure's heap refusals in `Init.Prelude` make the loop take more
+   than 50 minutes).
 
 `make scaffold-corpus` is the check over all twelve corpus entries; it
 needs Mathlib's cache, and no CI job runs it.
