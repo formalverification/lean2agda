@@ -61,10 +61,14 @@ def checkKinds (env : Environment) : IO Unit := do
   let companion ← itemOf s ``KindFixtures.loop._unsafe_rec
   require (companion.text == "-- cyclic definition, postulated\npostulate KindFixtures:loop:~uunsafe~urec : Nat → Nat\n")
     s!"a partial definition's companion: {companion.text}"
-  -- An axiom and a recursor are postulates; the class is a record, which
-  -- declares its constructor (`Inductive.lean`).
-  for n in [``KindFixtures.Q, ``KindFixtures.Marker.rec] do
-    require ((← itemOf s n).text.startsWith "postulate ") s!"{n} is not a postulate"
+  -- An axiom is a postulate, and a recursor is defined by its rule
+  -- (`Recursor.lean`); the class is a record, which declares its
+  -- constructor (`Inductive.lean`).
+  require ((← itemOf s ``KindFixtures.Q).text.startsWith "postulate ") "KindFixtures.Q is not a postulate"
+  let recursor ← itemOf s ``KindFixtures.Marker.rec
+  require (recursor.text.startsWith "-- recursor\nKindFixtures:Marker:rec : " &&
+    recursor.text.endsWith "\nKindFixtures:Marker:rec {α₀} {motive₁} mk₂ (KindFixtures:Marker:mk mark₃) = mk₂ mark₃\n")
+    s!"a recursor: {recursor.text}"
   for n in [``KindFixtures.Marker, ``KindFixtures.Marker.mk] do
     require ((← itemOf s n).text.startsWith "record KindFixtures:Marker ") s!"{n} is not the record"
   -- Refusals: sorryAx, what depends on it, and the unsafe definitions,

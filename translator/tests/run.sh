@@ -77,7 +77,8 @@ check_scaffold nat-gcd-self Init.Data.Nat.Gcd -- Nat.gcd_self
 check_scaffold printing TranslatorTests.Input.Printing -- PrintFixtures.alignedTop \
   PrintFixtures.alignedDeep PrintFixtures.withLet PrintFixtures.redex PrintFixtures.higher \
   PrintFixtures.strict PrintFixtures.pick PrintFixtures.greeting PrintFixtures.large \
-  PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value
+  PrintFixtures.sorts PrintFixtures.doubling PrintFixtures.Pair.first PrintFixtures.Dependent.value \
+  PrintFixtures.etaRepaired PrintFixtures.instanceRepaired PrintFixtures.hiddenInstanceRepaired
 check_scaffold selected TranslatorTests.Input.Consumer -- Fixtures.selected
 check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec \
   InductiveFixtures.Same InductiveFixtures.Sized InductiveFixtures.Packed InductiveFixtures.Packed.width \
@@ -86,6 +87,7 @@ check_scaffold inductives TranslatorTests.Input.Inductives -- InductiveFixtures.
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
 check_scaffold kinds TranslatorTests.Input.Kinds
+check_scaffold recursors TranslatorTests.Input.Recursors
 check_scaffold quotients TranslatorTests.Input.Quotients
 
 # Where the quotient's computation rules fire (issue M2-7): the same

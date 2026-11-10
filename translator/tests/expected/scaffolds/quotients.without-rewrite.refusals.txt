@@ -1,6 +1,7 @@
 # File: translator/tests/expected/scaffolds/quotients.without-rewrite.refusals.txt
 checked 18 of 18 declarations, 2 of 2 data types and records
 unfolded 1 of 5 theorems, 1 in vain
+defined 2 of 2 recursors by pattern matching, 0 refused by the termination checker
 unfolded UnequalTerms congrArg for QuotFixtures:eta~umk, in vain | Quot:lift (λ g₂ → g₂ x₁) (λ x₂ x₃ h₄ → congrArg (λ g₅ → g₅ x₁) h₄)
 refused value UnequalTerms QuotFixtures:eta~umk | Quot:lift (λ g₂ → g₂ x₁) (λ x₂ x₃ h₄ → congrArg (λ g₅ → g₅ x₁) h₄)
 refused value UnequalTerms QuotFixtures:ind~umk | Quot:ind (λ x₁ → rfl) (Quot:mk Eq n₀) != Eq:refl n₀ of type

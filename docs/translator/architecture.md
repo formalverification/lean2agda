@@ -8,8 +8,8 @@ issue builds it and where it stood are in [`../architecture.md`][pipeline],
 the companion note of ADR 0001; this map names the files and definitions
 that implement the stages built so far, and the rules each one implements
 stay in the notes beside it ([`loading.md`][loading],
-[`naming.md`][naming], [`printing.md`][printing] and
-[`inductives.md`][inductives]).
+[`naming.md`][naming], [`printing.md`][printing],
+[`inductives.md`][inductives] and [`recursors.md`][recursors]).
 
 The map is kept true by a test.  `scripts/python/standards_check.py`, run
 by `make test` (`tests/test_standards_check.py`), fails on any of the
@@ -65,8 +65,8 @@ One run of `lake exe lean2agda [--out DIR] [--stats] MODULE... [-- DECL...]`,
 from the command line to the files it writes, then the scaffold checker
 that the harness (or a person) runs on the scaffold.  Each row is one
 definition.  The rows from `addAuxiliaries` to `orderItems` run inside
-`scaffold`, and `inductiveDecl` inside `scaffoldItem`; `ruleItem` follows
-`scaffoldItem` for `Quot.lift` and `Quot.ind`.  Without `--out`
+`scaffold`, and `inductiveDecl` and `recursorDecl` inside `scaffoldItem`;
+`ruleItem` follows `scaffoldItem` for `Quot.lift` and `Quot.ind`.  Without `--out`
 the run stops after the listing; with `--stats` it appends the counts.
 
 | Definition | File | Consumes | Produces |
@@ -84,10 +84,12 @@ the run stops after the listing; with `--stats` it appends the counts.
 | `scaffold` | `translator/Lean2Agda/Core/Scaffold.lean` | the environment, the root, the shared closure | the `Scaffold`: its items in order, its counts, its refusals |
 | `addAuxiliaries` | `translator/Lean2Agda/Core/Share.lean` | the environment and the shared closure | the environment with the auxiliary definitions added, checked by the kernel |
 | `refuseDeclarations` | `translator/Lean2Agda/Core/Scaffold.lean` | the closure's declarations | the refused ones, each with its `Refusal` |
+| `recursorBlocks` | `translator/Lean2Agda/Core/Scaffold.lean` | the kept declarations | the recursors of each block of inductive types, keyed by its first type, in `recursorRank`'s order |
 | `scaffoldItem` | `translator/Lean2Agda/Core/Scaffold.lean` | one kept declaration | its `ScaffoldItem`, by kind, through the printer's `Printer.type` and `Printer.clause` |
 | `ruleItem` | `translator/Lean2Agda/Core/Scaffold.lean` | a quotient primitive's computation rule, from `quotRule?` | its `ScaffoldItem`: the rule's postulate and its `REWRITE` pragma |
 | `inductiveDecl` | `translator/Lean2Agda/Core/Inductive.lean` | a block's `InductiveMember`s, from `blockMembers` | its `InductiveDecl`: `data` and `record` lines, shaped by `isAgdaRecord` and `agdaParamCount` |
-| `breakCycles` | `translator/Lean2Agda/Core/Scaffold.lean` | the items | the items, a cyclic definition postulated |
+| `recursorDecl` | `translator/Lean2Agda/Core/Recursor.lean` | a block's recursors, from `recursorBlocks` | its `RecursorDecl`: each recursor's signature and its clauses by `recursorClauses`, one `mutual` block for several |
+| `breakCycles` | `translator/Lean2Agda/Core/Scaffold.lean` | the items | the items, a cyclic definition postulated and a recursor's own recursion left alone |
 | `orderItems` | `translator/Lean2Agda/Core/Scaffold.lean` | the items | the items, each after what it refers to |
 | `Scaffold.render` | `translator/Lean2Agda/Core/Scaffold.lean` | the scaffold and `scaffoldComment`'s line | the module's text, written at `Scaffold.filePath` |
 | `Scaffold.renderRefusals` | `translator/Lean2Agda/Core/Scaffold.lean` | the scaffold | `refusals.txt` |
@@ -121,8 +123,11 @@ structures are, and each Python one is a frozen dataclass.
 | `Printer` | `translator/Lean2Agda/Core/Print.lean` | `scaffold`, with the environment and a `Naming` | `Printer.type`, `Printer.clause`, `Printer.telescope`, `Printer.term` |
 | `Scope` | `translator/Lean2Agda/Core/Print.lean` | `Scope.enter` and `enterTelescope` | the printer and `Inductive.lean`'s `dataLines` and `recordLines` |
 | `Clause` | `translator/Lean2Agda/Core/Print.lean` | `Printer.clause` | `valueItem` in `Scaffold.lean` |
+| `Pattern` | `translator/Lean2Agda/Core/Print.lean` | `recursorClause`, `absurdClause` and `variablePatterns` in `Recursor.lean` | `PatternClause.render` |
+| `PatternClause` | `translator/Lean2Agda/Core/Print.lean` | `recursorClause` and `absurdClause` in `Recursor.lean` | `recursorDecl`, through `PatternClause.render` |
 | `InductiveMember` | `translator/Lean2Agda/Core/Inductive.lean` | `blockMembers` | `inductiveDecl` |
 | `InductiveDecl` | `translator/Lean2Agda/Core/Inductive.lean` | `inductiveDecl` | `inductiveItem` in `Scaffold.lean` |
+| `RecursorDecl` | `translator/Lean2Agda/Core/Recursor.lean` | `recursorDecl` | `recursorItem` in `Scaffold.lean` |
 | `ScaffoldItem` | `translator/Lean2Agda/Core/Scaffold.lean` | `scaffoldItem` | `breakCycles`, `orderItems`, `Scaffold.render` |
 | `Refusal` | `translator/Lean2Agda/Core/Scaffold.lean` | `refuseDeclarations` | `Scaffold.renderRefusals` |
 | `Scaffold` | `translator/Lean2Agda/Core/Scaffold.lean` | `scaffold` | `writeOutputs` |
@@ -168,7 +173,8 @@ and `translator/Lean2Agda/Main.lean`.
 | `translator/Lean2Agda/Core/InductiveShape.lean` | emit: inductives | an inductive type | record or data, the parameters kept, a field's binder | pure | [`inductives.md`][inductives] |
 | `translator/Lean2Agda/Core/Print.lean` | emit: printer | a kernel expression | `AgdaTerm`, its text, a clause, `PrintCounts` | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/Inductive.lean` | emit: inductives | a block of inductive types | its Agda declaration | pure | [`inductives.md`][inductives] |
-| `translator/Lean2Agda/Core/Scaffold.lean` | emit: scaffold | the shared closure | the scaffold, its quotient computation rules, and its refusals | pure | [`printing.md`][printing] |
+| `translator/Lean2Agda/Core/Recursor.lean` | emit: recursors | a block's recursors | their signatures and clauses, one per rule of the kernel's, as one `mutual` block for several | pure | [`recursors.md`][recursors] |
+| `translator/Lean2Agda/Core/Scaffold.lean` | emit: scaffold | the shared closure | the scaffold, its recursor blocks, its quotient computation rules, and its refusals | pure | [`printing.md`][printing] |
 | `scripts/python/scaffold_check.py` | check | a scaffold | its listing of refusals and unfoldings | IO in `check_module` and `main`; the rest pure | [`printing.md`][printing] |
 | `scripts/python/agda_run.py` | check | a file and a directory | Agda's verdict, classified | IO in `run_agda`, `check_file` and `real_clock`; the rest pure | [`printing.md`][printing] |
 
@@ -207,7 +213,8 @@ named checks only.
 | `translator/tests/Inductives.lean` | `lake test` (`inductives`) | record or data, parameters kept, the declarations of core types and the fixtures, projections, sharing in constructor types |
 | `translator/tests/Naming.lean` | `lake test` (`naming`) | identifiers, reverse maps, injectivity over samples and `Init`, module paths; writes `NamingLexical.agda` and `NamingImport.agda` to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/Printing.lean` | `lake test` (`printing`) | the layout, binder names, constructors, telescopes, repairs, sharing; writes `PrintingLexical.agda` to `PRINTING_AGDA_TEST_DIR` |
-| `translator/tests/Scaffold.lean` | `lake test` (`scaffold`) | each kind's item, refusals, `unsafe` and sharing, cycles, builtins, the quotient's computation rules against `Quot.liftBeta` and `Quot.indBeta` |
+| `translator/tests/Recursors.lean` | `lake test` (`recursors`) | the recursors' clauses, a parameter Agda keeps as an index, the absurd clause, `String`'s recursor postulated, nested and mutual blocks in `recursorRank`'s order, the patterns' layout, `breakCycles` leaving a recursor's recursion alone |
+| `translator/tests/Scaffold.lean` | `lake test` (`scaffold`) | each kind's item, a class's recursor by its clause, refusals, `unsafe` and sharing, cycles, builtins, the quotient's computation rules against `Quot.liftBeta` and `Quot.indBeta` |
 | `translator/tests/NamingAtlasFixture.lean` | `run.sh`, `lake env lean` | writes the NDJSON fixtures `naming-check-atlas` runs on, valid and defective, to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/NamingGolden.lean` | `run.sh`, `lake env lean` | prints the names `Init.Data.Nat.Gcd` owns, diffed with `tests/expected/naming-init.txt` |
 | `translator/tests/NamingSidecars.lean` | `run.sh`, `lake env lean` | the sidecars a run wrote to `NAMING_OUTPUT_DIR`, under `NAMING_ROOT`, against the closure's |
@@ -220,6 +227,7 @@ named checks only.
 | `translator/tests/TranslatorTests/Input/Kinds.lean` | fixture | every kind the scaffold emits or refuses |
 | `translator/tests/TranslatorTests/Input/Printing.lean` | fixture | every expression constructor and binder visibility, the repairs, a sharing blowup |
 | `translator/tests/TranslatorTests/Input/Quotients.lean` | fixture | theorems that hold by `rfl` only through a quotient's computation rule |
+| `translator/tests/TranslatorTests/Input/Recursors.lean` | fixture | values that compute through recursors: structural recursion, an indexed family, nested and mutual types, a `K`-like family, a type without constructors |
 | `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden scaffolds and refusal listings through `scaffold_check.py`; the `quotients` scaffold with its rewrite rules removed; `Init.Core`'s inductive types; the golden listings and sidecars; `--version`; the command line's failures |
 
 The fixture `Consumer.lean` declares an `initialize`, so it mentions `IO`;
@@ -288,6 +296,7 @@ version and the profile, in the library's `NOTICE` and README
 [naming]: naming.md
 [printing]: printing.md
 [inductives]: inductives.md
+[recursors]: recursors.md
 [translator-readme]: ../../translator/README.md
 [atlas]: ../../atlas/README.md
 [findings]: ../lean-findings.md

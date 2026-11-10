@@ -36,6 +36,10 @@ The entries are as follows:
 +  The engineering standards: the module map and its test, the `File:`
    header test, `lake test`, `translator/VERSION` with `--version`, and
    this file ([#25]).
++  Recursors defined by pattern matching on their constructors, one
+   clause per rule of the kernel's and a `mutual` block for several; the
+   printer's eta repair; the checker's heap bound and its markers, which
+   charge an exhausted run to the declaration Agda died in ([#82]).
 
 [#25]: https://github.com/formalverification/lean2agda/issues/25
 [#64]: https://github.com/formalverification/lean2agda/pull/64
@@ -45,6 +49,7 @@ The entries are as follows:
 [#77]: https://github.com/formalverification/lean2agda/pull/77
 [#80]: https://github.com/formalverification/lean2agda/pull/80
 [#81]: https://github.com/formalverification/lean2agda/pull/81
+[#82]: https://github.com/formalverification/lean2agda/pull/82
 [#83]: https://github.com/formalverification/lean2agda/pull/83
 
 [map]: docs/translator/architecture.md
