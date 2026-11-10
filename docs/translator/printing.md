@@ -3,17 +3,19 @@
 # Printing expressions
 
 The printer turns a Lean kernel expression into Agda text under profile U
-(`--type-in-type`, postulates allowed), and the sharing pass first moves
-repeated closed subterms into auxiliary definitions, so that the text
-stays near the size of the shared term.  Issue [#17] implements both, in
-`translator/Lean2Agda/Core/Print.lean` and `Core/Share.lean`, and a
-scaffold, `Core/Scaffold.lean`, that tests them with Agda until the
-emitters of [#19] and [#21] exist; [#18] added the inductive types
-([`inductives.md`][inductives]), and [#20] gave the scaffold its rules for
+(`--type-in-type --rewriting`, postulates allowed), and the sharing pass
+first moves repeated closed subterms into auxiliary definitions, so that
+the text stays near the size of the shared term.  Issue [#17] implements
+both, in `translator/Lean2Agda/Core/Print.lean` and `Core/Share.lean`, and
+a scaffold, `Core/Scaffold.lean`, that tests them with Agda until the
+emitter of [#19] exists; [#18] added the inductive types
+([`inductives.md`][inductives]), [#20] gave the scaffold its rules for
 definitions, theorems, opaque constants and axioms, and the fallback that
-unfolds a theorem when a dependent needs it.  The measurements behind the
-choices below are in the dated reports [`printing-blowup`][report] and
-[`opaque-theorems`][report-opaque].
+unfolds a theorem when a dependent needs it, and [#21] gave the quotient
+primitives the kernel's computation rules as rewrite rules.  The
+measurements behind the choices below are in the dated reports
+[`printing-blowup`][report], [`opaque-theorems`][report-opaque] and
+[`quotient-rules`][report-quot].
 
 ## Command line
 
@@ -40,6 +42,9 @@ python3 ../scripts/python/agda_check.py --refusals --messages --listings listed 
 the pass off.  The listing, `closure.txt` and standard output are as
 before.  The sidecars are those of the shared closure, so that they map the
 auxiliary definitions' identifiers back to their structured names too.
+`agda_check.py --refusals --without-rewrite` checks the tree with its
+`REWRITE` pragmas removed (Quotients, below), as `scaffold_check.py
+--without-rewrite` does for one module.
 
 ## The printer
 
@@ -151,8 +156,10 @@ checks the table on 28 cases.
 ### Sorts under profile U
 
 Every sort prints as `Set`, `Prop` and `imax u v` included, and the
-scaffold's options are `--type-in-type` alone.  lyphyser's output adds
-`--prop` and prints `Prop` for `Sort 0` ([`related-work.md`][related]),
+scaffold's one option about sorts is `--type-in-type` (its other,
+`--rewriting`, is for the quotient's computation rules, below).  lyphyser's
+output adds `--prop` and prints `Prop` for `Sort 0`
+([`related-work.md`][related]),
 but Agda's `Prop` and `Set` are different sorts, and a Lean constant whose
 universe parameter is instantiated at zero then receives a `Prop` where its
 printed type has `Set`.  Measured on the scaffolds of `nat-gcd-succ` and
@@ -252,9 +259,11 @@ declarations are [#44]'s.
 ## The scaffold
 
 The scaffold declares a closure's constants under
-`{-# OPTIONS --type-in-type #-}`, one Agda module per Lean module
-([`modules.md`][modules]).  Issues [#18] and [#20] settled how each kind
-of declaration is emitted, as follows:
+`{-# OPTIONS --type-in-type --rewriting #-}`, one Agda module per Lean
+module ([`modules.md`][modules]); `--rewriting` is in every module's
+pragma, since Agda refuses a module that imports one using it without it.
+Issues [#18], [#20] and [#21] settled how each kind of declaration is
+emitted, as follows:
 
 +  the inductive types, each block of them one declaration: a record for
    each type with one constructor and no indices, a data type for each
@@ -277,8 +286,9 @@ of declaration is emitted, as follows:
    also makes, with an inhabitant of its type as the value) is a
    definition inside an `opaque` block, under `-- opaque constant`: the
    value Lean's kernel never unfolds, kept but never unfolded;
-+  an axiom is a postulate, and so are the recursors and the quotient
-   primitives until [#19] and [#21] emit them.
++  an axiom is a postulate, and so are the recursors until [#19] emits
+   them, and the quotient primitives, `Quot.lift` and `Quot.ind` each
+   followed by its computation rule as a rewrite rule (Quotients, below).
 
 Three refinements, as follows:
 
@@ -323,6 +333,67 @@ group (an inductive type with its recursor) the printed references decide.
 A module sits at the path of its source module's sidecar, so a reverse
 lookup of an identifier needs only the sidecar beside the module, or, for
 a part of a split module, beside the module it is a part of.
+
+### Quotients
+
+Lean's kernel reduces `Quot.lift f h (Quot.mk r a)` to `f a` and
+`Quot.ind mk (Quot.mk r a)` to `mk a` ([gap catalog][catalog-quot]).  A
+postulated `Quot.lift` does not compute, so before [#21] Agda refused
+`funext`, whose proof relies on the first rule, at
+`Quot:lift (λ f₈ → f₈ x₇) (λ x₈ x₉ h₁₀ → h₁₀ x₇) (Quot:mk eqv₅ f₂)`.  The
+scaffold keeps `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` and the axiom
+`Quot.sound` as postulates and states the two rules as Agda rewrite rules,
+as follows:
+
++  every scaffold's options include `--rewriting`, and the block of `Eq`
+   declares it the rewrite relation with `{-# BUILTIN REWRITE Eq #-}`, as
+   `Nat`'s carries `BUILTIN NATURAL`;
++  after the postulate of `Quot.lift` comes a postulate `Quot:lift-β` of
+   `Quot.lift f h (Quot.mk r a) = f a`, under the comment
+   `-- computation rule` and followed by `{-# REWRITE Quot:lift-β #-}`, and
+   after the postulate of `Quot.ind`, likewise, `Quot:ind-β` of
+   `Quot.ind mk (Quot.mk r a) = mk a`; a closure without `Quot` has
+   neither;
++  each rule's type is the statement of Lean's `Quot.liftBeta` or
+   `Quot.indBeta`, which `tests/Scaffold.lean` checks in the kernel, built
+   in `Scaffold.lean` rather than read from the environment, since
+   `init_quot` is in `Init.Prelude` and the two theorems are in
+   `Init.Core`; the printer prints it, so that its left-hand side applies
+   `Quot:lift` and `Quot:mk` with the visibilities every printed
+   application of them has,
+   `Quot:lift {α₀} {r₁} {β₂} f₃ h₄ (Quot:mk {α₀} r₁ a₅)`;
++  the rules' identifiers end in `-β`, two characters no `agdaIdent`
+   produces (it escapes both), so they cannot collide with a Lean
+   constant's; they name no Lean constant, so no names sidecar has them.
+
+A probe, run on 2026-10-13 and again on 2026-11-08, settled the two
+questions the emission rests on, under Agda 2.8.0, as follows:
+
++  Agda accepts the emitted `Eq`, a data type with an implicit parameter
+   and two indices, as the rewrite relation: the manual asks only that the
+   relation take at least two arguments, the last two visible;
++  Agda accepts a rule whose left-hand side applies a postulate,
+   `Quot:lift` or `Quot:ind`, to another, `Quot:mk`, and gives no
+   `RewriteVariablesBoundInSingleton` warning.
+
+With both rules the golden's `funext` checks, and without them it fails
+with the golden's refusal, word for word; a lift into a function type
+applied to one more argument, and a lift under a binder whose result is a
+function only by eta (the shape of `funext`'s proof), fire as well.
+`--safe` refuses `--rewriting` (`[SafeFlagPragma] The --safe mode does not
+allow OPTIONS pragma --rewriting`), with `--confluence-check` too, so no
+safe profile can state the rules; there the parameter record's
+propositional rule and the normalizer's casts take their place ([#30]).
+
+`agda_check.py --refusals --without-rewrite` checks a tree with its
+`REWRITE` pragmas removed (`scaffold_check.py --without-rewrite` one
+module), the rules left as postulates that never fire: a
+declaration that checks with the pragmas and is refused without them is
+one a rule fired for, and so one that needs a cast in the safe profiles.
+The harness checks the fixture `tests/TranslatorTests/Input/Quotients.lean`
+both ways; [`quotient-rules`][report-quot] gives the record for the corpus
+scaffolds and `Init.Core`, beside the declarations whose check reduces
+`Quot.lift` or `Quot.ind` in Lean's kernel.
 
 ### What Agda checks, and the fallback
 
@@ -380,12 +451,13 @@ a data type or a record with its constructors being one):
 | Scaffold | Declarations | Data types and records | Values | Checked | Refused | Behind a refused type | Theorems | Unfolded |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `list-reverse-reverse` | 34 | 6 | 21 | 17 | 4 | 0 | 10 | 0 |
-| `nat-gcd-succ` | 252 | 23 | 201 | 141 | 49 | 11 | 65 | 0 |
-| `nat-gcd-self` | 320 | 24 | 266 | 182 | 62 | 22 | 103 | 0 |
+| `nat-gcd-succ` | 254 | 23 | 201 | 142 | 48 | 11 | 65 | 0 |
+| `nat-gcd-self` | 322 | 24 | 266 | 183 | 61 | 22 | 103 | 0 |
 | printing fixture | 333 | 41 | 248 | 199 | 49 | 0 | 47 | 0 |
 | `Fixtures.selected` | 29 | 6 | 17 | 15 | 2 | 0 | 0 | 0 |
 | inductives fixture | 77 | 24 | 29 | 27 | 2 | 0 | 1 | 0 |
 | `kinds` | 333 | 41 | 246 | 195 | 51 | 0 | 51 | 2, one in vain |
+| `quotients` | 18 | 2 | 8 | 8 | 0 | 0 | 5 | 0 |
 | `Init.Core`'s inductive types | 539 | 144 | 246 | 197 | 49 | 0 | 48 | 0 |
 
 Every type checks but three: the compiled matcher of
@@ -401,10 +473,15 @@ a postulate must compute, as follows:
    the `brecOn` definitions, `Bool.rec` under `decEq`, `Decidable.rec`
    under `ite` and `dite`'s lemmas, `PProd.rec` and `List.rec` under the
    structural-recursion helpers, and `Eq.rec` on `Eq.refl` ([#19]);
-+  `Quot.lift` in `funext` ([#21]);
 +  K-like reduction of `Eq.rec` on `h : α = α` in `eq_of_heq`, which
    under `--type-in-type` does not reduce on a variable and which the
    normalizer of [#26] is to make explicit.
+
+`Quot.lift` in `funext` was a third class until [#21]: with the
+computation rules, `funext` checks in both gcd scaffolds, which is the
+only change in their listings, and each gains the two rules as
+declarations.  `quotients`, the fixture of the rules, checks entirely,
+and its listing with `--without-rewrite` refuses its four roots.
 
 No refusal names a theorem: the fallback fired on none of the corpus and
 inductive scaffolds, and on `kinds` twice, once for the pair written to
@@ -429,7 +506,14 @@ unfolds to `Quot.sound`.  Eleven of its refusals are two proof variables
 of one proposition compared (`property₇ != property₈`), which is [#27]'s
 encoding of `Prop` to settle.  The dated report
 [`opaque-theorems`][report-opaque] has the tables, the classes, and the
-same run with the inductive types still postulates.
+same run with the inductive types still postulates.  With the quotient's
+computation rules ([#21]; 1,965 declarations, the two rules among them),
+1,351 values check and 305 are refused: the rules fire for `funext`,
+`Quot.liftBeta`, `Quot.indBeta`, `Quot.liftIndepPr1`,
+`Quotient.lift₂._proof_2`, `Quotient.rel.refl` and `Quotient.exact`, the
+seven declarations whose kernel check reduces `Quot.lift` or `Quot.ind`,
+and for `Quotient.lift₂._proof_2` the fallback's two unfoldings, in vain
+before, now help ([`quotient-rules`][report-quot]).
 
 ## Verification
 
@@ -442,6 +526,11 @@ broke each rule in turn and showed which checks fail:
    doubling of 2^20 leaves and its auxiliaries (kernel-checked, owned,
    printed in linear size);
 +  `tests/Scaffold.lean`: on the fixture
+   `tests/TranslatorTests/Input/Quotients.lean`, the two computation
+   rules, each well typed and definitionally equal in the kernel to Lean's
+   `Quot.liftBeta` or `Quot.indBeta`, their exact printed text, each after
+   its primitive, `Quot.mk` and `Eq`, `Eq` declared the rewrite relation,
+   and no rule in a closure without `Quot`; on the fixture
    `tests/TranslatorTests/Input/Kinds.lean`, the emission of each kind (a
    definition and an instance transparent, a theorem and an opaque
    constant in `opaque` blocks, a `partial` definition and its postulated
@@ -452,24 +541,28 @@ broke each rule in turn and showed which checks fail:
    companions of the printing fixture, and a `String` root's builtin;
 +  `PrintingLexical.agda`, which `tests/Printing.lean` writes: a binder
    built from every Agda keyword and sort name, which Agda checks;
-+  seven scaffolds against golden trees in `tests/expected/scaffolds/`
++  eight scaffolds against golden trees in `tests/expected/scaffolds/`
    ([`modules.md`][modules]), type-checked module by module with
    `agda_check.py --refusals` against golden listings, one per module and
    their sums in `checked.txt`: the three core-Lean corpus entries, the
    printing fixture (`tests/TranslatorTests/Input/Printing.lean`, which
    prints every constructor, every visibility and both repairs),
    `Fixtures.selected`, the inductive types' fixture of
-   [`inductives.md`][inductives], and `kinds`, whose golden
-   `refusals.txt` names the six refused declarations and whose listings
-   show the fallback; the scaffold of `Init.Core`'s inductive types,
+   [`inductives.md`][inductives], `kinds`, whose golden `refusals.txt`
+   names the six refused declarations and whose listings show the
+   fallback, and `quotients`, whose four roots check, with a second set of
+   listings of the same tree checked with `--without-rewrite`, which
+   refuses all four; the scaffold of `Init.Core`'s inductive types,
    against its listings alone; and the declarations each scaffold's
    translator refuses, against a golden `refusals.txt` where one exists
    and required to be none otherwise;
 +  `scripts/python/tests/test_scaffold_check.py`: the checker's parsing
    of every block shape, the fallback's trigger (only a theorem the message
    proper names, never the refused declaration itself), the transparent
-   form, the postulate form, the `in vain` mark, and a run in which the
-   fake Agda names a theorem;
+   form, the postulate form, the `in vain` mark, a run in which the
+   fake Agda names a theorem, and the removal of `REWRITE` pragmas, which
+   leaves a rule a postulate under its label and `BUILTIN REWRITE` in
+   place;
 +  the scaffold of the printing fixture's whole module, mutual `partial`
    definitions included, which the refusal loop gets through.
 
@@ -513,9 +606,17 @@ It assumes the following of its callers:
    declared every inductive type, `Nat` included; [#20] made definitions
    transparent and theorems opaque, and refuses `sorryAx` and `unsafe`;
    [#19] defines the recursors, which `projectionAsRecursor` still uses
-   for the types with one constructor that are not records; [#21] gives
-   `Quot.lift` its rewrite rule.  Each replaces a `postulateItem` case of
-   `scaffoldItem` in `Core/Scaffold.lean`.
+   for the types with one constructor that are not records, and replaces
+   the `postulateItem` case of `scaffoldItem` in `Core/Scaffold.lean` that
+   recursors still reach.  [#21] left the quotient primitives postulates
+   and added their computation rules beside them (`quotRule?`,
+   `ruleItem`); an emitter that turns `Quot.lift` or `Quot.ind` into a
+   definition must drop its rule, since a rewrite rule's left-hand side
+   must not reduce.
++  The safe profiles cannot use the rules (`--safe` refuses
+   `--rewriting`): the declarations that check only with them, which
+   `agda_check.py --refusals --without-rewrite` finds, are where [#30]'s
+   casts by the propositional rule must go.
 +  The scaffold's golden listings measure that progress: a refusal that
    disappears is an emitter's success, and the listing should be
    regenerated with it.  A refusal that names a theorem is the fallback's,
@@ -530,9 +631,12 @@ It assumes the following of its callers:
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28
+[#30]: https://github.com/formalverification/lean2agda/issues/30
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [report]: ../reports/printing-blowup-2026-10-12.md
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
+[report-quot]: ../reports/quotient-rules-2026-11-08.md
+[catalog-quot]: ../foundations/gap-catalog.md#quotients
 [naming]: naming.md
 [modules]: modules.md
 [catalog-irrel]: ../foundations/gap-catalog.md#proof-irrelevance

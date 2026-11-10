@@ -79,6 +79,16 @@ check_tree inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec 
   "InductiveFixtures.Stream'" InductiveFixtures.Term InductiveFixtures.Pair InductiveFixtures.Wide \
   InductiveFixtures.Bad
 check_tree kinds TranslatorTests.Input.Kinds
+check_tree quotients TranslatorTests.Input.Quotients
+
+# Where the quotient's computation rules fire (issue M2-7): the same
+# tree with its REWRITE pragmas removed, so that the rules never fire,
+# refuses every root, each of which holds in Lean only because the
+# kernel reduces Quot.lift or Quot.ind on Quot.mk.  Only the listings
+# are compared.
+python3 ../scripts/python/agda_check.py --refusals --messages --without-rewrite --agda "${AGDA:-agda}" \
+  -j "$jobs" --listings "$scratch/quotients-without-rewrite" "$scratch/scaffold-quotients" > /dev/null
+diff -r tests/expected/scaffolds/quotients-without-rewrite "$scratch/quotients-without-rewrite"
 
 # The driver of issue M2-8 (make check-output): the final tree of the
 # loop over `selected` checks module by module, as it is.

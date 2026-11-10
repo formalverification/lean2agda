@@ -203,7 +203,9 @@ def moduleParts (root : Root) (qualifiedOwner : Std.HashMap String ModuleName) (
 rewritten.  Each declaration belongs to its source module, an auxiliary
 definition to its owner's; an auxiliary appears when something the
 scaffold prints uses it, and a refused declaration does not appear, nor
-do its auxiliaries.  Within a module the items are ordered as the single
+do its auxiliaries.  The computation rules of `Quot.lift` and `Quot.ind`
+join their postulates' module, which `orderItems` keeps after `Quot.mk`
+and `Eq` too.  Within a module the items are ordered as the single
 scaffold ordered them; a module none of whose declarations is emitted is
 not written. -/
 def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
@@ -242,6 +244,10 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
     let mut items := #[]
     for decl in groups[m]! do
       if let some (item, c) ← scaffoldItem p byName decl then
+        items := items.push item
+        counts := counts.add c
+      if let some (name, type) := quotRule? decl.name then
+        let (item, c) ← ruleItem p name type
         items := items.push item
         counts := counts.add c
     let ordered ← orderItems (breakCycles items)

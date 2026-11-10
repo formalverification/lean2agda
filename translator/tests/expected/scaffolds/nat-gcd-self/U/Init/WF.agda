@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of Nat:gcd~uself
 -- Lean module Init.WF
 module U.Init.WF where

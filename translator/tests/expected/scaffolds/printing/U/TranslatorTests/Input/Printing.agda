@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of PrintFixtures:Dependent:value PrintFixtures:Pair:first PrintFixtures:alignedDeep PrintFixtures:alignedTop PrintFixtures:doubling and 8 more
 -- Lean module TranslatorTests.Input.Printing
 module U.TranslatorTests.Input.Printing where

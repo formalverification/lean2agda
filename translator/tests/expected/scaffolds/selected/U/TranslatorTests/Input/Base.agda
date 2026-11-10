@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of Fixtures:selected
 -- Lean module TranslatorTests.Input.Base
 module U.TranslatorTests.Input.Base where

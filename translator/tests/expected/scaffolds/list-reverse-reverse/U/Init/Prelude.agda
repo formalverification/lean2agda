@@ -1,10 +1,11 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of List:reverse~ureverse
 -- Lean module Init.Prelude
 module U.Init.Prelude where
 
 data Eq {α₀ : Set} : α₀ → α₀ → Set where
   Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
+{-# BUILTIN REWRITE Eq #-}
 
 postulate Eq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : (a₂ : α₀) → Eq {α₀} a₁ a₂ → Set} → motive₂ a₁ (Eq:refl {α₀} a₁) → {a₃ : α₀} → (t₄ : Eq {α₀} a₁ a₃) → motive₂ a₃ t₄
 

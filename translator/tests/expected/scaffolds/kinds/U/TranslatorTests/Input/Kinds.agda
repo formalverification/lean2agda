@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of KindFixtures:Marker KindFixtures:Marker:casesOn KindFixtures:Marker:ctorIdx KindFixtures:Marker:mark KindFixtures:Marker:mk and 22 more
 -- Lean module TranslatorTests.Input.Kinds
 -- refused 5 declarations; refusals.txt names each with its reason

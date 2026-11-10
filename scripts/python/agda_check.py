@@ -46,13 +46,16 @@ Description:
     them in).  `--types-only` keeps
     in each module what scaffold_check.py's `--types-only` keeps, and
     what any kept declaration of the tree names, in its own module or
-    another, directly or not.
+    another, directly or not.  `--without-rewrite` removes every module's
+    `REWRITE` pragmas first, as scaffold_check.py's `--without-rewrite`
+    does: what checks with them and is refused without them is what a
+    rewrite rule fired for.
 
     python3 scripts/python/agda_check.py [-j N] [--fresh] [--agda AGDA]
         [--timeout SECONDS] [--heap SIZE] [--json] DIR
     python3 scripts/python/agda_check.py --refusals [-j N] [--messages]
-        [--listings OUT] [--keep OUT] [--types-only] [--agda AGDA]
-        [--timeout SECONDS] [--heap SIZE] DIR
+        [--listings OUT] [--keep OUT] [--types-only] [--without-rewrite]
+        [--agda AGDA] [--timeout SECONDS] [--heap SIZE] DIR
 
   Agda runs with GHC's heap bounded (`--heap`, 8G by default, GHC's
   `-M`) and names each declaration as it starts it (`-v tc.decl:5`), so
@@ -97,7 +100,7 @@ from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import Clock, FileRun, Outcome, Runner, check_file, real_clock
 from scaffold_check import (
     Checked, Event, Module, State, check_module, code, listing, parse_module, reach,
-    references, types_only,
+    references, types_only, without_rewrites,
 )
 
 DEFAULT_TIMEOUT: float = 3600.0
@@ -658,16 +661,24 @@ class Pruned:
     error: str = ""
 
 
-def restrict_tree(tree: Tree, scratch: Path) -> Result[None, str]:
-    """Rewrite the scratch tree's modules as types_only_tree restricts
-    them."""
+def rewrites_removed(modules: Mapping[str, Module]) -> dict[str, Module]:
+    """Each module without its `REWRITE` pragmas, as
+    scaffold_check.without_rewrites leaves it."""
+    return {name: without_rewrites(module) for name, module in modules.items()}
+
+
+def restrict_tree(tree: Tree, scratch: Path,
+                  restrict: Callable[[Mapping[str, Module]], Mapping[str, Module]] = types_only_tree
+                  ) -> Result[None, str]:
+    """Rewrite the scratch tree's modules as `restrict` gives them,
+    types_only_tree by default."""
     parsed: dict[str, Module] = {}
     for name, source in tree.modules.items():
         module = read_text(scratch / source.path).map_err(str).and_then(lambda t: parse_module(t).map_err(str))
         if module.is_err:
             return Result.err(module.unwrap_err())
         parsed[name] = module.unwrap()
-    for name, module in types_only_tree(parsed).items():
+    for name, module in restrict(parsed).items():
         text = "\n\n".join((module.header,) + tuple(item.text for item in module.items)) + "\n"
         written = write_text(scratch / tree.modules[name].path, text)
         if written.is_err:
@@ -811,6 +822,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--keep", type=Path, help="with --refusals, copy the final tree here")
     parser.add_argument("--types-only", action="store_true",
                         help="with --refusals, keep the data types and records and what they need")
+    parser.add_argument("--without-rewrite", action="store_true",
+                        help="with --refusals, remove the REWRITE pragmas first")
     return parser.parse_args(argv)
 
 
@@ -835,6 +848,8 @@ def main(argv: Sequence[str]) -> int:
         return 1
     with tempfile.TemporaryDirectory(prefix="agda-check-") as scratch:
         copied = copy_tree(tree, root, Path(scratch)).and_then(
+            lambda _: restrict_tree(tree, Path(scratch), rewrites_removed) if args.without_rewrite
+            else Result.ok(None)).and_then(
             lambda _: restrict_tree(tree, Path(scratch)) if args.types_only else Result.ok(None))
         if copied.is_err:
             print(f"agda_check: {copied.unwrap_err()}", file=sys.stderr)

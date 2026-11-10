@@ -223,8 +223,8 @@ closure of `Init.Core` emits and checks under profile U.  That closure has
 115 types with one constructor and no indices, 28 of them propositions.
 `translator/scripts/InductiveTypes.lean` lists them, and a scaffold with
 them as its roots declares each one, with the definitions and theorems
-its types need as postulates; `tests/run.sh` checks it against the listing
-`tests/expected/scaffolds/init-core-inductives.refusals.txt`:
+its types need as postulates; `tests/run.sh` checks it against the listings
+under `tests/expected/scaffolds/init-core-inductives/`:
 
 | Scaffold | Roots | Declarations, checked | Data types and records, checked | Refused |
 | --- | --- | --- | --- | --- |

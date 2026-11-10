@@ -1,4 +1,4 @@
-checked 221 of 221 declarations, 22 of 22 data types and records
+checked 223 of 223 declarations, 22 of 22 data types and records
 unfolded 0 of 53 theorems, 0 in vain
 refused value UnequalTerms Bool:noConfusion | (k₄ : P₀) → P₀ !=<
 refused value UnequalTerms Bool:decEq | Bool:rec (Bool:casesOn Bool:true (False → False) False)

@@ -1,4 +1,4 @@
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of List:reverse~ureverse
 -- Lean module Init.SimpLemmas
 module U.Init.SimpLemmas where

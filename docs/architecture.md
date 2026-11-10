@@ -19,10 +19,10 @@ The deep notes it summarizes stay beside their components:
 ## Terms
 
 +  A **profile** is a set of Agda flags the output must check under, plus what
-   remains a module parameter.  There are four: U (`--type-in-type`, postulates
-   allowed; scaffolding only, never a deliverable), K (`--safe` under Agda's
-   default theory, in which K, the principle that any two proofs of an equality
-   are equal, is available by pattern matching), CC
+   remains a module parameter.  There are four: U (`--type-in-type
+   --rewriting`, postulates allowed; scaffolding only, never a deliverable), K
+   (`--safe` under Agda's default theory, in which K, the principle that any
+   two proofs of an equality are equal, is available by pattern matching), CC
    (`--safe --cubical-compatible`, which implies `--without-K`) and CU
    (`--safe --cubical`).
 +  A **tier** sorts a declaration by the axioms it depends on, computed
@@ -208,9 +208,10 @@ made faithful in Milestones 3 and 4, as follows.
    ideas, re-derived.  Details: [`translator/printing.md`][printing], with the
    measurements in [`reports/printing-blowup-2026-10-12.md`][blowup].
 +  **The scaffold** (built by [#17]).  `--out DIR` writes one Agda module for
-   the whole closure under `{-# OPTIONS --type-in-type #-}`: every constant a
-   postulate of its printed type, except `Nat` and `String` (bound to their
-   builtins), the type abbreviations, the roots' values and the auxiliaries.
+   the whole closure under `{-# OPTIONS --type-in-type --rewriting #-}`: each
+   declaration emitted by its kind ([#18], [#20]; recursors are still
+   postulates), and the quotient primitives postulates with the kernel's two
+   computation rules as rewrite rules ([#21]).
    `scripts/python/scaffold_check.py` type-checks it, turning each refusal into
    a postulate or a drop and listing them, and golden listings pin where each
    scaffold stands.  All twelve corpus scaffolds printed and scope-checked as
