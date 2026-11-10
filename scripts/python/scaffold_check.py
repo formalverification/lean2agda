@@ -26,7 +26,11 @@ Description:
   unfolded, and how many of the recursors are still defined by pattern
   matching.  An unfolding is in vain when the declaration it was made
   for is refused or dropped all the same, which the first later event at
-  or beyond that declaration decides, and the listing says so.
+  or beyond that declaration decides, and the listing says so; the
+  checker then puts the theorem back in its opaque block, so that no
+  later declaration sees a proof that helped nothing (a proof by
+  structural recursion, transparent, can make a later record's
+  positivity check exhaust the heap, as issue M3-6 found).
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
         [--timeout SECONDS] [--heap SIZE] [--messages] [--types-only]
@@ -468,6 +472,22 @@ def transparent(item: Item, dependent: str) -> Item:
     return Item("definition", label, item.names, 1, "\n".join((f"-- {label}",) + body))
 
 
+def opaque_again(item: Item) -> Item:
+    """A theorem that `transparent` re-emitted, back in its opaque block
+    under the label `theorem`: the inverse of `transparent`."""
+    body = item.text.split("\n")[item.signature:]
+    return parse_item("\n".join(("-- theorem", "opaque") + tuple(_INDENT + line for line in body)))
+
+
+def reverted(items: tuple[Item, ...], dependents: frozenset[str]) -> tuple[Item, ...]:
+    """The items with every theorem still transparent for one of the
+    dependents back in its opaque block: the unfoldings made for a
+    declaration that is refused or dropped all the same are undone."""
+    labels = frozenset(f"theorem, unfolded for {d}" for d in dependents)
+    return tuple(opaque_again(item) if item.kind == "definition" and item.label in labels else item
+                 for item in items)
+
+
 def has_value(item: Item) -> bool:
     """A declaration with clauses below its signatures: a definition, an
     opaque block, or a mutual block of definitions."""
@@ -492,7 +512,8 @@ def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
     transparent; otherwise a declaration refused below its signature, or
     by the termination checker, which points at its first line, keeps
     its signature as a postulate, and anything else is dropped with its
-    dependents."""
+    dependents.  A refused or dropped declaration's unfoldings are undone
+    (`reverted`)."""
     item = state.items[index]
     theorem = unfoldable(state.items, state.alive, index, refusal)
     if theorem is not None:
@@ -500,20 +521,22 @@ def step(state: State, index: int, offset: int, refusal: Refusal) -> State:
         items = state.items[:theorem] + (unfolded,) + state.items[theorem + 1:]
         event = Event("unfolded", unfolded.names[0], refusal.error, refusal.message, item.names[0])
         return State(items, state.alive, state.events + (event,))
+    undone = reverted(state.items, frozenset(item.names[:1]))
     if has_value(item) and refusal.error == _TERMINATION:
         label = f"{item.label}, refused by the termination checker" if item.label else "refused by the termination checker"
-        items = state.items[:index] + (postulated(item, label),) + state.items[index + 1:]
+        items = undone[:index] + (postulated(item, label),) + undone[index + 1:]
         event = Event("refused value", item.names[0], refusal.error, refusal.message)
         return State(items, state.alive, state.events + (event,))
     if has_value(item) and offset > item.signature:
-        items = state.items[:index] + (postulated(item),) + state.items[index + 1:]
+        items = undone[:index] + (postulated(item),) + undone[index + 1:]
         event = Event("refused value", item.names[0], refusal.error, refusal.message, detail=refusal.detail)
         return State(items, state.alive, state.events + (event,))
     gone = dependents(index, references(state.items), state.alive)
     alive = tuple(a and i not in gone for i, a in enumerate(state.alive))
     first = Event("refused type", item.names[0], refusal.error, refusal.message, detail=refusal.detail)
     rest = tuple(Event("dropped", state.items[i].names[0], "", "") for i in gone[1:])
-    return State(state.items, alive, state.events + (first,) + rest)
+    items = reverted(state.items, frozenset(state.items[i].names[0] for i in gone if state.items[i].names))
+    return State(items, alive, state.events + (first,) + rest)
 
 
 def theorems(items: tuple[Item, ...]) -> int:
