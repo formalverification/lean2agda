@@ -1,5 +1,5 @@
 -- File: translator/tests/expected/scaffolds/recursors.agda
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of RecursorFixtures:Doc RecursorFixtures:Doc:~usizeOf~u1 RecursorFixtures:Doc:~usizeOf~u2 RecursorFixtures:Doc:~usizeOf~u2~ueq RecursorFixtures:Doc:~usizeOf~u3 and 251 more
 module U.TranslatorTests.Input.Recursors where
 
@@ -159,6 +159,7 @@ Array:casesOn {α₀} {motive₁} t₂ mk₃ = Array:rec {α₀} {motive₁} (λ
 
 data Eq {α₀ : Set} : α₀ → α₀ → Set where
   Eq:refl : (a₁ : α₀) → Eq {α₀} a₁ a₁
+{-# BUILTIN REWRITE Eq #-}
 
 -- recursor
 Eq:rec : {α₀ : Set} → {a₁ : α₀} → {motive₂ : (a₂ : α₀) → Eq {α₀} a₁ a₂ → Set} → motive₂ a₁ (Eq:refl {α₀} a₁) → {a₃ : α₀} → (t₄ : Eq {α₀} a₁ a₃) → motive₂ a₃ t₄

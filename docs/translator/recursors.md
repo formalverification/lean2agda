@@ -181,7 +181,7 @@ The golden scaffolds and their counts, before and after, are in
 defined but `ByteArray.IsValidUTF8.rec`, dropped with its type in the three
 goldens that hold it, none is refused by the termination checker, and the
 values that
-check rise from 17, 141 and 182 to 21 of 21, 198 of 201 and 261 of 266 in
+check rise from 17, 142 and 183 to 21 of 21, 199 of 201 and 262 of 266 in
 the three corpus closures, with nothing left behind a refused type there.
 The recursor fixture checks 552 of its 554 values, each fixture theorem
 among them; its two refusals are `eq_of_heq` and `Nat.modCore_lt` from the
@@ -195,45 +195,53 @@ the `iota` classes of the code before (`Nat.rec` under `Nat.add`,
 The acceptance criterion of [#19] is that every recursor in the closure of
 `Init.Core` emits, is accepted by the termination checker, and computes on
 the corpus terms.  On that closure (every declaration `Init.Core` owns,
-printed in 0.8 s into 1,271,562 bytes, scope-checked in 11.3 s), the
-checker made 33 Agda runs in 519 s at load averages of 2.5 before and 2.1
-after (2026-10-15), against the [`opaque-theorems`][report-opaque] report's
-320 runs in 3,786 s:
+printed into 1,272,372 bytes, the quotient's two rewrite rules of [#21]
+among its declarations), the checker made 24 Agda runs in 759 s at load
+averages of 4.4 before and 3.1 after (2026-11-09), against the
+[`quotient-rules`][report-quot] report's 311 runs in 5,016 s on the code
+before [#19], which has the rules, and the
+[`opaque-theorems`][report-opaque] report's 320 runs on the code before
+both:
 
 | `Init.Core`'s closure | Declarations | Values | Checked | Refused | Behind a refused type | Types refused | Unfolded | Recursors defined |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| before [#19] | 1,963 | 1,660 | 1,344 | 312 | 4 | 1 | 6, five in vain | 0 of 146 |
-| after | 1,961 | 1,660 | 1,563 | 23 | 74 | 2 | 7, four in vain | 145 of 146 |
+| before [#19] and [#21] | 1,963 | 1,660 | 1,344 | 312 | 4 | 1 | 6, five in vain | 0 of 146 |
+| before [#19] | 1,965 | 1,660 | 1,351 | 305 | 4 | 1 | 4, one in vain | 0 of 146 |
+| after | 1,963 | 1,660 | 1,570 | 16 | 74 | 2 | 5, none in vain | 145 of 146 |
 
 The 147 recursors are 145 inductive types' and `Lean.Syntax`'s two
 `rec_N`; `String.rec` stays a postulate, and `ByteArray.IsValidUTF8.rec`
 is dropped with its type, so 145 of the 146 the listing counts (all but
 `String.rec`) are defined, all of them accepted by the termination
-checker.  The 23 refused values, with the refused type of `apply_eqRec`,
+checker.  The 16 refused values, with the refused type of `apply_eqRec`,
 fall into the classes of the goldens: 15 comparisons of two proofs of one
-proposition (`Subtype.eq`,
-`Subtype.ext`, `Subtype.eta`, `Subtype.mk.injEq`,
-`Subtype.instDecidableEq`'s proof, `Char.ext`, `Char.mk.injEq`,
-`Fin.eq_of_val_eq`, `Fin.mk.injEq`, `proof_irrel`,
+proposition (`Subtype.eq`, `Subtype.ext`, `Subtype.eta`,
+`Subtype.mk.injEq`, `Subtype.instDecidableEq`'s proof, `Char.ext`,
+`Char.mk.injEq`, `Fin.eq_of_val_eq`, `Fin.mk.injEq`, `proof_irrel`,
 `instSubsingletonDecidable`, `Nat.modCore_lt`, `dif_pos`, `dif_neg`, and
-the type of `apply_eqRec`), [#27]'s; two `K`-like reductions, `eq_of_heq`
-and `cast_eq`, [#26]'s; and seven quotient refusals (`funext`,
-`Quot.liftBeta`, `Quot.indBeta`, `Quot.liftIndepPr1`, `Quotient.exact`,
-`Quotient.lift₂`'s proof, `Quotient.rel.refl`), [#21]'s.  The 74 values
+the type of `apply_eqRec`), [#27]'s; and two `K`-like reductions,
+`eq_of_heq` and `cast_eq`, [#26]'s.  On the same code without [#21]'s
+rules (this branch before it merged) the run refused seven values more,
+the quotient's (`funext`, `Quot.liftBeta`, `Quot.indBeta`,
+`Quot.liftIndepPr1`, `Quotient.exact`, `Quotient.lift₂`'s proof,
+`Quotient.rel.refl`), and the two listings differ in nothing else but the
+two rules and the fallback's unfoldings at those seven.  The 74 values
 behind a refused type are `apply_eqRec` with the 3 behind it
 (`Quot.pliftOn` and its kin, as before) and 70 behind
 `ByteArray.IsValidUTF8` (`String`'s equality and its instances,
 `Lean.Name.beq`, the macro scopes and `Init.Core`'s macro and unexpander
 rules), [#31]'s.
 
-The fallback fired seven times.  Three unfoldings helped: `Quotient.sound`
-for `Quotient.rec`, as before, and `Eq.symm` and `Nat.eq_of_beq_eq_true`
-for `DoResultPRBC.noConfusion`, which the recursors made reachable.  Four
-were in vain, at quotient refusals.  None was under well-founded
-recursion, which `Init.Core`'s closure does not contain: `Acc` and
-`WellFounded.Nat.fix` are declared in `Init.WF`, which `Init.Core` does not
-import.  (At the pin `WellFounded.Nat.fix` is fuel-based in any case, its
-recursion `Nat.rec` on the fuel; [gap catalog][catalog-literals].)
+The fallback fired five times, and each unfolding helped:
+`Quotient.sound` for `Quotient.rec`, as before; `Setoid.refl` and
+`Quotient.lift₂._proof_1` for `Quotient.lift₂._proof_2`, as with the
+rules alone; and `Eq.symm` and `Nat.eq_of_beq_eq_true` for
+`DoResultPRBC.noConfusion`, which the recursors made reachable.  None was
+under well-founded recursion, which `Init.Core`'s closure does not
+contain: `Acc` and `WellFounded.Nat.fix` are declared in `Init.WF`, which
+`Init.Core` does not import.  (At the pin `WellFounded.Nat.fix` is
+fuel-based in any case, its recursion `Nat.rec` on the fuel;
+[gap catalog][catalog-literals].)
 
 ## Verification
 
@@ -289,9 +297,9 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 
 ## Hand-off
 
-+  [#21]: `Quot.lift` in `funext` and the `Quot.*Beta` lemmas are its
-   refusals in every closure; nothing here touches the quotient
-   primitives.
++  [#21], merged first: nothing here touches the quotient primitives or
+   their rules, and with both every quotient refusal of the goldens and of
+   `Init.Core`'s closure checks.
 +  [#22]: a recursor block is one `mutual` item and must stay in one
    module; it refers to its types' constructors, so it can sit in the
    module of its block's types or in one that imports it.
@@ -311,6 +319,7 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [printing]: printing.md
+[report-quot]: ../reports/quotient-rules-2026-11-08.md
 [printing-checks]: printing.md#what-agda-checks-and-the-fallback
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
 [catalog-literals]: ../foundations/gap-catalog.md#literals

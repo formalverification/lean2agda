@@ -45,7 +45,8 @@ of evidence are used, as follows.
 
 **Terms**.  The roadmap ([`../GITHUB_PROJECT.md`][roadmap], Description)
 defines *profile* (a set of Agda flags plus what stays a module parameter: U is
-`--type-in-type` with postulates, K is `--safe` with Agda's default K rule, CC
+`--type-in-type --rewriting` with postulates, K is `--safe` with Agda's default
+K rule, CC
 is `--safe --cubical-compatible`, CU is `--safe --cubical`), *layer*
 (constructive or classical), *tier* (T0 no axioms, T1 `propext` or
 `Quot.sound`, T2 `Classical.choice`, T3 anything else), *atlas* and
@@ -69,7 +70,7 @@ claims.  An entry that has nothing to say under a profile says why in a line.
 
 | Profile | Agda flags | What stays a parameter | Deliverable |
 | --- | --- | --- | --- |
-| U | `--type-in-type`, postulates allowed | nothing (postulated) | no: scaffolding for M2 |
+| U | `--type-in-type --rewriting`, postulates allowed | nothing (postulated) | no: scaffolding for M2 |
 | K | `--safe` (Agda's default, with K) | `propext`, quotients, `funext`, `Classical.choice` | the faithful target |
 | CC | `--safe --cubical-compatible` | as K | the primary deliverable |
 | CU | `--safe --cubical` | `Classical.choice` only, in forms consistent with univalence | the cubical target |
@@ -477,8 +478,18 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    At the pin `Quot.lift f h (Quot.mk r a) = f a := rfl` is accepted and
    `#print Quot` answers "Quotient primitive" (`probes/lean/DefEq.lean`).
 +  **Agda's status**.  Plain Agda has no quotients.  By profile, as follows.
-   +  U: postulated, as lyphyser's output does; a postulated `lift` does not
-      compute.
+   +  U: the four primitives and `Quot.sound` are postulates, as in
+      lyphyser's output, and the kernel's two computation rules come back as
+      rewrite rules under `--rewriting` ([#21]): the emitted `Eq` is declared
+      the rewrite relation (`BUILTIN REWRITE`), and two postulates,
+      `Quot:lift-β` stating `Quot.lift f h (Quot.mk r a) = f a` and
+      `Quot:ind-β` stating `Quot.ind mk (Quot.mk r a) = mk a`, carry `REWRITE`
+      pragmas.  Agda 2.8.0 accepts both rules, whose left-hand sides apply a
+      postulate to a postulate, and with them `funext`'s proof checks as
+      Lean's kernel checks it; without them a postulated `lift` does not
+      compute, and Agda refuses `funext` with
+      `Quot:lift (λ f → f x) (λ x y h → h x) (Quot:mk eqv f) != f x`
+      ([printing], Quotients; [report-quot]).
    +  K: a record of the primitives as a module parameter, `Quot`, `mk`,
       `lift`, `ind`, `sound` and a propositional computation rule `lift-β`,
       type-checks under `--safe`; the rule has to be a field, since
@@ -496,9 +507,13 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
       Lean type is an h-set; a lift into a type not known to be an h-set needs
       that proof too.  `funExt` and `hPropExt` are theorems ([cubical-prelude],
       [cubical-univalence]; probe `P16CubicalQuotient`).
-+  **Translation strategy**.  Postulates under profile U ([#21]); the parameter
-   record with the propositional rule, and the extension of the normalizer's
-   cast mechanism to `Quot.lift`'s computation rule ([#30]); parameters
++  **Translation strategy**.  Postulates and the two rewrite rules under
+   profile U ([#21]).  The safe profiles cannot have a rewrite rule (`--safe`
+   rejects `--rewriting`), so they take the parameter record with the
+   propositional rule `lift-β`, and the normalizer's casts replace each
+   definitional use of the rule ([#30], M3-5): the declarations that check
+   under profile U only with the rules are the ones that need a cast, and
+   [report-quot] lists them for the corpus scaffolds and `Init.Core`; parameters
    threaded per module in both layers ([#38]); cubical set quotients and the
    parameter-free constructive layer under CU ([#52]).  The corpus expects
    `multiset-map-map` and `set-ext`, in both a CC and a CU file, and the three
@@ -1327,5 +1342,6 @@ Mathlib's large-eliminating propositions excepted.
     binder" and the sentence "Note that we don't have any congruence rules for
     let."
 [printing]: ../translator/printing.md
+[report-quot]: ../reports/quotient-rules-2026-11-08.md
 [inductives]: ../translator/inductives.md
 [recursors]: ../translator/recursors.md

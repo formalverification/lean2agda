@@ -126,7 +126,7 @@ what remains a module parameter.
 
 | Profile | Agda flags | Parameters | Purpose |
 | --- | --- | --- | --- |
-| U | `--type-in-type`, postulates allowed | none (postulated) | scaffolding for building the mechanical parts; never a deliverable |
+| U | `--type-in-type --rewriting`, postulates allowed | none (postulated) | scaffolding for building the mechanical parts; never a deliverable |
 | K | `--safe` (Agda's default, with K) | `propext`, quotients, `funext`, `Classical.choice` | the faithful target: every rule of Lean's theory has a counterpart |
 | CC | `--safe --cubical-compatible` | as K | the primary deliverable; K must be justified by `isSet` proofs |
 | CU | `--safe --cubical` | `Classical.choice` only, in forms consistent with univalence | quotients, `funext` and `propext` become theorems; constructive layer first |

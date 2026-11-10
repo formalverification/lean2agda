@@ -1,5 +1,5 @@
 -- File: translator/tests/expected/scaffolds/selected.agda
-{-# OPTIONS --type-in-type #-}
+{-# OPTIONS --type-in-type --rewriting #-}
 -- lean2agda, profile U: the scaffold of the closure of Fixtures:selected
 module U.TranslatorTests.Input.Consumer where
 

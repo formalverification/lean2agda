@@ -154,8 +154,10 @@ def memberLines (m : InductiveMember) (indent : String) : PrintM Printed := do
 
 /-- A block as one declaration: a lone type as itself, several in a
 `mutual` block; `Nat` with `BUILTIN NATURAL`, so that literals print as
-decimals; and an unsafe block after `NO_POSITIVITY_CHECK`, since Lean's
-kernel checks no unsafe type for positivity. -/
+decimals; `Eq` with `BUILTIN REWRITE`, the relation of the quotient's
+computation rules (`Scaffold.lean`); and an unsafe block after
+`NO_POSITIVITY_CHECK`, since Lean's kernel checks no unsafe type for
+positivity. -/
 def inductiveDecl (p : Printer) (members : Array InductiveMember) : Except String InductiveDecl := do
   let ((lines, terms), counts) ← runPrint p do
     if members.size == 1 then memberLines members[0]! ""
@@ -164,6 +166,8 @@ def inductiveDecl (p : Printer) (members : Array InductiveMember) : Except Strin
       return (lines ++ more, terms ++ moreTerms)
   let lines := if members.any (·.type.isUnsafe) then #["{-# NO_POSITIVITY_CHECK #-}"] ++ lines else lines
   let lines := if members.map (·.type.name) == #[``Nat] then lines.push s!"\{-# BUILTIN NATURAL {agdaIdent ``Nat} #-}"
+    else lines
+  let lines := if members.map (·.type.name) == #[``Eq] then lines.push s!"\{-# BUILTIN REWRITE {agdaIdent ``Eq} #-}"
     else lines
   let provides := members.foldl (fun acc m =>
     (acc.push (agdaIdent m.type.name)) ++ m.ctors.map (agdaIdent ·.name)) #[]

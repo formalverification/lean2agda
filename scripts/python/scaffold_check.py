@@ -30,7 +30,7 @@ Description:
 
     python3 scripts/python/scaffold_check.py [--agda AGDA]
         [--timeout SECONDS] [--heap SIZE] [--messages] [--types-only]
-        MODULE.agda
+        [--without-rewrite] MODULE.agda
 
   Agda runs with its heap bounded, 8G by default (`--heap`, GHC's
   `-M` on the command line, which wins over `GHCRTS`), since its
@@ -57,8 +57,13 @@ Description:
   other, every theorem and opaque constant among them postulated: what
   Agda's positivity and termination checkers see, in a module a fraction
   of the size, since Agda's time grows faster than a module, and a
-  theorem's proof can be tens of megabytes.  The number of Agda runs
-  and their times go to standard error.
+  theorem's proof can be tens of megabytes.  `--without-rewrite`
+  checks the module with its `REWRITE` pragmas removed, the rules left as
+  postulates that never fire: the declarations that check with the
+  pragmas and are refused without them are the ones a rewrite rule fired
+  for, which is how issue M2-7 records where the quotient's computation
+  rules are needed.  The number of Agda runs and their times go to
+  standard error.
 
 Design Principles:
   - The module is never edited in place: the checker writes its copies
@@ -126,6 +131,8 @@ _CHECKING = re.compile(r"^Check(?:ing|ed) (\S+)\.$", re.MULTILINE)
 _MARK = "scaffold-check-mark-"
 # A heap size as GHC's runtime takes it: a number and a unit.
 _HEAP_SIZE = re.compile(r"[1-9][0-9]*[kKmMgG]?")
+# The pragma that makes a postulated equation a rewrite rule.
+_REWRITE = "{-# REWRITE "
 
 
 @dataclass(frozen=True)
@@ -297,6 +304,20 @@ def reach(start: frozenset[int], successors: Callable[[int], frozenset[int]]) ->
         frontier = frozenset().union(*(successors(i) for i in frontier)) - found
         found = found | frontier
     return found
+
+
+def without_rewrites(module: Module) -> Module:
+    """The module with every `REWRITE` pragma removed, so that its rules
+    are postulates that never fire.  A block left with no line at all is
+    dropped; one left with lines is classified anew."""
+    def strip(item: Item) -> Optional[Item]:
+        lines = item.text.split("\n")
+        kept = tuple(line for line in lines if not line.startswith(_REWRITE))
+        if len(kept) == len(lines):
+            return item
+        return parse_item("\n".join(kept)) if kept else None
+    stripped = (strip(item) for item in module.items)
+    return Module(module.name, module.header, tuple(item for item in stripped if item is not None))
 
 
 def types_only(module: Module) -> Module:
@@ -595,11 +616,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--heap", default=DEFAULT_HEAP)
     parser.add_argument("--messages", action="store_true")
     parser.add_argument("--types-only", action="store_true")
+    parser.add_argument("--without-rewrite", action="store_true")
     args = parser.parse_args(argv)
     if not _HEAP_SIZE.fullmatch(args.heap):
         parser.error(f"--heap takes a size such as 8G or 512M, not {args.heap!r}")
     with tempfile.TemporaryDirectory(prefix="scaffold-check-") as scratch:
         outcome = read_text(args.module).and_then(parse_module).map(
+            lambda m: without_rewrites(m) if args.without_rewrite else m).map(
             lambda m: types_only(m) if args.types_only else m).and_then(
             lambda m: check_module(capped(run_agda, args.heap), real_clock, args.agda, m, args.timeout,
                                    Path(scratch)))
