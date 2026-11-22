@@ -20,13 +20,15 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Sequence
+from unittest import mock
 
 from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_run import FileRun, Outcome
 from scaffold_check import (
     Event, Item, Module, Refusal, State, capped, charged, check_module, code, dependents, in_vain, listing,
-    locate, main, marker, parse_exhaustion, parse_item, parse_module, parse_refusal, postulated, recursors,
-    references, render, step, theorems, transparent, types_only, unfoldable, without_rewrites,
+    locate, main, marker, opaque_again, parse_exhaustion, parse_item, parse_module, parse_refusal, postulated,
+    recursors, references, render, reverted, step, theorems, transparent, types_only, unfoldable,
+    without_rewrites,
 )
 
 SCAFFOLD = """{-# OPTIONS --type-in-type #-}
@@ -381,6 +383,39 @@ class TestFallback(unittest.TestCase):
         self.assertEqual(again.items[6].kind, "postulate")
         self.assertEqual(again.events[-1], Event("refused value", "root", "UnequalTerms", "two~uok != x"))
 
+    def test_opaque_again_inverts_transparent(self) -> None:
+        _, state = module_and_state()
+        self.assertEqual(opaque_again(transparent(state.items[4], "root")), state.items[4])
+
+    def test_reverted_undoes_only_the_dependents_unfoldings(self) -> None:
+        _, state = module_and_state()
+        unfolded = state.items[:4] + (transparent(state.items[4], "root"),) + state.items[5:]
+        self.assertEqual(reverted(unfolded, frozenset(("root",))), state.items)
+        self.assertEqual(reverted(unfolded, frozenset(("two",))), unfolded)
+
+    def test_a_refusal_undoes_the_unfoldings_made_for_it(self) -> None:
+        _, state = module_and_state()
+        stuck = Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T")
+        vain = step(step(state, 6, 1, stuck), 6, 1, stuck)
+        # The theorem is back in its opaque block, and the listing still
+        # counts the unfolding, in vain.
+        self.assertEqual(vain.items[4], state.items[4])
+        self.assertEqual(vain.items[6], postulate("root", "postulate root : Eq {Nat} two 2"))
+        self.assertIn("unfolded 1 of 1 theorems, 1 in vain\n", listing(vain, False))
+
+    def test_another_refusal_keeps_the_unfolding(self) -> None:
+        _, state = module_and_state()
+        helped = step(state, 6, 1, Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T"))
+        after = step(helped, 5, 0, Refusal(24, "UnequalTerms", "m", "m"))
+        self.assertEqual(after.items[4], helped.items[4])
+        self.assertEqual(after.alive, (True,) * 5 + (False, True))
+
+    def test_a_dropped_dependent_undoes_its_unfoldings(self) -> None:
+        _, state = module_and_state()
+        helped = step(state, 6, 1, Refusal(27, "UnequalTerms", "two~uok != x", "two~uok != x of type T"))
+        after = step(helped, 3, 0, Refusal(15, "UnequalTerms", "m", "m"))
+        self.assertEqual(after.items[4], state.items[4])
+
     def test_in_vain(self) -> None:
         position = {"t": 0, "u": 0, "c": 1, "d": 2, "e": 3}
         unfold = Event("unfolded", "t", "UnequalTerms", "m", "d")
@@ -649,12 +684,50 @@ def fake_agda(text: str, culprit: str, named: str = "") -> tuple[str, int]:
     return "".join(lines), 0
 
 
+# Three theorems in a chain and five definitions, each of which tries
+# the three in vain: Copilot's case in the review of #86.  Eight items,
+# for which the cap before that review allowed 20 runs; the loop needs 21.
+CHAIN = """{-# OPTIONS --type-in-type #-}
+module U.A.B where
+
+-- theorem
+opaque
+  t3 : A
+  t3 = stuck
+
+-- theorem
+opaque
+  t2 : A
+  t2 = t3
+
+-- theorem
+opaque
+  t1 : A
+  t1 = t2
+""" + "".join(f"\nd{i} : Eq {{A}} t1 base\nd{i} = Eq:refl {{A}} base\n" for i in range(1, 6))
+
+
+def chained_agda(text: str) -> str:
+    """What Agda 2.8.0 says of CHAIN as the checker writes it (measured
+    on the same module with `postulate`s of `Eq`, `A`, `stuck` and `base`,
+    2026-11-10): the first definition still defined fails on the first
+    theorem of the chain still opaque, or on `stuck` once all three are
+    transparent; nothing is said once every definition is postulated."""
+    lines = text.split("\n")
+    first = next((line for line in lines if line.startswith("d") and " = " in line), None)
+    if first is None:
+        return ""
+    opaque = [t for t in ("t1", "t2", "t3") if f"opaque\n  {t} :" in text]
+    culprit = opaque[0] if opaque else "stuck"
+    return agda_error(line_of(text, first), "UnequalTerms", f"base != {culprit} of type A")
+
+
 class TestCheckModule(unittest.TestCase):
-    def run_module(self, answers: list) -> tuple:
-        """Check SCAFFOLD with Agda's answers played in turn: each answer
-        takes the text the checker wrote and gives Agda's output, empty
-        for a pass."""
-        module, _ = module_and_state()
+    def run_module(self, answers: list, scaffold: str = SCAFFOLD) -> tuple:
+        """Check a scaffold of the module U.A.B, SCAFFOLD unless another
+        is given, with Agda's answers played in turn: each answer takes the
+        text the checker wrote and gives Agda's output, empty for a pass."""
+        module = parse_module(scaffold).unwrap()
         played = iter(answers)
         seen: list[str] = []
 
@@ -704,6 +777,43 @@ class TestCheckModule(unittest.TestCase):
         self.assertIn("-- theorem, unfolded for root\ntwo~uok : Eq {Nat} two 2\ntwo~uok = Eq:refl {Nat} two\n", seen[1])
         self.assertNotIn("opaque", seen[1])
         self.assertEqual(listing(checked.state, False).split("\n")[1], "unfolded 1 of 1 theorems, 0 in vain")
+
+    def test_theorems_tried_in_vain_again_for_each_declaration(self) -> None:
+        # Each definition unfolds the three theorems, is refused all the
+        # same, and puts them back; the next one unfolds them again.
+        checked, seen = self.run_module([chained_agda] * 21, CHAIN)
+        self.assertEqual(checked.runs, 21)
+        self.assertEqual(listing(checked.state, False).split("\n")[:2],
+                         ["checked 8 of 8 declarations, 0 of 0 data types and records",
+                          "unfolded 15 of 3 theorems, 15 in vain"])
+        self.assertEqual([e.action for e in checked.state.events], (["unfolded"] * 3 + ["refused value"]) * 5)
+        self.assertEqual(seen[-1].count("opaque\n"), 3)
+
+    def test_a_loop_that_cannot_converge_is_stopped(self) -> None:
+        # Only a defect could unfold without end or change declarations
+        # without end; with `step` replaced by one that does, the loop
+        # stops after t + 1 unfoldings in a row, or 2n + 1 changes.
+        module = parse_module(SCAFFOLD).unwrap()
+        n, t = len(module.items), theorems(module.items)
+        for action, runs in (("unfolded", t + 1), ("refused value", 2 * n + 1)):
+            played: list[str] = []
+
+            def runner(command: Sequence[str], cwd: Path, timeout: float) -> Result[subprocess.CompletedProcess, PipelineError]:
+                text = (cwd / command[1]).read_text()
+                played.append(text)
+                if len(played) > 2 * n + 2:
+                    raise AssertionError("the loop ran past its bound")
+                output = agda_error(line_of(text, "root = two~uok"), "UnequalTerms", "m")
+                return Result.err(PipelineError(ErrorType.COMMAND_FAILED, "exit 42", context={"stdout": output}))
+
+            def defective(state: State, index: int, offset: int, refusal: Refusal, action: str = action) -> State:
+                return State(state.items, state.alive, state.events + (Event(action, "root", "", ""),))
+
+            with self.subTest(action=action), tempfile.TemporaryDirectory() as scratch, \
+                    mock.patch("scaffold_check.step", defective):
+                outcome = check_module(runner, lambda: 0.0, "agda", module, 60.0, Path(scratch))
+                self.assertEqual(outcome.unwrap_err().message, "the checker did not converge")
+                self.assertEqual(len(played), runs)
 
     def test_an_unplaceable_failure_is_an_error(self) -> None:
         module, _ = module_and_state()

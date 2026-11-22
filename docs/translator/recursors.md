@@ -165,14 +165,19 @@ never normalizes a type to check it, and computes `Nat.ble`, `Nat.mod`
 and the rest on literals with GMP.  Agda-native definitions of `Nat.ble`
 and `Nat.beq` alone do not help, since `Nat.div` and `Nat.mod` unfold
 through structural recursion on a fuel argument, `Nat.brecOn` as in
-`Nat.ble`; the fix is the operation table of [#31], each accelerated
-operation an Agda definition that is stuck on a variable.  Until then
-`scaffold_check.py` bounds Agda's heap (8G by default) and charges a run
-that exhausts it to the declaration Agda died in (its section of
-[`printing.md`][printing-checks] says how it knows):
-`ByteArray.IsValidUTF8` is refused as a type wherever it appears, with
-its recursor, `String.ofByteArray` and `String.rec` behind it, and in
-`Init.Core`'s closure 70 values more.
+`Nat.ble`.  `scaffold_check.py` bounds Agda's heap (8G by default) and
+charges a run that exhausts it to the declaration Agda died in (its
+section of [`printing.md`][printing-checks] says how it knows), so that
+before [#31] `ByteArray.IsValidUTF8` was refused as a type wherever it
+appeared, with its recursor, `String.ofByteArray` and `String.rec`
+behind it, and in `Init.Core`'s closure 70 values more.  The operation
+table of [#31] makes each accelerated operation's recursive core an Agda
+builtin, or Lean's clauses over the builtins, stuck on a variable as one
+small term ([`nat-operations.md`][nat-operations]): the type's closure
+checks in 7 Agda runs, 11 s and 311 MiB, against the heap bound and 97 s
+for Lean's definitions (`--arithmetic lean`), and the type checks in
+every scaffold that holds it.  The heap bound stays, as the guard it was
+written to be.
 
 ## What Agda checks
 
@@ -208,6 +213,7 @@ both:
 | before [#19] and [#21] | 1,963 | 1,660 | 1,344 | 312 | 4 | 1 | 6, five in vain | 0 of 146 |
 | before [#19] | 1,965 | 1,660 | 1,351 | 305 | 4 | 1 | 4, one in vain | 0 of 146 |
 | after | 1,963 | 1,660 | 1,570 | 16 | 74 | 2 | 5, none in vain | 145 of 146 |
+| after [#31]'s operation table | 1,972 | 1,660 | 1,635 | 21 | 4 | 1 | 8, three in vain | 146 of 146 |
 
 The 147 recursors are 145 inductive types' and `Lean.Syntax`'s two
 `rec_N`; `String.rec` stays a postulate, and `ByteArray.IsValidUTF8.rec`
@@ -230,7 +236,16 @@ behind a refused type are `apply_eqRec` with the 3 behind it
 (`Quot.pliftOn` and its kin, as before) and 70 behind
 `ByteArray.IsValidUTF8` (`String`'s equality and its instances,
 `Lean.Name.beq`, the macro scopes and `Init.Core`'s macro and unexpander
-rules), [#31]'s.
+rules), [#31]'s.  With [#31]'s operation table those 70 check, and
+`ByteArray.IsValidUTF8.rec` is defined; of the values the type hid, five
+are refused (`String.decEq`, its `_proof_2` and
+`String.ofByteArray.injEq`, [#27]'s; `String.noConfusion` and
+`String.ofByteArray.noConfusion`, which need `String.rec` to compute), and
+the table refuses `Nat.modCoreGo_lt`, whose proof needs a fuel equation
+the table gives up, and checks `Nat.modCore_lt`, whose comparison of two
+proofs it removes ([`nat-operations.md`][nat-operations], The
+measurements); the nine declarations more are the table's six builtin
+helpers and `Nat.sub`'s three rewrite rules.
 
 The fallback fired five times, and each unfolding helped:
 `Quotient.sound` for `Quotient.rec`, as before; `Setoid.refl` and
@@ -312,9 +327,9 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
    (`Nat.modCore_lt`, `dif_pos`, `dif_neg`, the `Subtype` and `Fin`
    extensionality lemmas).
 +  [#31]: Agda-native definitions of Lean's accelerated `Nat` operations,
-   which would let Agda's positivity check through
-   `ByteArray.IsValidUTF8` and take the heap bound out of play; the
-   minimal reproduction is a record whose field mentions `v % 16`.
+   which let Agda's positivity check through `ByteArray.IsValidUTF8` and
+   take the heap bound out of play; the minimal reproduction is a record
+   whose field mentions `v % 16` ([`nat-operations.md`][nat-operations]).
 
 [#19]: https://github.com/formalverification/lean2agda/issues/19
 [#21]: https://github.com/formalverification/lean2agda/issues/21
@@ -330,3 +345,4 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 [catalog-literals]: ../foundations/gap-catalog.md#literals
 [inductives]: inductives.md
 [probes]: probes/
+[nat-operations]: ../foundations/nat-operations.md

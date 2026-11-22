@@ -16,8 +16,12 @@ planned, are as follows:
    feature by feature of the catalog, what each gap cost, what the translator
    will have to do about it, and the corpus's evidence on the two encodings
    of `Prop`;
++  [`nat-operations.md`](nat-operations.md) (issue M3-6, written
+   2026-11-10): the operation table, each operation Lean's kernel
+   accelerates on `Nat` against its Agda definition, with the equations
+   each keeps, its cost on numerals, what the safe profiles need, and the
+   design for `String` and `Char`;
 +  `faithfulness-init-std.md` (issue M3-10): what fraction of `Init` and
    `Std` translates under each profile, and why the rest does not;
-+  the operation table for `Nat` and `String` literals (issue M3-6), the
-   UIP-on-types study (issue M6-5), and the choice-under-univalence
++  the UIP-on-types study (issue M6-5) and the choice-under-univalence
    study (issue M6-3).

@@ -47,6 +47,7 @@ entry adds its row here too.
 | LF-12 | Checked | the kernel's diagnostics name exactly the declarations that need the quotient's computation rules |
 | LF-13 | S2 | Lake does not track a file that `include_str` reads |
 | LF-14 | S2 | `testDriver` cannot name an executable whose name has a hyphen |
+| LF-15 | Checked | the kernel's counters bound the uses of an accelerated operation's definition, and match Agda's refusals for `Nat.sub` |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -637,6 +638,48 @@ entry adds its row here too.
 +  **What the project does**.  The test executable is `unittests`, with
    no hyphen, and `translator/lakefile.toml` says why.
 
+## LF-15: the kernel's counters bound the uses of an accelerated operation's definition
+
++  **Severity**.  Checked.
++  **Found**.  2026-11-10, by issue [#31]'s session, at Lean v4.33.1 and
+   Agda 2.8.0.
++  **What was asked**.  Lean's kernel computes fifteen operations on
+   numerals with an arbitrary-precision library (`reduce_nat`,
+   [`type_checker.cpp`, lines 702 to 733][kernel-reduce-nat]), so a proof
+   can rely on an operation's definition only where an argument is not a
+   numeral.  The operation table of [#31] gives up four of those
+   definitional equations in Agda (`Nat.sub`'s at a successor in the safe
+   profiles, the fuel equations of `Nat.div.go` and `Nat.modCore.go`,
+   `Nat.bitwise`'s at zero for an unknown `f`), and the safe profiles
+   must replace each use by a cast.  Asked: whether the kernel's
+   diagnostics, whose counters record each unfolding of a definition
+   (`record_unfold`, line 571), find those uses, given that `whnf` tries
+   the library first (line 765) but the lazy unfolding of a definitional
+   equality tries it only when neither side has a free variable (lines
+   1093 to 1099), so that an unfolding may also be one of a comparison
+   of two open terms.
++  **The answer**.  The counters give an upper bound that was tight where
+   Agda could test it.  Re-checking all 63,034 theorems and safe
+   definitions of `Init` with the diagnostics on rejected none and named
+   663 constants that unfold `Nat.sub`, 53 `Nat.div.go`, 4
+   `Nat.modCore.go` and 167 `Nat.bitwise`, besides their own equation
+   lemmas.  In `Init.Prelude` and `Init.Core` the constants that unfold
+   `Nat.sub` are `Nat.sub_le` and `Nat.succ_sub_succ_eq_sub`, and Agda,
+   with `Nat.sub` the builtin monus and no rewrite rule, refuses exactly
+   those two in `ByteArray.IsValidUTF8`'s closure and in `Init.Core`'s
+   whole closure, and nothing else there.  Of the
+   four that unfold `Nat.modCore.go`, `Nat.modCoreGo_lt` is refused under
+   the table, while `Nat.modCore_lt` checks: the counter names a use of
+   the definition, not of the equation the table loses, which is the
+   upper bound the question expected.  The counters do not name the
+   equation used, and they cannot see what the library computes.
++  **To rerun**.  `docs/foundations/probes/lean/NatOpsUses.lean`, from
+   `translator/`, 91 s; and the checker on a scaffold whose `Nat.sub`
+   rules have their `REWRITE` pragma removed
+   ([`foundations/nat-operations.md`][nat-operations], "`Nat.sub`: four
+   candidates").
++  **Upstream**.  Nothing to report.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -673,3 +716,6 @@ entry adds its row here too.
 [lake-toml-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Load/Toml.lean#L447
 [lake-name]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/Util/Name.lean#L24-L25
 [lake-test-driver]: https://github.com/leanprover/lean4/blob/v4.33.1/src/lake/Lake/CLI/Actions.lean#L75-L87
+[#31]: https://github.com/formalverification/lean2agda/issues/31
+[kernel-reduce-nat]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/type_checker.cpp#L702-L733
+[nat-operations]: foundations/nat-operations.md

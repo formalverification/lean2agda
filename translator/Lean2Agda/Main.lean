@@ -59,7 +59,7 @@ def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (clos
     (listing : String) : IO Unit := do
   let shared ← IO.ofExcept (shareClosure env args.share closure)
   let maps ← IO.ofExcept <| moduleNameMaps args.root shared
-  let tree ← IO.ofExcept (scaffoldTree env args.root shared args.split)
+  let tree ← IO.ofExcept (scaffoldTree env args.root shared args.split args.arithmetic)
   let comment := scaffoldComment closure
   let everything := tree.everythingPath.foldl (· / ·) dir |>.addExtension "agda"
   let strays ← strayModules dir (tree.modules.map (·.filePath dir) |>.push everything)

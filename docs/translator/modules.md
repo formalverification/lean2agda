@@ -164,7 +164,8 @@ details are as follows:
    module that exhausts the heap fails alone, reported as `heap` with the
    declaration Agda named last, instead of taking the machine down; [#19]
    met one such declaration, `ByteArray.IsValidUTF8`, whose positivity
-   check normalizes an exponentially large type.
+   check normalized an exponentially large type until the operation table
+   of [#31] replaced Lean's unary arithmetic.
 +  **Interfaces**.  Agda reuses an interface newer than its module, so a
    second run over an unchanged tree checks nothing; `--fresh` removes
    `DIR/_build` first, which every measurement below used.
@@ -204,9 +205,18 @@ scheduler stays in one place.
    from a fresh copy with that theorem transparent in its own module,
    under `-- theorem, unfolded for D`, and lists `unfolded T for D` in
    the dependent's module, where its `in vain` mark is decided as in one
-   module.  Each pass adds a theorem, so the passes end; the summary line
-   counts them when there are more than one, and each module's runs and
-   seconds are summed over them.  A first version unfolded only within
+   module.  Every dependent whose refusal names a theorem claims it, so
+   that dependents' chains of unfoldings run side by side and each records
+   its own.  An unfolding whose dependent the pass refuses all the same,
+   with nothing more to ask for, is in vain, and once no claim on its
+   theorem is left the next pass leaves it opaque, as the loop undoes one
+   within a module ([#31]).  Each pass adds an unfolding or undoes one,
+   never the same twice, so the passes end; the summary line counts them
+   when there are more than one, and each module's runs and seconds are
+   summed over them.  Which dependent records an unfolding in vain
+   depends on the order in which dependents meet its theorem, which a
+   split changes, so the harness compares a split tree with the uncut one
+   on outcomes and on the unfoldings that helped (`check_split`).  A first version unfolded only within
    the module, and lost two kinds of unfolding: on `kinds` and on the
    quotients' `--without-rewrite` listing, an unfolding of an `Init`
    theorem, in vain in the single module too; and, in the review of
@@ -329,6 +339,7 @@ python3 ../scripts/python/agda_check.py --fresh -j 8 kept
 [#22]: https://github.com/formalverification/lean2agda/issues/22
 [#83]: https://github.com/formalverification/lean2agda/pull/83
 [#84]: https://github.com/formalverification/lean2agda/pull/84
+[#31]: https://github.com/formalverification/lean2agda/issues/31
 [naming]: naming.md
 [printing]: printing.md
 [related]: ../related-work.md

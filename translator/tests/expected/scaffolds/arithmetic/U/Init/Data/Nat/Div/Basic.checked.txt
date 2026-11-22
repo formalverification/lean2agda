@@ -1,0 +1,11 @@
+checked 10 of 10 declarations, 0 of 0 data types and records
+unfolded 6 of 5 theorems, 6 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms Nat:div~urec~ufuel~ulemma for Nat:div:go:eq~u1, in vain | U.Init.Prelude.Nat:div:go y₀ hy₁ (U.Init.Prelude.Nat:succ fuel2₃)
+unfolded UnequalTerms Nat:div~urec~ufuel~ulemma for ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:div:go:fuel~ucongr:~uf, in vain | U.Init.Prelude.Decidable:rec (λ x₁₄ → U.Init.Prelude.OfNat:ofNat _)
+unfolded UnequalTerms Nat:not~ule~uof~unot~uble~ueq~utrue for Nat:div:go:eq~u1, in vain | U.Init.Prelude.Nat:div:go y₀ hy₁ (U.Init.Prelude.Nat:succ fuel2₃)
+unfolded UnequalTerms Nat:not~ule~uof~unot~uble~ueq~utrue for ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:div:go:fuel~ucongr:~uf, in vain | U.Init.Prelude.Decidable:rec (λ x₁₄ → U.Init.Prelude.OfNat:ofNat _)
+unfolded UnequalTerms Nat:le~uof~uble~ueq~utrue for Nat:div:go:eq~u1, in vain | U.Init.Prelude.Nat:div:go y₀ hy₁ (U.Init.Prelude.Nat:succ fuel2₃)
+unfolded UnequalTerms Nat:le~uof~uble~ueq~utrue for ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:div:go:fuel~ucongr:~uf, in vain | U.Init.Prelude.Decidable:rec (λ x₁₄ → U.Init.Prelude.OfNat:ofNat _)
+refused value UnequalTerms Nat:div:go:eq~u1 | U.Init.Prelude.Nat:div:go y₀ hy₁ (U.Init.Prelude.Nat:succ fuel2₃)
+refused value UnequalTerms ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:div:go:fuel~ucongr:~uf | U.Init.Prelude.Decidable:rec (λ x₁₄ → U.Init.Prelude.OfNat:ofNat _)

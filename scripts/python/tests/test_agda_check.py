@@ -28,7 +28,8 @@ from _utils.pipeline_types import ErrorType, PipelineError, Result
 from agda_check import (
     Progress, Pruned, Source, Span, assemble, blocked, build_tree, capped, check_tree, dependents,
     execute, exit_status, find_cycle, foreign_names, named, format_summary, format_table, launchable,
-    Tree, Unfold, first_requests, injections, keep_target, measured_run, merged, module_run, parse_args,
+    Tree, Unfold, in_vain_unfolds, injections, keep_target, measured_run, merged, module_run,
+    next_requests, parse_args,
     parse_source, positive, predropped, prune_tree, read_tree, requests, simulate, skipped, strays, summed,
     sum_counts, topological, types_only_tree, unfold_modules, without,
 )
@@ -344,10 +345,53 @@ class TestUnfoldingAcrossModules(unittest.TestCase):
         self.assertEqual(requests(self.tree, self.pruned(detail="other != x")), ())
         self.assertEqual(requests(self.tree, self.pruned(detail="nothing named")), ())
 
-    def test_first_requests(self) -> None:
-        one = Unfold("U.A", "thm", "U.B", "user", "E", "m")
-        self.assertEqual(first_requests((one, replace(one, dependent="later"), replace(one, theorem="t2"))),
-                         (one, replace(one, theorem="t2")))
+    def test_an_unfolding_in_vain_is_undone(self) -> None:
+        one = Unfold("U.A", "thm", "U.B", "user", "UnequalTerms", "thm != x")
+        # The dependent is refused again, naming no other theorem: in vain.
+        refused = self.pruned(detail="nothing named")
+        self.assertEqual(in_vain_unfolds((one,), (), refused), frozenset({("U.A", "thm", "user")}))
+        self.assertEqual(next_requests(self.tree, refused, (one,), frozenset()), ((), frozenset({("U.A", "thm", "user")})))
+        # Still asking for a theorem: the chain goes on, nothing is undone.
+        self.assertEqual(in_vain_unfolds((one,), (replace(one, theorem="t2"),), refused), frozenset())
+        # A dependent that checked made no unfolding in vain.
+        checked = dict(refused, **{"U.B": replace(refused["U.B"], state=State(refused["U.B"].state.items, (True,), ()))})
+        self.assertEqual(in_vain_unfolds((one,), (), checked), frozenset())
+
+    def test_an_undone_theorem_can_be_asked_for_again(self) -> None:
+        one = Unfold("U.A", "thm", "U.B", "user", "UnequalTerms", "thm != x")
+        # The same dependent does not ask twice; another one may.
+        self.assertEqual(next_requests(self.tree, self.pruned(), (one,), frozenset({("U.A", "thm", "user")})),
+                         ((), frozenset()))
+        other = replace(one, dependent="other")
+        self.assertEqual(next_requests(self.tree, self.pruned(), (other,), frozenset({("U.A", "thm", "other")})),
+                         ((one,), frozenset()))
+
+    def test_a_dependent_after_one_already_asked_still_asks(self) -> None:
+        # Two refusals name the theorem in one pass, the first by a
+        # dependent that asked for it before, in vain: the second still asks.
+        pruned = self.pruned()
+        b = pruned["U.B"].state
+        first = Event("refused value", "other", "UnequalTerms", "thm != y", detail="U.A.thm != y of type T")
+        pruned = dict(pruned, **{"U.B": replace(pruned["U.B"], state=State(b.items, b.alive, (first,) + b.events))})
+        asked = Unfold("U.A", "thm", "U.B", "other", "UnequalTerms", "thm != y")
+        fresh, _ = next_requests(self.tree, pruned, (asked,), frozenset({("U.A", "thm", "other")}))
+        self.assertEqual([u.dependent for u in fresh], ["user"])
+
+    def test_every_dependent_that_asks_claims_the_theorem(self) -> None:
+        # Two refusals name the theorem t2 in one pass: both claim it, so
+        # that their chains run side by side and each records its own; the
+        # second, whose unfolding of thm is active, is still asking.
+        t2 = parse_item("-- theorem\nopaque\n  t2 : T\n  t2 = t")
+        a = State((t2,), (True,), ())
+        b = State((parse_item("first : T\nfirst = x"), parse_item("user : T\nuser = x")), (True, True),
+                  (Event("refused value", "first", "UnequalTerms", "t2 != x", detail="U.A.t2 != x of type T"),
+                   Event("refused value", "user", "UnequalTerms", "t2 != y", detail="U.A.t2 != y of type T")))
+        pruned = {m: Pruned(m, "", frozenset(), 1, 0.0, 0, "", s) for m, s in (("U.A", a), ("U.B", b))}
+        tree = Tree({}, {"U.A": frozenset(), "U.B": frozenset({"U.A"})})
+        active = Unfold("U.A", "thm", "U.B", "user", "UnequalTerms", "thm != x")
+        fresh, vain = next_requests(tree, pruned, (active,), frozenset())
+        self.assertEqual([(u.theorem, u.dependent) for u in fresh], [("t2", "first"), ("t2", "user")])
+        self.assertEqual(vain, frozenset())
 
     def test_unfold_modules(self) -> None:
         module = Module("U.A", "header", (self.theorem, parse_item("thm2 : T\nthm2 = t")))

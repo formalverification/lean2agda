@@ -89,6 +89,13 @@ check_tree kinds TranslatorTests.Input.Kinds
 check_tree recursors TranslatorTests.Input.Recursors
 check_tree quotients TranslatorTests.Input.Quotients
 
+# The operation table (issue M3-6): Lean's equations for the accelerated
+# operations, on variables, and computations on numerals past 2^64,
+# under the table; and the equations again under Lean's compiled
+# definitions, the control (numerals there would run in unary).
+check_tree arithmetic TranslatorTests.Input.Arithmetic TranslatorTests.Input.Numerals
+check_tree arithmetic-lean --arithmetic lean TranslatorTests.Input.Arithmetic
+
 # Where the quotient's computation rules fire (issue M2-7): the same
 # tree with its REWRITE pragmas removed, so that the rules never fire,
 # refuses every root, each of which holds in Lean only because the
@@ -108,10 +115,17 @@ python3 ../scripts/python/agda_check.py --agda "${AGDA:-agda}" -j "$jobs" "$scra
 # opens as the module names it: nat-gcd-self's cut into parts of at most 60 KB, so
 # that what a part drops is dropped from the later parts that open it,
 # and kinds cut after every item, so that the fallback's unfolding of
-# KindFixtures.alias for useAlias crosses parts.
+# KindFixtures.alias for useAlias crosses parts.  Unfoldings in vain are
+# left out (issue M3-6): the loop and the driver undo each one, so it
+# changes no outcome, and which dependent records one depends on the
+# order in which the dependents meet its theorem, which the parts change;
+# the unfoldings that helped, and every refusal, are compared.
 events_of() {
   find "$1" -name '*.checked.txt' -exec cat {} + \
-    | grep -Ev '^(checked|unfolded|defined) [0-9]+ of [0-9]+ ' | sed 's/ | .*//' | sort
+    | grep -Ev '^(checked|unfolded|defined) [0-9]+ of [0-9]+ ' | sed 's/ | .*//' | grep -v ', in vain$' | sort
+}
+counts_of() {
+  awk '/^unfolded [0-9]+ of [0-9]+ theorems, [0-9]+ in vain$/ { print "unfolded", $2 - $6, "that helped, of", $4, "theorems"; next } { print }' "$1"
 }
 check_split() {
   local name=$1 split=$2
@@ -120,7 +134,7 @@ check_split() {
   find "$scratch/split-$name" -path '*~p2.agda' | grep -q .
   python3 ../scripts/python/agda_check.py --refusals --agda "${AGDA:-agda}" -j "$jobs" \
     --listings "$scratch/split-$name-listed" "$scratch/split-$name" > /dev/null
-  diff -u "tests/expected/scaffolds/$name/checked.txt" "$scratch/split-$name-listed/checked.txt"
+  diff -u <(counts_of "tests/expected/scaffolds/$name/checked.txt") <(counts_of "$scratch/split-$name-listed/checked.txt")
   diff -u <(events_of "tests/expected/scaffolds/$name") <(events_of "$scratch/split-$name-listed")
 }
 check_split nat-gcd-self 60000 Init.Data.Nat.Gcd -- Nat.gcd_self
@@ -200,6 +214,8 @@ expect_failure 2 '--root needs a Lean name' --root
 expect_failure 2 '--root needs a Lean name' --root --stats Init
 expect_failure 2 '--share needs a natural number' --share x Init
 expect_failure 2 '--share needs a natural number' --share
+expect_failure 2 '--arithmetic needs agda or lean' --arithmetic binary Init
+expect_failure 2 '--arithmetic needs agda or lean' --arithmetic
 expect_failure 2 '--split needs a natural number' --split x Init
 expect_failure 2 '--split needs a natural number' --split
 expect_failure 1 'unknown declaration' Init.Data.Nat.Gcd -- DoesNotExist

@@ -122,8 +122,11 @@ blocks, the rest postulated), with `DIR/U.agda-lib`, `DIR/libraries` and
 `DIR/U/Everything.agda`, beside `DIR/refusals.txt`, which names the
 declarations the scaffold refuses (`sorryAx`, `unsafe`, and their
 dependents) with the reason; `--share N` sets the sharing pass's
-threshold, and `--split BYTES` the size past which a module is cut into
-parts (1 MB by default).  A `DIR` holding a module the run does not write
+threshold, `--split BYTES` the size past which a module is cut into
+parts (1 MB by default), and `--arithmetic agda|lean` whether the
+recursive cores of the operations Lean's kernel accelerates on `Nat` are
+the operation table's Agda definitions (`agda`, the default) or Lean's
+compiled ones ([`../docs/foundations/nat-operations.md`]).  A `DIR` holding a module the run does not write
 is refused.  The naming API and sidecar schema are in [`naming.md`], the
 printer, the sharing pass and the scaffold's declarations in
 [`printing.md`], and the tree of modules, its split rule and the tree
@@ -179,3 +182,4 @@ Conventions for everything that lands here are as follows:
 [`naming.md`]: ../docs/translator/naming.md
 [`modules.md`]: ../docs/translator/modules.md
 [`printing.md`]: ../docs/translator/printing.md
+[`../docs/foundations/nat-operations.md`]: ../docs/foundations/nat-operations.md

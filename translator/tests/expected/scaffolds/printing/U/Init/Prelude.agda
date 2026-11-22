@@ -206,8 +206,15 @@ Nat:add:match~u1 motive₀ x₁ x₂ h1₃ h2₄ = Nat:casesOn {λ (x₅ : Nat) 
 Nat:add:~uf : (x₀ : Nat) → Nat:below {λ (x₁ : Nat) → Nat → Nat} x₀ → Nat → Nat
 Nat:add:~uf x₀ f₁ x₂ = Nat:add:match~u1 (λ (x₃ : Nat) → λ (x₄ : Nat) → Nat:below {λ (x₅ : Nat) → Nat → Nat} x₄ → Nat) x₂ x₀ (λ (a₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Nat} Nat:zero) → a₃) (λ (a₃ : Nat) → λ (b₄ : Nat) → λ (x₅ : Nat:below {λ (x₅ : Nat) → Nat → Nat} (Nat:succ b₄)) → Nat:succ (PProd.fst₂ {(λ (x₆ : Nat) → Nat → Nat) b₄} {Nat:rec {λ (t₆ : Nat) → Set} PUnit (λ (n₆ : Nat) → λ (nih₇ : Set) → PProd ((λ (x₈ : Nat) → Nat → Nat) n₆) nih₇) b₄} x₅ a₃)) f₁
 
+-- operation table
+Nat:add-builtin : Nat → Nat → Nat
+Nat:add-builtin Nat:zero m₁ = m₁
+Nat:add-builtin (Nat:succ n₀) m₁ = Nat:succ (Nat:add-builtin n₀ m₁)
+{-# BUILTIN NATPLUS Nat:add-builtin #-}
+
+-- operation table
 Nat:add : Nat → Nat → Nat
-Nat:add x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Nat} x₁ Nat:add:~uf x₀
+Nat:add x₀ x₁ = Nat:add-builtin x₁ x₀
 
 Nat:mul:match~u1 : (motive₀ : Nat → Nat → Set) → (x₁ : Nat) → (x₂ : Nat) → ((x₃ : Nat) → motive₀ x₃ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) → ((a₃ : Nat) → (b₄ : Nat) → motive₀ a₃ (Nat:succ b₄)) → motive₀ x₁ x₂
 Nat:mul:match~u1 motive₀ x₁ x₂ h1₃ h2₄ = Nat:casesOn {λ (x₅ : Nat) → motive₀ x₁ x₅} x₂ (h1₃ x₁) (λ (n₅ : Nat) → h2₄ x₁ n₅)
@@ -215,8 +222,15 @@ Nat:mul:match~u1 motive₀ x₁ x₂ h1₃ h2₄ = Nat:casesOn {λ (x₅ : Nat) 
 Nat:mul:~uf : (x₀ : Nat) → Nat:below {λ (x₁ : Nat) → Nat → Nat} x₀ → Nat → Nat
 Nat:mul:~uf x₀ f₁ x₂ = Nat:mul:match~u1 (λ (x₃ : Nat) → λ (x₄ : Nat) → Nat:below {λ (x₅ : Nat) → Nat → Nat} x₄ → Nat) x₂ x₀ (λ (x₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Nat} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) → OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (λ (a₃ : Nat) → λ (b₄ : Nat) → λ (x₅ : Nat:below {λ (x₅ : Nat) → Nat → Nat} (Nat:succ b₄)) → Nat:add (PProd.fst₂ {(λ (x₆ : Nat) → Nat → Nat) b₄} {Nat:rec {λ (t₆ : Nat) → Set} PUnit (λ (n₆ : Nat) → λ (nih₇ : Set) → PProd ((λ (x₈ : Nat) → Nat → Nat) n₆) nih₇) b₄} x₅ a₃) a₃) f₁
 
+-- operation table
+Nat:mul-builtin : Nat → Nat → Nat
+Nat:mul-builtin Nat:zero m₁ = Nat:zero
+Nat:mul-builtin (Nat:succ n₀) m₁ = Nat:add-builtin m₁ (Nat:mul-builtin n₀ m₁)
+{-# BUILTIN NATTIMES Nat:mul-builtin #-}
+
+-- operation table
 Nat:mul : Nat → Nat → Nat
-Nat:mul x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Nat} x₁ Nat:mul:~uf x₀
+Nat:mul x₀ x₁ = Nat:mul-builtin x₁ x₀
 
 Unit : Set
 Unit = PUnit
@@ -230,8 +244,10 @@ Nat:pow:match~u1 motive₀ x₁ h1₂ h2₃ = Nat:casesOn {λ (x₄ : Nat) → m
 Nat:pow:~uf : Nat → (x₀ : Nat) → Nat:below {λ (x₁ : Nat) → Nat} x₀ → Nat
 Nat:pow:~uf m₀ x₁ f₂ = Nat:pow:match~u1 (λ (x₃ : Nat) → Nat:below {λ (x₄ : Nat) → Nat} x₃ → Nat) x₁ (λ (x₃ : Unit) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) → OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄) (λ (n₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat} (Nat:succ n₃)) → Nat:mul (PProd.fst₂ {(λ (x₅ : Nat) → Nat) n₃} {Nat:rec {λ (t₅ : Nat) → Set} PUnit (λ (n₅ : Nat) → λ (nih₆ : Set) → PProd ((λ (x₇ : Nat) → Nat) n₅) nih₆) n₃} x₄) m₀) f₂
 
+-- operation table
 Nat:pow : Nat → Nat → Nat
-Nat:pow m₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat} x₁ (Nat:pow:~uf m₀)
+Nat:pow m₀ Nat:zero = 1
+Nat:pow m₀ (Nat:succ n₁) = Nat:mul-builtin m₀ (Nat:pow m₀ n₁)
 
 record NatPow (α₀ : Set) : Set where
   constructor NatPow:mk
@@ -480,6 +496,9 @@ Mod:rec {α₀} {motive₁} mk₂ (Mod:mk mod₃) = mk₂ mod₃
 data Bool : Set where
   Bool:false : Bool
   Bool:true : Bool
+{-# BUILTIN BOOL Bool #-}
+{-# BUILTIN FALSE Bool:false #-}
+{-# BUILTIN TRUE Bool:true #-}
 
 -- recursor
 Bool:rec : {motive₀ : Bool → Set} → motive₀ Bool:false → motive₀ Bool:true → (t₁ : Bool) → motive₀ t₁
@@ -504,8 +523,16 @@ Nat:ble:match~u1 motive₀ x₁ x₂ h1₃ h2₄ h3₅ = Nat:casesOn {λ (x₆ :
 Nat:ble:~uf : (x₀ : Nat) → Nat:below {λ (x₁ : Nat) → Nat → Bool} x₀ → Nat → Bool
 Nat:ble:~uf x₀ f₁ x₂ = Nat:ble:match~u1 (λ (x₃ : Nat) → λ (x₄ : Nat) → Nat:below {λ (x₅ : Nat) → Nat → Bool} x₃ → Bool) x₀ x₂ (λ (x₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Bool} Nat:zero) → Bool:true) (λ (n₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Bool} (Nat:succ n₃)) → Bool:false) (λ (n₃ : Nat) → λ (m₄ : Nat) → λ (x₅ : Nat:below {λ (x₅ : Nat) → Nat → Bool} (Nat:succ n₃)) → PProd.fst₂ {(λ (x₆ : Nat) → Nat → Bool) n₃} {Nat:rec {λ (t₆ : Nat) → Set} PUnit (λ (n₆ : Nat) → λ (nih₇ : Set) → PProd ((λ (x₈ : Nat) → Nat → Bool) n₆) nih₇) n₃} x₅ m₄) f₁
 
+-- operation table
+Nat:blt-builtin : Nat → Nat → Bool
+Nat:blt-builtin n₀ Nat:zero = Bool:false
+Nat:blt-builtin Nat:zero (Nat:succ m₁) = Bool:true
+Nat:blt-builtin (Nat:succ n₀) (Nat:succ m₁) = Nat:blt-builtin n₀ m₁
+{-# BUILTIN NATLESS Nat:blt-builtin #-}
+
+-- operation table
 Nat:ble : Nat → Nat → Bool
-Nat:ble x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Bool} x₀ Nat:ble:~uf x₁
+Nat:ble x₀ x₁ = Nat:blt-builtin x₀ (Nat:succ x₁)
 
 Bool:casesOn : {motive₀ : Bool → Set} → (t₁ : Bool) → motive₀ Bool:false → motive₀ Bool:true → motive₀ t₁
 Bool:casesOn {motive₀} t₁ false₂ true₃ = Bool:rec {motive₀} false₂ true₃ t₁
@@ -522,8 +549,13 @@ Nat:beq:match~u1 motive₀ x₁ x₂ h1₃ h2₄ h3₅ h4₆ = Nat:casesOn {λ (
 Nat:beq:~uf : (x₀ : Nat) → Nat:below {λ (x₁ : Nat) → Nat → Bool} x₀ → Nat → Bool
 Nat:beq:~uf x₀ f₁ x₂ = Nat:beq:match~u1 (λ (x₃ : Nat) → λ (x₄ : Nat) → Nat:below {λ (x₅ : Nat) → Nat → Bool} x₃ → Bool) x₀ x₂ (λ (x₃ : Unit) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Bool} Nat:zero) → Bool:true) (λ (n₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Bool} Nat:zero) → Bool:false) (λ (n₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Bool} (Nat:succ n₃)) → Bool:false) (λ (n₃ : Nat) → λ (m₄ : Nat) → λ (x₅ : Nat:below {λ (x₅ : Nat) → Nat → Bool} (Nat:succ n₃)) → PProd.fst₂ {(λ (x₆ : Nat) → Nat → Bool) n₃} {Nat:rec {λ (t₆ : Nat) → Set} PUnit (λ (n₆ : Nat) → λ (nih₇ : Set) → PProd ((λ (x₈ : Nat) → Nat → Bool) n₆) nih₇) n₃} x₅ m₄) f₁
 
+-- operation table
 Nat:beq : Nat → Nat → Bool
-Nat:beq x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Bool} x₀ Nat:beq:~uf x₁
+Nat:beq Nat:zero Nat:zero = Bool:true
+Nat:beq (Nat:succ n₀) (Nat:succ m₁) = Nat:beq n₀ m₁
+Nat:beq Nat:zero (Nat:succ m₁) = Bool:false
+Nat:beq (Nat:succ n₀) Nat:zero = Bool:false
+{-# BUILTIN NATEQUALS Nat:beq #-}
 
 record True : Set where
   constructor True:intro
@@ -689,8 +721,10 @@ opaque
   Nat:le~usucc : (n₀ : Nat) → LE:le {Nat} ⦃ instLENat ⦄ n₀ (Nat:succ n₀)
   Nat:le~usucc n₀ = Nat:le:step {n₀} {n₀} (Nat:le:refl {n₀})
 
+-- operation table
 Nat:pred : Nat → Nat
-Nat:pred x₀ = Nat:pow:match~u1 (λ (x₁ : Nat) → Nat) x₀ (λ (x₁ : Unit) → OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (λ (a₁ : Nat) → a₁)
+Nat:pred Nat:zero = Nat:zero
+Nat:pred (Nat:succ n₀) = n₀
 
 ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 : (motive₀ : (x₀ : Nat) → (x₁ : Nat) → LE:le {Nat} ⦃ instLENat ⦄ x₀ x₁ → Set) → (x₁ : Nat) → (x₂ : Nat) → (x₃ : LE:le {Nat} ⦃ instLENat ⦄ x₁ x₂) → ((n₄ : Nat) → motive₀ n₄ n₄ (Nat:le:refl {n₄})) → ((n₄ : Nat) → (h₅ : Nat:le (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) n₄) → motive₀ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (Nat:succ n₄) (Nat:le:step {OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄} {n₄} h₅)) → ((n₄ : Nat) → (n₅ : Nat) → (h₆ : Nat:le (Nat:succ n₄) n₅) → motive₀ (Nat:succ n₄) (Nat:succ n₅) (Nat:le:step {Nat:succ n₄} {n₅} h₆)) → motive₀ x₁ x₂ x₃
 ~uprivate:Init:Prelude:~n0:Nat:pred~ule~upred:match~u1~u1 motive₀ x₁ x₂ x₃ h1₄ h2₅ h3₆ = Nat:le:casesOn {x₁} {λ (a₇ : Nat) → λ (x₈ : Nat:le x₁ a₇) → Eq {Nat} x₂ a₇ → HEq {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₂} x₃ {Nat:le x₁ a₇} x₈ → motive₀ x₁ x₂ x₃} {x₂} x₃ (λ (h₇ : Eq {Nat} x₂ x₁) → Eq:ndrec {Nat} {x₁} {λ (x₈ : Nat) → (x₉ : LE:le {Nat} ⦃ instLENat ⦄ x₁ x₈) → HEq {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₈} x₉ {Nat:le x₁ x₁} (Nat:le:refl {x₁}) → motive₀ x₁ x₈ x₉} (λ (x₈ : LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁) → λ (h₉ : HEq {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁} x₈ {Nat:le x₁ x₁} (Nat:le:refl {x₁})) → Eq:ndrec {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁} {Nat:le:refl {x₁}} {λ (x₁₀ : LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁) → motive₀ x₁ x₁ x₁₀} (h1₄ x₁) {x₈} (Eq:symm {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁} {x₈} {Nat:le:refl {x₁}} (eq~uof~uheq {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁} {x₈} {Nat:le:refl {x₁}} h₉))) {x₂} (Eq:symm {Nat} {x₂} {x₁} h₇) x₃) (λ {m₇ : Nat} → λ (a₈ : Nat:le x₁ m₇) → λ (h₉ : Eq {Nat} x₂ (Nat:succ m₇)) → Eq:ndrec {Nat} {Nat:succ m₇} {λ (x₁₀ : Nat) → (x₁₁ : LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁₀) → HEq {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₁₀} x₁₁ {Nat:le x₁ (Nat:succ m₇)} (Nat:le:step {x₁} {m₇} a₈) → motive₀ x₁ x₁₀ x₁₁} (λ (x₁₀ : LE:le {Nat} ⦃ instLENat ⦄ x₁ (Nat:succ m₇)) → λ (h₁₁ : HEq {LE:le {Nat} ⦃ instLENat ⦄ x₁ (Nat:succ m₇)} x₁₀ {Nat:le x₁ (Nat:succ m₇)} (Nat:le:step {x₁} {m₇} a₈)) → Eq:ndrec {LE:le {Nat} ⦃ instLENat ⦄ x₁ (Nat:succ m₇)} {Nat:le:step {x₁} {m₇} a₈} {λ (x₁₂ : LE:le {Nat} ⦃ instLENat ⦄ x₁ (Nat:succ m₇)) → motive₀ x₁ (Nat:succ m₇) x₁₂} (Nat:casesOn {λ (x₁₂ : Nat) → (a₁₃ : Nat:le x₁₂ m₇) → motive₀ x₁₂ (Nat:succ m₇) (Nat:le:step {x₁₂} {m₇} a₁₃)} x₁ (λ (a₁₂ : Nat:le Nat:zero m₇) → h2₅ m₇ a₁₂) (λ (n₁₂ : Nat) → λ (a₁₃ : Nat:le (Nat:succ n₁₂) m₇) → h3₆ n₁₂ m₇ a₁₃) a₈) {x₁₀} (Eq:symm {LE:le {Nat} ⦃ instLENat ⦄ x₁ (Nat:succ m₇)} {x₁₀} {Nat:le:step {x₁} {m₇} a₈} (eq~uof~uheq {LE:le {Nat} ⦃ instLENat ⦄ x₁ (Nat:succ m₇)} {x₁₀} {Nat:le:step {x₁} {m₇} a₈} h₁₁))) {x₂} (Eq:symm {Nat} {x₂} {Nat:succ m₇} h₉) x₃) (Eq:refl {Nat} x₂) (HEq:refl {LE:le {Nat} ⦃ instLENat ⦄ x₁ x₂} x₃)
@@ -737,8 +771,35 @@ opaque
 Nat:sub:~uf : (x₀ : Nat) → Nat:below {λ (x₁ : Nat) → Nat → Nat} x₀ → Nat → Nat
 Nat:sub:~uf x₀ f₁ x₂ = Nat:mul:match~u1 (λ (x₃ : Nat) → λ (x₄ : Nat) → Nat:below {λ (x₅ : Nat) → Nat → Nat} x₄ → Nat) x₂ x₀ (λ (a₃ : Nat) → λ (x₄ : Nat:below {λ (x₄ : Nat) → Nat → Nat} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) → a₃) (λ (a₃ : Nat) → λ (b₄ : Nat) → λ (x₅ : Nat:below {λ (x₅ : Nat) → Nat → Nat} (Nat:succ b₄)) → Nat:pred (PProd.fst₂ {(λ (x₆ : Nat) → Nat → Nat) b₄} {Nat:rec {λ (t₆ : Nat) → Set} PUnit (λ (n₆ : Nat) → λ (nih₇ : Set) → PProd ((λ (x₈ : Nat) → Nat → Nat) n₆) nih₇) b₄} x₅ a₃)) f₁
 
+-- operation table
+Nat:sub-builtin : Nat → Nat → Nat
+Nat:sub-builtin n₀ Nat:zero = n₀
+Nat:sub-builtin Nat:zero (Nat:succ m₁) = Nat:zero
+Nat:sub-builtin (Nat:succ n₀) (Nat:succ m₁) = Nat:sub-builtin n₀ m₁
+{-# BUILTIN NATMINUS Nat:sub-builtin #-}
+
+-- operation table
+Nat:sub-builtin-succ : (n₀ : Nat) → (m₁ : Nat) → Eq {Nat} (Nat:sub-builtin n₀ (Nat:succ m₁)) (Nat:pred (Nat:sub-builtin n₀ m₁))
+Nat:sub-builtin-succ Nat:zero Nat:zero = Eq:refl Nat:zero
+Nat:sub-builtin-succ Nat:zero (Nat:succ m₁) = Eq:refl Nat:zero
+Nat:sub-builtin-succ (Nat:succ n₀) Nat:zero = Eq:refl n₀
+Nat:sub-builtin-succ (Nat:succ n₀) (Nat:succ m₁) = Nat:sub-builtin-succ n₀ m₁
+
+-- operation table
+Nat:sub-builtin-pred-zero : (m₁ : Nat) → Eq {Nat} (Nat:pred (Nat:sub-builtin Nat:zero m₁)) Nat:zero
+Nat:sub-builtin-pred-zero Nat:zero = Eq:refl Nat:zero
+Nat:sub-builtin-pred-zero (Nat:succ m₁) = Eq:refl Nat:zero
+
+-- operation table
+Nat:sub-builtin-pred-succ : (n₀ : Nat) → (m₁ : Nat) → Eq {Nat} (Nat:pred (Nat:sub-builtin (Nat:succ n₀) m₁)) (Nat:sub-builtin n₀ m₁)
+Nat:sub-builtin-pred-succ n₀ Nat:zero = Eq:refl n₀
+Nat:sub-builtin-pred-succ Nat:zero (Nat:succ m₁) = Nat:sub-builtin-pred-zero m₁
+Nat:sub-builtin-pred-succ (Nat:succ n₀) (Nat:succ m₁) = Nat:sub-builtin-pred-succ n₀ m₁
+{-# REWRITE Nat:sub-builtin-succ Nat:sub-builtin-pred-zero Nat:sub-builtin-pred-succ #-}
+
+-- operation table
 Nat:sub : Nat → Nat → Nat
-Nat:sub x₀ x₁ = Nat:brecOn {λ (x₂ : Nat) → Nat → Nat} x₁ Nat:sub:~uf x₀
+Nat:sub x₀ x₁ = Nat:sub-builtin x₀ x₁
 
 record Sub (α₀ : Set) : Set where
   constructor Sub:mk
@@ -800,8 +861,17 @@ opaque
 Nat:modCore:go:~uf : (y₀ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₀ → (fuel₁ : Nat) → Nat:below {λ (fuel₂ : Nat) → (x₃ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₃ fuel₂ → Nat} fuel₁ → (x₂ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₂ fuel₁ → Nat
 Nat:modCore:go:~uf y₀ hy₁ fuel₂ f₃ x₄ hfuel₅ = Nat:div:go:match~u1 x₄ (λ (fuel₆ : Nat) → λ (hfuel₇ : LT:lt {Nat} ⦃ instLTNat ⦄ x₄ fuel₆) → Nat:below {λ (fuel₈ : Nat) → (x₉ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₉ fuel₈ → Nat} fuel₆ → Nat) fuel₂ hfuel₅ (λ (fuel₆ : Nat) → λ (hfuel₇ : LT:lt {Nat} ⦃ instLTNat ⦄ x₄ (Nat:succ fuel₆)) → λ (x₈ : Nat:below {λ (fuel₈ : Nat) → (x₉ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₉ fuel₈ → Nat} (Nat:succ fuel₆)) → dite {Nat} (LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄) ⦃ Nat:decLe y₀ x₄ ⦄ (λ (h₉ : LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄) → PProd.fst₂ {(λ (fuel₁₀ : Nat) → (x₁₁ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₁₁ fuel₁₀ → Nat) fuel₆} {Nat:rec {λ (t₁₀ : Nat) → Set} PUnit (λ (n₁₀ : Nat) → λ (nih₁₁ : Set) → PProd ((λ (fuel₁₂ : Nat) → (x₁₃ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₁₃ fuel₁₂ → Nat) n₁₀) nih₁₁) fuel₆} x₈ (HSub:hSub {Nat} {Nat} {Nat} ⦃ instHSub {Nat} ⦃ instSubNat ⦄ ⦄ x₄ y₀) (Nat:div~urec~ufuel~ulemma {x₄} {y₀} {fuel₆} hy₁ h₉ hfuel₇)) (λ (x₉ : Not (LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄)) → x₄)) f₃
 
+-- operation table
+Nat:mod-builtin : Nat → Nat → Nat → Nat → Nat
+Nat:mod-builtin k₀ m₁ Nat:zero j₃ = k₀
+Nat:mod-builtin k₀ m₁ (Nat:succ n₂) Nat:zero = Nat:mod-builtin Nat:zero m₁ n₂ m₁
+Nat:mod-builtin k₀ m₁ (Nat:succ n₂) (Nat:succ j₃) = Nat:mod-builtin (Nat:succ k₀) m₁ n₂ j₃
+{-# BUILTIN NATMODSUCAUX Nat:mod-builtin #-}
+
+-- operation table
 Nat:modCore:go : (y₀ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₀ → (fuel₁ : Nat) → (x₂ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₂ fuel₁ → Nat
-Nat:modCore:go y₀ hy₁ fuel₂ x₃ hfuel₄ = Nat:brecOn {λ (fuel₅ : Nat) → (x₆ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₆ fuel₅ → Nat} fuel₂ (Nat:modCore:go:~uf y₀ hy₁) x₃ hfuel₄
+Nat:modCore:go Nat:zero hy₁ fuel₂ x₃ hfuel₄ = x₃
+Nat:modCore:go (Nat:succ y₀) hy₁ fuel₂ x₃ hfuel₄ = Nat:mod-builtin Nat:zero y₀ x₃ y₀
 
 Nat:modCore : Nat → Nat → Nat
 Nat:modCore x₀ y₁ = dite {Nat} (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁) ⦃ Nat:decLt (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁ ⦄ (λ (hy₂ : LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁) → Nat:modCore:go y₁ hy₂ (Nat:succ x₀) x₀ (Nat:lt~usucc~uself x₀)) (λ (x₂ : Not (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁)) → x₀)
@@ -1079,8 +1149,17 @@ Div:rec {α₀} {motive₁} mk₂ (Div:mk div₃) = mk₂ div₃
 Nat:div:go:~uf : (y₀ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₀ → (fuel₁ : Nat) → Nat:below {λ (fuel₂ : Nat) → (x₃ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₃ fuel₂ → Nat} fuel₁ → (x₂ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₂ fuel₁ → Nat
 Nat:div:go:~uf y₀ hy₁ fuel₂ f₃ x₄ hfuel₅ = Nat:div:go:match~u1 x₄ (λ (fuel₆ : Nat) → λ (hfuel₇ : LT:lt {Nat} ⦃ instLTNat ⦄ x₄ fuel₆) → Nat:below {λ (fuel₈ : Nat) → (x₉ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₉ fuel₈ → Nat} fuel₆ → Nat) fuel₂ hfuel₅ (λ (fuel₆ : Nat) → λ (hfuel₇ : LT:lt {Nat} ⦃ instLTNat ⦄ x₄ (Nat:succ fuel₆)) → λ (x₈ : Nat:below {λ (fuel₈ : Nat) → (x₉ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₉ fuel₈ → Nat} (Nat:succ fuel₆)) → dite {Nat} (LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄) ⦃ Nat:decLe y₀ x₄ ⦄ (λ (h₉ : LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄) → HAdd:hAdd {Nat} {Nat} {Nat} ⦃ instHAdd {Nat} ⦃ instAddNat ⦄ ⦄ (PProd.fst₂ {(λ (fuel₁₀ : Nat) → (x₁₁ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₁₁ fuel₁₀ → Nat) fuel₆} {Nat:rec {λ (t₁₀ : Nat) → Set} PUnit (λ (n₁₀ : Nat) → λ (nih₁₁ : Set) → PProd ((λ (fuel₁₂ : Nat) → (x₁₃ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₁₃ fuel₁₂ → Nat) n₁₀) nih₁₁) fuel₆} x₈ (HSub:hSub {Nat} {Nat} {Nat} ⦃ instHSub {Nat} ⦃ instSubNat ⦄ ⦄ x₄ y₀) (Nat:div~urec~ufuel~ulemma {x₄} {y₀} {fuel₆} hy₁ h₉ hfuel₇)) (OfNat:ofNat {Nat} 1 ⦃ instOfNatNat 1 ⦄)) (λ (x₉ : Not (LE:le {Nat} ⦃ instLENat ⦄ y₀ x₄)) → OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)) f₃
 
+-- operation table
+Nat:div-builtin : Nat → Nat → Nat → Nat → Nat
+Nat:div-builtin k₀ m₁ Nat:zero j₃ = k₀
+Nat:div-builtin k₀ m₁ (Nat:succ n₂) Nat:zero = Nat:div-builtin (Nat:succ k₀) m₁ n₂ m₁
+Nat:div-builtin k₀ m₁ (Nat:succ n₂) (Nat:succ j₃) = Nat:div-builtin k₀ m₁ n₂ j₃
+{-# BUILTIN NATDIVSUCAUX Nat:div-builtin #-}
+
+-- operation table
 Nat:div:go : (y₀ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₀ → (fuel₁ : Nat) → (x₂ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₂ fuel₁ → Nat
-Nat:div:go y₀ hy₁ fuel₂ x₃ hfuel₄ = Nat:brecOn {λ (fuel₅ : Nat) → (x₆ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ x₆ fuel₅ → Nat} fuel₂ (Nat:div:go:~uf y₀ hy₁) x₃ hfuel₄
+Nat:div:go Nat:zero hy₁ fuel₂ x₃ hfuel₄ = Nat:zero
+Nat:div:go (Nat:succ y₀) hy₁ fuel₂ x₃ hfuel₄ = Nat:div-builtin Nat:zero y₀ x₃ y₀
 
 Nat:div : Nat → Nat → Nat
 Nat:div x₀ y₁ = dite {Nat} (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁) ⦃ Nat:decLt (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁ ⦄ (λ (hy₂ : LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁) → Nat:div:go y₁ hy₂ (Nat:succ x₀) x₀ (Nat:lt~usucc~uself x₀)) (λ (x₂ : Not (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) y₁)) → OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄)
