@@ -28,6 +28,16 @@ And:rec {a₀} {b₁} {motive₂} intro₃ (And:intro left₄ right₅) = intro�
 And:casesOn : {a₀ : Set} → {b₁ : Set} → {motive₂ : And a₀ b₁ → Set} → (t₃ : And a₀ b₁) → ((left₄ : a₀) → (right₅ : b₁) → motive₂ (And:intro {a₀} {b₁} left₄ right₅)) → motive₂ t₃
 And:casesOn {a₀} {b₁} {motive₂} t₃ intro₄ = And:rec {a₀} {b₁} {motive₂} (λ (left₅ : a₀) → λ (right₆ : b₁) → intro₄ left₅ right₆) t₃
 
+-- theorem
+opaque
+  And:left : {a₀ : Set} → {b₁ : Set} → And a₀ b₁ → a₀
+  And:left {a₀} {b₁} self₂ = And.left₂ {a₀} {b₁} self₂
+
+-- theorem
+opaque
+  And:right : {a₀ : Set} → {b₁ : Set} → And a₀ b₁ → b₁
+  And:right {a₀} {b₁} self₂ = And.right₃ {a₀} {b₁} self₂
+
 data List (α₀ : Set) : Set where
   List:nil : List α₀
   List:cons : α₀ → List α₀ → List α₀
@@ -1007,6 +1017,9 @@ Fin:Internal:ofNat n₀ hn₁ a₂ = Fin:mk {n₀} (HMod:hMod {Nat} {Nat} {Nat} 
 BitVec:ofNat : (n₀ : Nat) → Nat → BitVec n₀
 BitVec:ofNat n₀ i₁ = BitVec:ofFin {n₀} (Fin:Internal:ofNat (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) n₀) (BitVec:ofNat:~uproof~u1 n₀) i₁)
 
+BitVec:ofNatLT : {w₀ : Nat} → (i₁ : Nat) → LT:lt {Nat} ⦃ instLTNat ⦄ i₁ (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) w₀) → BitVec w₀
+BitVec:ofNatLT {w₀} i₁ p₂ = BitVec:ofFin {w₀} (Fin:mk {HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) w₀} i₁ p₂)
+
 BitVec:toFin : {w₀ : Nat} → BitVec w₀ → Fin (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) w₀)
 BitVec:toFin {w₀} self₁ = BitVec.toFin₁ {w₀} self₁
 
@@ -1192,6 +1205,128 @@ record ByteArray:IsValidUTF8 (b₀ : ByteArray) : Set where
 ByteArray:IsValidUTF8:rec : {b₀ : ByteArray} → {motive₁ : ByteArray:IsValidUTF8 b₀ → Set} → ((m₂ : List Char) → (hm₃ : Eq {ByteArray} b₀ (List:utf8Encode m₂)) → motive₁ (ByteArray:IsValidUTF8:intro {b₀} m₂ hm₃)) → (t₂ : ByteArray:IsValidUTF8 b₀) → motive₁ t₂
 ByteArray:IsValidUTF8:rec {b₀} {motive₁} intro₂ (ByteArray:IsValidUTF8:intro m₃ hm₄) = intro₂ m₃ hm₄
 
+Decidable:decide : (p₀ : Set) → ⦃ _ : Decidable p₀ ⦄ → Bool
+Decidable:decide p₀ ⦃ h₁ ⦄ = Decidable:casesOn {p₀} {λ (x₂ : Decidable p₀) → Bool} h₁ (λ (x₂ : Not p₀) → Bool:false) (λ (x₂ : p₀) → Bool:true)
+
+~uprivate:Init:Prelude:~n0:of~udecide~ueq~utrue:match~u1~u1 : {p₀ : Set} → (motive₁ : Decidable p₀ → Set) → (inst₂ : Decidable p₀) → ((h₃ : p₀) → motive₁ (Decidable:isTrue {p₀} h₃)) → ((h₃ : Not p₀) → motive₁ (Decidable:isFalse {p₀} h₃)) → motive₁ inst₂
+~uprivate:Init:Prelude:~n0:of~udecide~ueq~utrue:match~u1~u1 {p₀} motive₁ inst₂ h1₃ h2₄ = Decidable:casesOn {p₀} {λ (x₅ : Decidable p₀) → motive₁ x₅} inst₂ (λ (h₅ : Not p₀) → h2₄ h₅) (λ (h₅ : p₀) → h1₃ h₅)
+
+~uprivate:Init:Prelude:~n0:decide~ueq~ufalse:match~u1~u1 : {p₀ : Set} → (motive₁ : Decidable p₀ → Not p₀ → Set) → (x₂ : Decidable p₀) → (x₃ : Not p₀) → ((h₄ : p₀) → (h₅ : Not p₀) → motive₁ (Decidable:isTrue {p₀} h₄) h₅) → ((h₄ : Not p₀) → (x₅ : Not p₀) → motive₁ (Decidable:isFalse {p₀} h₄) x₅) → motive₁ x₂ x₃
+~uprivate:Init:Prelude:~n0:decide~ueq~ufalse:match~u1~u1 {p₀} motive₁ x₂ x₃ h1₄ h2₅ = Decidable:casesOn {p₀} {λ (x₆ : Decidable p₀) → motive₁ x₆ x₃} x₂ (λ (h₆ : Not p₀) → h2₅ h₆ x₃) (λ (h₆ : p₀) → h1₄ h₆ x₃)
+
+-- theorem
+opaque
+  decide~ueq~ufalse : {p₀ : Set} → ⦃ inst₁ : Decidable p₀ ⦄ → Not p₀ → Eq {Bool} (Decidable:decide p₀ ⦃ inst₁ ⦄) Bool:false
+  decide~ueq~ufalse {p₀} ⦃ x₁ ⦄ x₂ = ~uprivate:Init:Prelude:~n0:decide~ueq~ufalse:match~u1~u1 {p₀} (λ (x₃ : Decidable p₀) → λ (x₄ : Not p₀) → Eq {Bool} (Decidable:decide p₀ ⦃ x₃ ⦄) Bool:false) x₁ x₂ (λ (h₃ : p₀) → λ (h₄ : Not p₀) → absurd {p₀} {Eq {Bool} (Decidable:decide p₀ ⦃ Decidable:isTrue {p₀} h₃ ⦄) Bool:false} h₃ h₄) (λ (h₃ : Not p₀) → λ (x₄ : Not p₀) → rfl {Bool} {Decidable:decide p₀ ⦃ Decidable:isFalse {p₀} h₃ ⦄})
+
+~uprivate:Init:Prelude:~n0:ne~utrue~uof~ueq~ufalse:match~u1~u1 : (motive₀ : (x₀ : Bool) → Eq {Bool} x₀ Bool:false → Set) → (x₁ : Bool) → (x₂ : Eq {Bool} x₁ Bool:false) → ((h₃ : Eq {Bool} Bool:true Bool:false) → motive₀ Bool:true h₃) → ((x₃ : Eq {Bool} Bool:false Bool:false) → motive₀ Bool:false x₃) → motive₀ x₁ x₂
+~uprivate:Init:Prelude:~n0:ne~utrue~uof~ueq~ufalse:match~u1~u1 motive₀ x₁ x₂ h1₃ h2₄ = Bool:casesOn {λ (x₅ : Bool) → (x₆ : Eq {Bool} x₅ Bool:false) → motive₀ x₅ x₆} x₁ (λ (x₅ : Eq {Bool} Bool:false Bool:false) → h2₄ x₅) (λ (x₅ : Eq {Bool} Bool:true Bool:false) → h1₃ x₅) x₂
+
+-- theorem
+opaque
+  ne~utrue~uof~ueq~ufalse : {b₀ : Bool} → Eq {Bool} b₀ Bool:false → Not (Eq {Bool} b₀ Bool:true)
+  ne~utrue~uof~ueq~ufalse {x₀} x₁ = ~uprivate:Init:Prelude:~n0:ne~utrue~uof~ueq~ufalse:match~u1~u1 (λ (x₂ : Bool) → λ (x₃ : Eq {Bool} x₂ Bool:false) → Not (Eq {Bool} x₂ Bool:true)) x₀ x₁ (λ (h₂ : Eq {Bool} Bool:true Bool:false) → Bool:noConfusion {Not (Eq {Bool} Bool:true Bool:true)} {Bool:true} {Bool:false} h₂) (λ (x₂ : Eq {Bool} Bool:false Bool:false) → λ (h₃ : Eq {Bool} Bool:false Bool:true) → Bool:noConfusion {False} {Bool:false} {Bool:true} h₃)
+
+-- theorem
+opaque
+  of~udecide~ueq~utrue : {p₀ : Set} → ⦃ inst₁ : Decidable p₀ ⦄ → Eq {Bool} (Decidable:decide p₀ ⦃ inst₁ ⦄) Bool:true → p₀
+  of~udecide~ueq~utrue {p₀} ⦃ inst₁ ⦄ h₂ = ~uprivate:Init:Prelude:~n0:of~udecide~ueq~utrue:match~u1~u1 {p₀} (λ (inst₃ : Decidable p₀) → p₀) inst₁ (λ (h₃ : p₀) → h₃) (λ (h₃ : Not p₀) → absurd {Eq {Bool} (Decidable:decide p₀ ⦃ inst₁ ⦄) Bool:true} {p₀} h₂ (ne~utrue~uof~ueq~ufalse {Decidable:decide p₀ ⦃ inst₁ ⦄} (decide~ueq~ufalse {p₀} ⦃ inst₁ ⦄ h₃)))
+
+Char:ofNat:~uproof~u1:~ushare:~n1 : Nat
+Char:ofNat:~uproof~u1:~ushare:~n1 = HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)
+
+Char:ofNat:~uproof~u1:~ushare:~n2 : Set
+Char:ofNat:~uproof~u1:~ushare:~n2 = LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u1:~ushare:~n1
+
+Char:ofNat:~uproof~u1:~ushare:~n3 : Decidable (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)))
+Char:ofNat:~uproof~u1:~ushare:~n3 = Nat:decLt (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u1:~ushare:~n1
+
+-- theorem
+opaque
+  Char:ofNat:~uproof~u1 : Char:ofNat:~uproof~u1:~ushare:~n2
+  Char:ofNat:~uproof~u1 = of~udecide~ueq~utrue {Char:ofNat:~uproof~u1:~ushare:~n2} ⦃ Char:ofNat:~uproof~u1:~ushare:~n3 ⦄ (rfl {Bool} {Decidable:decide Char:ofNat:~uproof~u1:~ushare:~n2 ⦃ Char:ofNat:~uproof~u1:~ushare:~n3 ⦄})
+
+Char:ofNat:~uproof~u2:~ushare:~n1 : Nat → Set
+Char:ofNat:~uproof~u2:~ushare:~n1 = LT:lt {Nat} ⦃ instLTNat ⦄ (UInt32:toNat (UInt32:ofBitVec (BitVec:ofNatLT {OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u1)))
+
+Char:ofNat:~uproof~u2:~ushare:~n2 : Nat
+Char:ofNat:~uproof~u2:~ushare:~n2 = HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)
+
+Char:ofNat:~uproof~u2:~ushare:~n3 : Set
+Char:ofNat:~uproof~u2:~ushare:~n3 = LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u2:~ushare:~n2
+
+Char:ofNat:~uproof~u2:~ushare:~n4 : Decidable (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)))
+Char:ofNat:~uproof~u2:~ushare:~n4 = Nat:decLt (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u2:~ushare:~n2
+
+Char:ofNat:~uproof~u2:~ushare:~n5 : Nat
+Char:ofNat:~uproof~u2:~ushare:~n5 = UInt32:toNat (UInt32:ofBitVec (BitVec:ofNatLT {OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (of~udecide~ueq~utrue {Char:ofNat:~uproof~u2:~ushare:~n3} ⦃ Char:ofNat:~uproof~u2:~ushare:~n4 ⦄ (rfl {Bool} {Decidable:decide Char:ofNat:~uproof~u2:~ushare:~n3 ⦃ Char:ofNat:~uproof~u2:~ushare:~n4 ⦄}))))
+
+Char:ofNat:~uproof~u2:~ushare:~n6 : Nat → Set
+Char:ofNat:~uproof~u2:~ushare:~n6 = LT:lt {Nat} ⦃ instLTNat ⦄ Char:ofNat:~uproof~u2:~ushare:~n5
+
+Char:ofNat:~uproof~u2:~ushare:~n7 : Set
+Char:ofNat:~uproof~u2:~ushare:~n7 = Char:ofNat:~uproof~u2:~ushare:~n6 (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)
+
+Char:ofNat:~uproof~u2:~ushare:~n8 : Decidable (LT:lt {Nat} ⦃ instLTNat ⦄ (UInt32:toNat (UInt32:ofBitVec (BitVec:ofNatLT {OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (of~udecide~ueq~utrue {LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄))} ⦃ Nat:decLt (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)) ⦄ (rfl {Bool} {Decidable:decide (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄))) ⦃ Nat:decLt (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) (HPow:hPow {Nat} {Nat} {Nat} ⦃ instHPow {Nat} {Nat} ⦃ instPowNat {Nat} ⦃ instNatPowNat ⦄ ⦄ ⦄ (OfNat:ofNat {Nat} 2 ⦃ instOfNatNat 2 ⦄) (OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄)) ⦄}))))) (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄))
+Char:ofNat:~uproof~u2:~ushare:~n8 = Nat:decLt Char:ofNat:~uproof~u2:~ushare:~n5 (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)
+
+-- theorem
+opaque
+  Char:ofNat:~uproof~u2 : Or (Char:ofNat:~uproof~u2:~ushare:~n1 (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)) (And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) (UInt32:toNat (UInt32:ofBitVec (BitVec:ofNatLT {OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u1)))) (Char:ofNat:~uproof~u2:~ushare:~n1 (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)))
+  Char:ofNat:~uproof~u2 = Or:inl {Char:ofNat:~uproof~u2:~ushare:~n7} {And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) Char:ofNat:~uproof~u2:~ushare:~n5) (Char:ofNat:~uproof~u2:~ushare:~n6 (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))} (of~udecide~ueq~utrue {Char:ofNat:~uproof~u2:~ushare:~n7} ⦃ Char:ofNat:~uproof~u2:~ushare:~n8 ⦄ (rfl {Bool} {Decidable:decide Char:ofNat:~uproof~u2:~ushare:~n7 ⦃ Char:ofNat:~uproof~u2:~ushare:~n8 ⦄}))
+
+UInt32:size : Nat
+UInt32:size = OfNat:ofNat {Nat} 4294967296 ⦃ instOfNatNat 4294967296 ⦄
+
+-- theorem
+opaque
+  Nat:lt~utrans : {n₀ : Nat} → {m₁ : Nat} → {k₂ : Nat} → LT:lt {Nat} ⦃ instLTNat ⦄ n₀ m₁ → LT:lt {Nat} ⦃ instLTNat ⦄ m₁ k₂ → LT:lt {Nat} ⦃ instLTNat ⦄ n₀ k₂
+  Nat:lt~utrans {n₀} {m₁} {k₂} h₃ = Nat:le~utrans {Nat:succ n₀} {Nat:succ m₁} {k₂} (Nat:le~usucc~uof~ule {Nat:succ n₀} {m₁} h₃)
+
+~uprivate:Init:Prelude:~n0:isValidChar~uUInt32:match~u1~u1 : {n₀ : Nat} → (motive₁ : Nat:isValidChar n₀ → Set) → (h₂ : Nat:isValidChar n₀) → ((h₃ : LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)) → motive₁ (Or:inl {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)} {And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))} h₃)) → ((left₃ : LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) → (h₄ : LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)) → motive₁ (Or:inr {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)} {And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))} (And:intro {LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀} {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)} left₃ h₄))) → motive₁ h₂
+~uprivate:Init:Prelude:~n0:isValidChar~uUInt32:match~u1~u1 {n₀} motive₁ h₂ h1₃ h2₄ = Or:casesOn {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)} {And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))} {λ (x₅ : Nat:isValidChar n₀) → motive₁ x₅} h₂ (λ (h₅ : LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)) → h1₃ h₅) (λ (h₅ : And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))) → And:casesOn {LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀} {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)} {λ (x₆ : And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))) → motive₁ (Or:inr {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)} {And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))} x₆)} h₅ (λ (left₆ : LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) → λ (right₇ : LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)) → h2₄ left₆ right₇))
+
+-- theorem
+opaque
+  ~uprivate:Init:Prelude:~n0:isValidChar~uUInt32 : {n₀ : Nat} → Nat:isValidChar n₀ → LT:lt {Nat} ⦃ instLTNat ⦄ n₀ UInt32:size
+  ~uprivate:Init:Prelude:~n0:isValidChar~uUInt32 {n₀} h₁ = ~uprivate:Init:Prelude:~n0:isValidChar~uUInt32:match~u1~u1 {n₀} (λ (h₂ : Nat:isValidChar n₀) → LT:lt {Nat} ⦃ instLTNat ⦄ n₀ UInt32:size) h₁ (λ (h₂ : LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)) → Nat:lt~utrans {n₀} {OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄} {UInt32:size} h₂ (of~udecide~ueq~utrue {LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄) UInt32:size} ⦃ Nat:decLt (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄) UInt32:size ⦄ (rfl {Bool} {Decidable:decide (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄) UInt32:size) ⦃ Nat:decLt (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄) UInt32:size ⦄}))) (λ (left₂ : LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) → λ (h₃ : LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)) → Nat:lt~utrans {n₀} {OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄} {UInt32:size} h₃ (of~udecide~ueq~utrue {LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄) UInt32:size} ⦃ Nat:decLt (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄) UInt32:size ⦄ (rfl {Bool} {Decidable:decide (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄) UInt32:size) ⦃ Nat:decLt (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄) UInt32:size ⦄})))
+
+Char:ofNatAux:~uprivate~u1 : (x1₀ : Nat) → Nat:isValidChar x1₀ → LT:lt {Nat} ⦃ instLTNat ⦄ x1₀ UInt32:size
+Char:ofNatAux:~uprivate~u1 x1₀ = ~uprivate:Init:Prelude:~n0:isValidChar~uUInt32 {x1₀}
+
+Char:ofNatAux : (n₀ : Nat) → Nat:isValidChar n₀ → Char
+Char:ofNatAux n₀ h₁ = Char:mk (UInt32:ofBitVec (BitVec:ofNatLT {OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄} n₀ (Char:ofNatAux:~uprivate~u1 n₀ h₁))) h₁
+
+-- theorem
+opaque
+  instDecidableAnd:~uproof~u1 : {p₀ : Set} → {q₁ : Set} → Not q₁ → And p₀ q₁ → False
+  instDecidableAnd:~uproof~u1 {p₀} {q₁} hq₂ h₃ = hq₂ (And:right {p₀} {q₁} h₃)
+
+-- theorem
+opaque
+  instDecidableAnd:~uproof~u2 : {p₀ : Set} → {q₁ : Set} → Not p₀ → And p₀ q₁ → False
+  instDecidableAnd:~uproof~u2 {p₀} {q₁} hp₂ h₃ = hp₂ (And:left {p₀} {q₁} h₃)
+
+instDecidableAnd:match~u1 : {q₀ : Set} → (motive₁ : Decidable q₀ → Set) → (dq₂ : Decidable q₀) → ((hq₃ : q₀) → motive₁ (Decidable:isTrue {q₀} hq₃)) → ((hq₃ : Not q₀) → motive₁ (Decidable:isFalse {q₀} hq₃)) → motive₁ dq₂
+instDecidableAnd:match~u1 {q₀} motive₁ dq₂ h1₃ h2₄ = Decidable:casesOn {q₀} {λ (x₅ : Decidable q₀) → motive₁ x₅} dq₂ (λ (h₅ : Not q₀) → h2₄ h₅) (λ (h₅ : q₀) → h1₃ h₅)
+
+instDecidableAnd : {p₀ : Set} → {q₁ : Set} → ⦃ _ : Decidable p₀ ⦄ → ⦃ _ : Decidable q₁ ⦄ → Decidable (And p₀ q₁)
+instDecidableAnd {p₀} {q₁} ⦃ dp₂ ⦄ ⦃ dq₃ ⦄ = instDecidableAnd:match~u1 {p₀} (λ (dp₄ : Decidable p₀) → Decidable (And p₀ q₁)) dp₂ (λ (hp₄ : p₀) → instDecidableAnd:match~u1 {q₁} (λ (dq₅ : Decidable q₁) → Decidable (And p₀ q₁)) dq₃ (λ (hq₅ : q₁) → Decidable:isTrue {And p₀ q₁} (And:intro {p₀} {q₁} hp₄ hq₅)) (λ (hq₅ : Not q₁) → Decidable:isFalse {And p₀ q₁} (instDecidableAnd:~uproof~u1 {p₀} {q₁} hq₅))) (λ (hp₄ : Not p₀) → Decidable:isFalse {And p₀ q₁} (instDecidableAnd:~uproof~u2 {p₀} {q₁} hp₄))
+
+instDecidableOr:match~u1 : {p₀ : Set} → {q₁ : Set} → (motive₂ : Or p₀ q₁ → Set) → (h₃ : Or p₀ q₁) → ((h₄ : p₀) → motive₂ (Or:inl {p₀} {q₁} h₄)) → ((h₄ : q₁) → motive₂ (Or:inr {p₀} {q₁} h₄)) → motive₂ h₃
+instDecidableOr:match~u1 {p₀} {q₁} motive₂ h₃ h1₄ h2₅ = Or:casesOn {p₀} {q₁} {λ (x₆ : Or p₀ q₁) → motive₂ x₆} h₃ (λ (h₆ : p₀) → h1₄ h₆) (λ (h₆ : q₁) → h2₅ h₆)
+
+-- theorem
+opaque
+  instDecidableOr:~uproof~u1 : {p₀ : Set} → {q₁ : Set} → Not p₀ → Not q₁ → Or p₀ q₁ → False
+  instDecidableOr:~uproof~u1 {p₀} {q₁} hp₂ hq₃ h₄ = instDecidableOr:match~u1 {p₀} {q₁} (λ (h₅ : Or p₀ q₁) → False) h₄ (λ (h₅ : p₀) → hp₂ h₅) (λ (h₅ : q₁) → hq₃ h₅)
+
+instDecidableOr : {p₀ : Set} → {q₁ : Set} → ⦃ _ : Decidable p₀ ⦄ → ⦃ _ : Decidable q₁ ⦄ → Decidable (Or p₀ q₁)
+instDecidableOr {p₀} {q₁} ⦃ dp₂ ⦄ ⦃ dq₃ ⦄ = instDecidableAnd:match~u1 {p₀} (λ (dp₄ : Decidable p₀) → Decidable (Or p₀ q₁)) dp₂ (λ (hp₄ : p₀) → Decidable:isTrue {Or p₀ q₁} (Or:inl {p₀} {q₁} hp₄)) (λ (hp₄ : Not p₀) → instDecidableAnd:match~u1 {q₁} (λ (dq₅ : Decidable q₁) → Decidable (Or p₀ q₁)) dq₃ (λ (hq₅ : q₁) → Decidable:isTrue {Or p₀ q₁} (Or:inr {p₀} {q₁} hq₅)) (λ (hq₅ : Not q₁) → Decidable:isFalse {Or p₀ q₁} (instDecidableOr:~uproof~u1 {p₀} {q₁} hp₄ hq₅)))
+
+Char:ofNat : Nat → Char
+Char:ofNat n₀ = dite {Char} (Nat:isValidChar n₀) ⦃ instDecidableOr {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄)} {And (LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀) (LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄))} ⦃ Nat:decLt n₀ (OfNat:ofNat {Nat} 55296 ⦃ instOfNatNat 55296 ⦄) ⦄ ⦃ instDecidableAnd {LT:lt {Nat} ⦃ instLTNat ⦄ (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀} {LT:lt {Nat} ⦃ instLTNat ⦄ n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄)} ⦃ Nat:decLt (OfNat:ofNat {Nat} 57343 ⦃ instOfNatNat 57343 ⦄) n₀ ⦄ ⦃ Nat:decLt n₀ (OfNat:ofNat {Nat} 1114112 ⦃ instOfNatNat 1114112 ⦄) ⦄ ⦄ ⦄ (λ (h₁ : Nat:isValidChar n₀) → Char:ofNatAux n₀ h₁) (λ (x₁ : Not (Nat:isValidChar n₀)) → Char:mk (UInt32:ofBitVec (BitVec:ofNatLT {OfNat:ofNat {Nat} 32 ⦃ instOfNatNat 32 ⦄} (OfNat:ofNat {Nat} 0 ⦃ instOfNatNat 0 ⦄) Char:ofNat:~uproof~u1)) Char:ofNat:~uproof~u2)
+
 record Inhabited (α₀ : Set) : Set where
   constructor Inhabited:mk
   field
@@ -1204,9 +1339,23 @@ Inhabited:rec {α₀} {motive₁} mk₂ (Inhabited:mk default₃) = mk₂ defaul
 Inhabited:default : {α₀ : Set} → ⦃ _ : Inhabited α₀ ⦄ → α₀
 Inhabited:default {α₀} ⦃ self₁ ⦄ = Inhabited.default₁ {α₀} self₁
 
-postulate String : Set
-{-# BUILTIN STRING String #-}
+record String : Set where
+  constructor String:ofByteArray
+  field
+    toByteArray₀ : ByteArray
+    isValidUTF8₁ : ByteArray:IsValidUTF8 toByteArray₀
 
-postulate String:ofByteArray : (toByteArray₀ : ByteArray) → ByteArray:IsValidUTF8 toByteArray₀ → String
+-- recursor
+String:rec : {motive₀ : String → Set} → ((toByteArray₁ : ByteArray) → (isValidUTF8₂ : ByteArray:IsValidUTF8 toByteArray₁) → motive₀ (String:ofByteArray toByteArray₁ isValidUTF8₂)) → (t₁ : String) → motive₀ t₁
+String:rec {motive₀} ofByteArray₁ (String:ofByteArray toByteArray₂ isValidUTF8₃) = ofByteArray₁ toByteArray₂ isValidUTF8₃
 
-postulate String:rec : {motive₀ : String → Set} → ((toByteArray₁ : ByteArray) → (isValidUTF8₂ : ByteArray:IsValidUTF8 toByteArray₁) → motive₀ (String:ofByteArray toByteArray₁ isValidUTF8₂)) → (t₁ : String) → motive₀ t₁
+-- theorem
+opaque
+  String:ofList:~uproof~u1 : (data₀ : List Char) → ByteArray:IsValidUTF8 (List:utf8Encode data₀)
+  String:ofList:~uproof~u1 data₀ = ByteArray:IsValidUTF8:intro {List:utf8Encode data₀} data₀ (rfl {ByteArray} {List:utf8Encode data₀})
+
+String:ofList : List Char → String
+String:ofList data₀ = String:ofByteArray (List:utf8Encode data₀) (String:ofList:~uproof~u1 data₀)
+
+String:~ulit:a~x22~b~x5c~c~xa~~x3bb~~x271d~ : String
+String:~ulit:a~x22~b~x5c~c~xa~~x3bb~~x271d~ = String:ofList (List:cons {Char} (Char:ofNat 97) (List:cons {Char} (Char:ofNat 34) (List:cons {Char} (Char:ofNat 98) (List:cons {Char} (Char:ofNat 92) (List:cons {Char} (Char:ofNat 99) (List:cons {Char} (Char:ofNat 10) (List:cons {Char} (Char:ofNat 955) (List:cons {Char} (Char:ofNat 10013) (List:nil {Char})))))))))

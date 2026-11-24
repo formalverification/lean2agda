@@ -79,7 +79,7 @@ PrintFixtures:etaRepaired : U.Init.Prelude.Nat
 PrintFixtures:etaRepaired = PrintFixtures:applyExplicit (λ (α₀ : Set) → λ (a₁ : α₀) → PrintFixtures:implicitId {α₀} a₁)
 
 PrintFixtures:greeting : U.Init.Prelude.String
-PrintFixtures:greeting = "a\"b\\c\10\&\955\&\10013\&"
+PrintFixtures:greeting = U.Init.Prelude.String:~ulit:a~x22~b~x5c~c~xa~~x3bb~~x271d~
 
 PrintFixtures:hiddenInstanceRepaired : ({_ : U.Init.Prelude.Nat} → ⦃ _ : U.Init.Prelude.Inhabited U.Init.Prelude.Nat ⦄ → U.Init.Prelude.Nat) → U.Init.Prelude.Nat
 PrintFixtures:hiddenInstanceRepaired g₀ = PrintFixtures:applyHidden (λ {n₁ : U.Init.Prelude.Nat} → λ ⦃ inst₂ : U.Init.Prelude.Inhabited U.Init.Prelude.Nat ⦄ → g₀ {n₁} ⦃ inst₂ ⦄)
