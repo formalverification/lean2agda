@@ -390,8 +390,8 @@ needs K-like reduction, which LF-6 refutes.
 
 ## 3.  Universe levels: specialize, then predicativize
 
-(See also [#28], [#29], [`foundations/gap-catalog.md`] and
-[`related-work.md`].)
+(See also [#28], [#29], [`foundations/gap-catalog.md`],
+[`translator/levels.md`] and [`related-work.md`].)
 
 **Terms**.  Lean's levels are `u`, `0`, `S ℓ`, `max` and `imax`, where
 `imax u 0 = 0` lets a proposition quantify over any universe and stay a
@@ -449,12 +449,48 @@ essentially impredicative, not translated.
    universe-polymorphic Lean constant must
    ([`foundations/gap-report-corpus.md`], `universe-levels`;
    [`foundations/gap-catalog.md`], `universe-levels`, probe `P09Setω`).
++  **The first step, built and measured** ([#28], 2026-11-24;
+   [`translator/levels.md`]).  An *instance* is a constant with each *split*
+   level parameter fixed as zero or as nonzero, where a parameter is split
+   only if a sort, an `imax` or a use of another constant depends on it; a
+   nonzero parameter is written `u + 1`, and every level of an instance is
+   a maximum of a constant and of parameters under successors, with no
+   `imax`.
+   +  **The counts**.  `Init`'s 65,994 constants at the pin have 43,639
+      level parameters, of which 10,278 are split, and 79,997 instances,
+      1.21 a constant.  Counted as rocq-lean-import counts its possible
+      instances, every parameter of every entry split, `Init` has 131,759
+      for 64,531 entries, 2.04 an entry, against that tool's 24,081 for
+      10,245 on Lean 3's standard library.  Instances are made from the
+      roots and their uses: the closure of `Nat.gcd_self` has 342 where
+      531 are possible.
+   +  **Lean's kernel accepts every instance**.  Each of `Init`'s 79,997
+      was checked again as a declaration of its own, none rejected and
+      none with an `imax` left ([`lean-findings.md`], LF-18).  The other
+      way to write a nonzero parameter, as `u` under an assumption with
+      each `imax a u` rewritten to `max a u`, the kernel rejects.
+   +  **With the first step the measurement above reverses**.  On the same
+      two scaffolds as they are now, printing `Prop` without instances
+      leaves 253 of 329 and 203 of 261 declarations, 65 and 43 of the
+      refusals `UnequalSorts`; with instances all 336 and all 269
+      declarations check and `UnequalSorts` does not occur, and three
+      values that profile U refuses for want of proof irrelevance check.
+   +  **`Init.Core`'s closure**.  As a tree of instances it checks as the
+      unspecialized tree does (3,307 of 3,327 declarations; every refused
+      instance is an instance of a declaration that tree refuses).  With
+      `Prop` printed, 3,200 check, and what Agda refuses is the
+      elimination of `Eq` and `HEq` into a type with what needs it, three
+      propositions emitted as records with a field that is not a proof,
+      and the computation rule of a quotient of a proposition.
 
-**Status**.  Proposed; nothing of the stage is built.  [#28] measures the
-number of instances generated for `Init` against rocq-lean-import's count of
-possible instances, and [#29] the fraction of `Init` and `Std` that elaborates,
-listing the essentially impredicative constants with the constraint that
-failed.
+**Status**.  Proposed.  The first step is built behind `--specialize`, off by
+default, since profile U prints no levels and its output does not need the
+instances ([#28]).  Open: [#29], the `Level` binders, the shift by one
+between Lean's `Sort (ℓ + 1)` and Agda's `Set ℓ`, the constraints, and the
+fraction of `Init` and `Std` that elaborates, with the essentially
+impredicative constants and the constraint that failed; and what Agda
+refuses once `Prop` is printed, the large eliminations of [#32] among them,
+which is [#27]'s to count.
 
 ---
 
@@ -1044,7 +1080,7 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 | 2 | lyphyser's tool cited and not copied before [#24] | Adopted ([#4], PR [#65]) | 3,177 lines against Lean v4.12.0-rc1; its choices are the ones K and CC undo (§ 1) |
 | 3 | Casts before any term is printed, with Lean4Less as the instrument, external and never copied while unlicensed; casts recorded apart from the axioms; the Dedukti route recorded as the alternative; re-implementation over Lean4Lean as the fallback | Proposed ([#26], [#30], [#36], [#14]) | 6.3 percent of `Std`'s constants, 15.5 percent growth; `prfIrrel` a theorem from `propext`; the chain never run; v4.28.0-rc1 against v4.33.1 (§ 2) |
 | 4 | Lean4Less's eliminations of structure-like reduction and unit eta stay off | Proposed ([#26]) | Agda's records have eta; three closures use structure eta at no cost (§ 2) |
-| 5 | Universe levels: specialize by which level parameters are zero, then predicativize with a hook for hand constraints; essential impredicativity reported | Proposed ([#28], [#29]) | rocq-lean-import and lyphyser; Predicativize's Theorem 6.1; refusals 6 to 17 and 7 to 20 without the first step; one essential case in twelve (§ 3) |
+| 5 | Universe levels: specialize by which level parameters are zero, then predicativize with a hook for hand constraints; essential impredicativity reported | Proposed; the first step built behind `--specialize` ([#28]), the second open ([#29]) | rocq-lean-import and lyphyser; Predicativize's Theorem 6.1; refusals 6 to 17 and 7 to 20 without the first step, none of that class with it; 79,997 instances of `Init`'s 65,994 constants, each accepted by the kernel; one essential case in twelve (§ 3) |
 | 6 | Four profiles U, K, CC and CU; U with `--type-in-type` and `--rewriting`; K the stepping stone; CC the primary deliverable; CU constructive layer first | Adopted as targets (roadmap; U in PR [#77], `--rewriting` by [#21]); K [#33], CC [#34] and [#51], CU [#52] | Probes `P05` to `P07`, `P17`, `P19`; sixteen files `--safe`, fourteen CC, two CU, no postulate, no K; Lemma 3.8.5 (§ 4) |
 | 7 | Two layers from the atlas: T0 and T1 constructive, T2 classical, T3 refused; both `--safe` with the principles as parameters | Adopted as the roadmap's shape; the rules [#37], the parameters [#38] | 14.7, 21.1, 64.2 and under 0.1 percent of Mathlib's constants; three of four T2 statements proved constructively (§ 5) |
 | 8 | The tier is the exact axiom set's; any other axiom is T3; the hatches no axiom shows are atlas fields (`unsafe` and `partial` today, `implemented_by` from [#36]) whose refusal rule is [#37]'s | Adopted for the atlas (PR [#71]); the rule [#37] | 15 axioms at the pin and `native_decide`'s bespoke axioms; 1,837 under-reports, 532 Mathlib tiers wrong by `#print axioms`; 41 T3, all `lcProof` (§ 5) |
@@ -1176,6 +1212,7 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 [`foundations/gap-report-corpus.md`]: ../foundations/gap-report-corpus.md
 [`reports/atlas-mathlib-v4.33.1-0df444a.md`]: ../reports/atlas-mathlib-v4.33.1-0df444a.md
 [`reports/printing-blowup-2026-10-12.md`]: ../reports/printing-blowup-2026-10-12.md
+[`translator/levels.md`]: ../translator/levels.md
 [`translator/loading.md`]: ../translator/loading.md
 [`translator/naming.md`]: ../translator/naming.md
 [`translator/printing.md`]: ../translator/printing.md
