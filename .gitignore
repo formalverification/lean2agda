@@ -27,3 +27,7 @@ result-*
 atlas/*.ndjson
 atlas/*.run.json
 atlas/*.tsv
+
+# What `make goldens RESULTS=goldens-results` keeps, as the goldens
+# workflow runs it: every emitted tree and its listings, regenerable
+goldens-results/

@@ -1,0 +1,30 @@
+# File: translator/tests/goldens.txt
+#
+# The trees translator/scripts/goldens.sh translates and checks against
+# tests/expected/scaffolds/NAME/ (issue M2-9; docs/performance.md): one
+# per line, the golden's name, its form, then the arguments of
+# `lake exe lean2agda --out DIR`.  The form is `tree` for a golden that
+# holds the emitted modules, and `digest` for one that holds each
+# module's digest and size in modules.txt instead, for a tree too large
+# to commit; both hold the library file, refusals.txt when the
+# translator refuses anything, and the refusal loop's listings.  The
+# corpus entries are named by their ids in corpus/manifest.json; the
+# first three are also checked by run.sh, on every pull request.  Three
+# entries are not here yet: finset-card-image, subgroup-card-dvd and
+# real-sqrt-nonneg, whose loops do not finish under the checker's bounds
+# (docs/performance.md, "The three largest closures"); issue M2-15 adds
+# them.
+
+list-reverse-reverse    tree    Init.Data.List.Lemmas -- List.reverse_reverse
+nat-gcd-self            tree    Init.Data.Nat.Gcd -- Nat.gcd_self
+nat-gcd-succ            tree    Init.Data.Nat.Gcd -- Nat.gcd_succ
+lists-subset-refl       tree    Mathlib.SetTheory.Lists -- Lists'.Subset.refl
+multiset-map-map        tree    Mathlib.Data.Multiset.MapFold -- Multiset.map_map
+set-ext                 tree    Mathlib.Data.Set.Defs -- Set.ext
+order-hom-map-lfp       tree    Mathlib.Order.FixedPoints -- OrderHom.map_lfp
+subtype-coe-eta         tree    Mathlib.Data.Subtype -- Subtype.coe_eta
+substructure-closure-le digest  Mathlib.ModelTheory.Substructures -- FirstOrder.Language.Substructure.closure_le
+init-prelude            digest  Init.Prelude
+init-core               digest  Init.Core
+init-data-nat-basic     digest  Init.Data.Nat.Basic
+init-data-nat-gcd       digest  Init.Data.Nat.Gcd

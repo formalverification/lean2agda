@@ -65,8 +65,9 @@ MAP_PATH: str = "docs/translator/architecture.md"
 VERSION_PATH: str = "translator/VERSION"
 CHANGELOG_PATH: str = "CHANGELOG.md"
 
-# The Python the translator's harness (translator/tests/run.sh) runs: the
-# scaffold checker and the module it imports.  The rest of scripts/python
+# The Python the translator's harness runs (translator/tests/run.sh, and
+# translator/scripts/goldens.sh): the scaffold checker, the modules it
+# imports, and the report on the golden trees.  The rest of scripts/python
 # (the corpus checker, the atlas report, the tables, _utils) serves the
 # corpus and the atlas, not the translator.  A new script the harness runs
 # joins this tuple and gets a row.
@@ -74,6 +75,7 @@ TRANSLATOR_PYTHON: tuple[str, ...] = (
     "scripts/python/agda_run.py",
     "scripts/python/scaffold_check.py",
     "scripts/python/agda_check.py",
+    "scripts/python/refusal_report.py",
 )
 
 # The monads in which a Lean function can do more than compute.  `ST`,

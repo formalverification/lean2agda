@@ -1,0 +1,102 @@
+# File: translator/tests/refusal-classes.txt
+#
+# The class of every refusal the golden trees' listings hold, for
+# scripts/python/refusal_report.py (docs/performance.md, issue M2-9): one
+# rule per line, `#N ERROR IDENTIFIER NOTE`, naming the issue a refusal
+# belongs to, Agda's error and the Agda identifier as the listing spells
+# them (a glob may stand for several).  The first rule that matches
+# classifies a refusal; a refusal no rule matches fails the report, and
+# no rule may name issue M2-9's own number.  Comments begin with `# `.
+
+# Two proofs of one proposition compared, which Lean's kernel accepts by
+# definitional proof irrelevance (issue M3-2).
+#27 UnequalTerms dif~upos                                    h != hc
+#27 UnequalTerms dif~uneg                                    h x != hnc x
+#27 UnequalTerms proof~uirrel                                h₁ != h₂
+#27 UnequalTerms instSubsingletonDecidable                   t != h
+#27 UnequalTerms Subtype:eq                                  property != property
+#27 UnequalTerms Subtype:ext                                 property != property
+#27 UnequalTerms Subtype:eta                                 h != property
+#27 UnequalTerms Subtype:mk:injEq                            property != property
+#27 UnequalTerms Subtype:instDecidableEq:~uproof~u3          h != h
+#27 UnequalTerms Char:ext                                    valid != valid
+#27 UnequalTerms Char:mk:injEq                               valid != valid
+#27 UnequalTerms Fin:eq~uof~uval~ueq                         isLt != isLt
+#27 UnequalTerms Fin:mk:injEq                                isLt != isLt
+#27 UnequalTerms String:decEq                                isValidUTF8 != isValidUTF8
+#27 UnequalTerms String:decEq:~uproof~u2                     its validity proofs, through Array.toList
+#27 UnequalTerms String:ofByteArray:injEq                    isValidUTF8 != isValidUTF8
+#27 UnequalTerms apply~ueqRec                                a type: h != Eq.refl b
+#27 UnequalTerms Nat:modCore~ult                             hy != h, under --arithmetic lean only
+#27 UnequalTerms NonemptyChain:ext                           Nonempty != Nonempty
+#27 UnequalTerms OrderHom:instFunLike:~uproof~u1             Eq.rec monotone h x != monotone x
+#27 UnequalTerms ClosureOperator:instFunLike:~uproof~u1      le_closure x != le_closure x
+#27 UnequalTerms FirstOrder:Language:Substructure:instSetLike:~uproof~u1  Eq.rec fun_mem h … != fun_mem …
+#27 UnequalTerms Equiv:instEquivLike:~uproof~u1              Eq.rec (Eq.ndrec left_inv h) h x != left_inv x
+#27 UnequalTerms Classical:em                                exU != exV, proofs of an Exists
+#27 UnequalTerms exists~uprop~ucongr                         w != Iff.mpr hp (Iff.mp hp w), proofs of p
+#27 UnequalTerms iInf~ucongr~uProp                           Iff.mpr pq x != x, proofs of p
+#27 UnequalTerms iInf~upos                                   x != hp, proofs of p
+#27 UnequalTerms Lean:Data:AC:evalList:~usparseCasesOn~u1:else~ueq  two proofs of False
+
+# K-like reduction of Eq.rec on a proof of a = a that is a variable,
+# which Agda reduces only on Eq.refl (issue M3-1, Lean4Less).
+#26 UnequalTerms eq~uof~uheq                                 Eq.rec x h != x
+#26 UnequalTerms cast~ueq                                    Eq.rec a h != a
+#26 UnequalTerms Lists~x27~:of~utoList                       Eq.rec Lists'.nil h on an index equation
+#26 UnequalTerms Lists~x27~:to~uofList                       stuck on eq_of_heq
+#26 UnequalTerms Lists~x27~:toList:eq~u2                     stuck on eq_of_heq
+
+# The equations the operation table of issue M3-6 gives up
+# (docs/foundations/nat-operations.md): the fuel equations of
+# Nat.div.go and Nat.modCore.go and what rests on them.
+#31 UnequalTerms Nat:modCoreGo~ult                           the fuel of Nat.modCore.go
+#31 UnequalTerms Nat:div:go:eq~u1                            the fuel of Nat.div.go
+#31 UnequalTerms Nat:modCore:go:eq~u1                        the fuel of Nat.modCore.go
+#31 UnequalTerms ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:div:go:fuel~ucongr:~uf
+#31 UnequalTerms ~uprivate:Init:Data:Nat:Div:Basic:~n0:Nat:modCore:go:fuel~ucongr:~uf
+#31 UnequalTerms ArithmeticFixtures:bitwise~uzero~uleft       Nat.bitwise at zero for an unknown f
+#31 UnequalTerms Nat:beq:eq~udef                             the table's Nat.beq is NATEQUALS, stuck on variables
+
+# String's recursor, a postulate under BUILTIN STRING, which these need
+# to compute (issue M3-11).
+#88 UnequalTerms String:noConfusion                          String.rec stuck on String.ofByteArray
+#88 CannotApply String:ofByteArray:noConfusion               String.rec stuck on String.ofByteArray
+#88 UnequalTerms String:isValidUTF8                          String.rec stuck on String.ofByteArray
+
+# Pi types that differ only in binder information, which Lean's kernel
+# identifies and Agda does not (issue M3-12): every visibility mismatch.
+#89 UnequalHiding *                                          {a : α} → B against (a : α) → B
+
+# The second form: a term with explicit binders where a strict-implicit
+# ⦃a b⦄ of Lean's is expected once the expected type unfolds
+# (Monotone, Function.Injective, upperBounds, lowerBounds, Set's order
+# from Pi's), which Agda meets with its hidden lambdas inserted; and the
+# values that stall on one of those, once it is postulated.
+#89 UnequalTerms OrderHom:lfp                                Monotone's ⦃a b⦄ against (x x' : α →o α)
+#89 UnequalTerms OrderHom:le~ulfp                            stuck on OrderHom.lfp
+#89 UnequalTerms OrderHom:lfp~ule                            stuck on OrderHom.lfp
+#89 UnequalTerms OrderHom:map~ule~ulfp                       stuck on OrderHom.lfp
+#89 UnequalTerms sSup~ule                                    upperBounds' ⦃a⦄ against h's explicit a
+#89 UnequalTerms le~usInf                                    lowerBounds' ⦃a⦄ against h's explicit a
+#89 UnequalTerms EquivLike:toFunLike                         Injective's ⦃a b⦄ against (a b : E)
+#89 UnequalTerms IsCompl:dual                                stuck on EquivLike.toFunLike
+#89 UnequalTerms IsCompl:le~usup~uright~uiff~uinf~uleft~ule  stuck on EquivLike.toFunLike
+#89 UnequalTerms Monotone:mem~ulowerBounds~uimage            lowerBounds' ⦃y⦄ against (y : β)
+#89 UnequalTerms ~sSet:instBoundedOrder                      Pi's (i : α) → against Set's ⦃a⦄
+#89 UnequalTerms ~sSet:instDistribLattice                    Pi's (i : α) → against Set's ⦃a⦄
+#89 UnequalTerms PartialOrder:ofSetLike                      stuck on Set.instDistribLattice
+#89 UnequalTerms ~sSet:Subset:antisymm~uiff                  stuck on Set.instDistribLattice
+#89 UnequalTerms ~sSet:iInter~uof~uempty                     stuck on Set.instBoundedOrder
+#89 UnequalTerms ~sSet:univ~usubset~uiff                     stuck on Set.instBoundedOrder
+#89 UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u?         stuck on Set.instDistribLattice
+#89 UnequalTerms ~sSet:instCompleteAtomicBooleanAlgebra:~uproof~u?  stuck on Set.instDistribLattice
+#89 UnequalTerms FirstOrder:Language:ClosedUnder:inf         stuck on Set.instDistribLattice
+#89 UnequalTerms FirstOrder:Language:Substructure:instInf    stuck on Set.instDistribLattice
+#89 UnequalTerms LowerAdjoint:le~uiff~usubset                stuck on Set.instDistribLattice
+#89 UnequalTerms FirstOrder:Language:Substructure:closure~ule  stuck on Set.instDistribLattice
+#89 UnequalTerms FirstOrder:Language:Substructure:closed     stuck on PartialOrder.ofSetLike
+#89 UnequalTerms FirstOrder:Language:Substructure:closure:~uproof~u1  stuck on PartialOrder.ofSetLike
+#89 UnequalTerms FirstOrder:Language:Substructure:instCompleteLattice  stuck on PartialOrder.ofSetLike
+#89 UnequalTerms FirstOrder:Language:Substructure:instCompleteLattice:~uproof~u1  stuck on PartialOrder.ofSetLike
+#89 CannotApply FirstOrder:Language:Substructure:instCompleteLattice:~uproof~u11  stuck on PartialOrder.ofSetLike
