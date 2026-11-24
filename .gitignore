@@ -14,6 +14,8 @@ __pycache__/
 result
 result-*
 .direnv/
+# A direnv user's own `use flake`; the repository commits no .envrc.
+.envrc
 
 # Editors
 *~
