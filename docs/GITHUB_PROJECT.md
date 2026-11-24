@@ -232,8 +232,13 @@ the first Agda performance baseline.
 
 Every corpus entry and the modules `Init.Prelude`, `Init.Core`,
 `Init.Data.Nat.Basic` and `Init.Data.Nat.Gcd` translate and are
-accepted by Agda under profile U; golden tests pass in CI; time and
-memory per emitted module are recorded.
+accepted by Agda under profile U: the refusal loop's final state checks
+fresh in Agda, and every refusal in its listings is classified to the
+later issue whose work removes it, with none unclassified and no
+postulate the checker made counted as checked
+(`docs/performance.md`); golden tests pass in CI, the core-Lean
+entries' on every pull request and the rest nightly; time and memory
+per emitted module are recorded.
 
 ---
 
@@ -410,6 +415,7 @@ graph TD
   M2_9["M2-9 Corpus golden tests and Init fragments"]
   M2_10["M2-10 Differential comparison with lyphyser/lean2agda"]
   M2_11["M2-11 Translator engineering standards"]
+  M2_15["M2-15 The three largest corpus closures"]
   M2_1 --> M2_2 --> M2_3
   M2_3 --> M2_4 --> M2_5
   M2_3 --> M2_6
@@ -417,6 +423,7 @@ graph TD
   M2_2 --> M2_8
   M2_5 & M2_6 & M2_7 & M2_8 --> M2_9
   M2_9 --> M2_10
+  M2_9 --> M2_15
   M2_1 --> M2_11
 ```
 
@@ -432,10 +439,13 @@ graph TD
   M3_8["M3-8 Profile K on Init and Std"]
   M3_9["M3-9 Profile CC: justifying K"]
   M3_10["M3-10 Faithfulness report"]
+  M3_11["M3-11 String and Char as Lean's structures"]
+  M3_12["M3-12 Binder information Lean's kernel ignores"]
   M3_1 --> M3_2
   M3_3 --> M3_4
   M3_1 --> M3_5
-  M3_2 & M3_4 & M3_5 & M3_6 & M3_7 --> M3_8
+  M3_6 --> M3_11
+  M3_2 & M3_4 & M3_5 & M3_6 & M3_7 & M3_11 & M3_12 --> M3_8
   M3_8 --> M3_9 --> M3_10
 ```
 
@@ -1068,12 +1078,14 @@ The milestone's exit test: translate every corpus entry and the modules `Init.Pr
 ## Tasks
 
 - [ ] Golden outputs for the corpus committed under `translator/tests/`.
-- [ ] CI job that runs translation and Agda checking for the corpus on every pull request, and for the `Init` fragments nightly or on demand.
+- [ ] CI: the three core-Lean goldens on every pull request (`ci.yml`), and every golden, the corpus entries and the `Init` fragments, nightly and on demand (`goldens.yml`).
 - [ ] `docs/performance.md` started with the baseline: term sizes, Agda time and memory per module, translation time.
 
 ## Acceptance criteria
 
-- [ ] All listed modules translate and check; the baseline table is committed.
+- [ ] The four `Init` fragments and the corpus entries translate and are accepted under the reading of Milestone 2's exit criterion (the refusal loop's final state checks fresh, and every refusal is classified to a later issue), except the three largest closures, which [#94] takes; the baseline table is committed.
+
+[#94]: https://github.com/formalverification/lean2agda/issues/94
 
 ---
 
@@ -1114,6 +1126,88 @@ Fix the standards the translator is written to before it grows: a pure core and 
 ## Acceptance criteria
 
 - [ ] `lake test` runs in CI; the architecture document matches the tree.
+
+---
+
+### Issue M2-12: One command: a flake package and app for the translator (#91)
+
+**Labels:** `milestone-2-translator-core`, `infrastructure`
+
+## Description
+
+A user who wants a translation today follows a developer's setup: `nix develop`, `lake update --keep-toolchain` in `translator/`, `make lean-build`, then `lake exe lean2agda ...` and `make check-output`, about seven steps that no one page gives in order.  The flake exports devShells and the `agda` and `lean` packages, and no translator.  One command, `nix run github:formalverification/lean2agda/<tag>#lean2agda -- <module> ...`, would take a user with Nix from nothing to a translated tree, with every pin the flake already holds.
+
+## Tasks
+
+- [ ] A flake package `lean2agda` (the Lake build of `translator/`, with its toolchain and the Lean environment it loads), and an app that runs it.
+- [ ] An app, or a flag of the same app, that checks a translated tree with the pinned Agda, as `make check-output` does.
+- [ ] Build both in CI and push them to the binary cache from `main`.
+- [ ] Say in the README that no path without Nix is supported, and give the pins a user without Nix would need (`docs/pinning.md`).
+
+## Acceptance criteria
+
+- [ ] On a machine with Nix and no checkout, `nix run github:formalverification/lean2agda#lean2agda -- --profile U --out out Init.Data.Nat.Gcd -- Nat.gcd_self` and the check app produce a tree that checks.
+
+---
+
+### Issue M2-13: Quick start: from a machine with Nix to a translated module that checks (#92)
+
+**Labels:** `documentation`, `milestone-2-translator-core`
+
+## Description
+
+A new user's first result is a translated module that checks in Agda.  The nearest page, `docs/translator/loading.md`, "Command line", prints a closure and runs no check, and it omits `lake update --keep-toolchain`, which `translator/README.md` requires.  Two status lines are stale: the README's "October 2026 ... no translated module checks whole yet", and `docs/translator/modules.md`'s "No tree checks whole yet", while the golden test `nat-gcd-self` records "checked 329 of 329 declarations" under profile U.
+
+## Tasks
+
+- [ ] A quick start, linked first from the README, from a machine with Nix 2.28 or later (flakes on) to a translated module that checks, by M2-12's command once it exists and by the shell until then, with the output the reader should see.
+- [ ] Say in it what a check under each available profile proves about the Lean declaration (under U, that the scaffold is well typed, and nothing about Lean's theorem).
+- [ ] Correct the two status lines.
+
+## Acceptance criteria
+
+- [ ] A fresh agent session given only the repository at a tag and this page reaches a translated module that checks, without help, and its record is linked here.
+
+---
+
+### Issue M2-14: Reporting a defect: an issue form, a contributing guide, and a stated boundary of support (#93)
+
+**Labels:** `documentation`, `milestone-2-translator-core`
+
+## Description
+
+The repository has no issue template, no `CONTRIBUTING.md`, and no statement of what is supported beyond the pins (README: "Agda output targets Agda 2.8.0 with agda-stdlib 2.3 and the cubical library 0.9"; `docs/pinning.md` for Lean and Mathlib).  A report of a mistranslation is useful when it names the translator's version, the profile, the Lean declaration and the pins.
+
+## Tasks
+
+- [ ] An issue form for a defect that requires the translator's version (`lean2agda --version`, or the commit), the command and profile, the Lean module and declaration, the Lean, Mathlib and Agda pins, the output, and what was expected; and one for a request.
+- [ ] `CONTRIBUTING.md`: how to build, test and propose a change, from the README's "Development setup".
+- [ ] A "Support" section in the README: best effort, with no promised time to an answer; the pinned Lean, Mathlib and Agda versions and no others; the systems the flake and CI build for.
+
+## Acceptance criteria
+
+- [ ] The defect form cannot be submitted without the version, the profile and the declaration, and the README's "Support" section links it.
+
+---
+
+### Issue M2-15: The three largest corpus closures (#94)
+
+**Labels:** `milestone-2-translator-core`, `translator`, `agda-output`
+
+## Description
+
+M2-9's goldens (`docs/performance.md`, "The three largest closures") pass for the four `Init` fragments and nine of the twelve corpus entries, under the reading of "accepted" M2-9 took.  The other three, `finset-card-image` (37 MB, 125 modules), `subgroup-card-dvd` (57 MB, 322) and `real-sqrt-nonneg` (126 MB, 511), do not: their refusal loops stop with an error, so no final state exists to check.  Four findings stand behind that, as follows.  First, in `Init.Data.List.Perm` an Agda run passes the checker's 3,600 s bound at about 8.6 GiB under the 8G heap: `List.perm_inv_core` leaves unsolved metas, which Agda keeps waking at every later declaration, so that the module takes 61 s to its end before `List.Perm.filterMap` and 718 s with it, and more than an hour by `List.perm_iff_count`.  Second, the loops list 447 `UnsolvedMetaVariables`, 416 of them in the sharing pass's auxiliaries (`_share_N`); the likeliest cause, not yet tested, is that a subterm lifted into an auxiliary loses the context Agda inferred its implicit arguments from.  Third, `Real`'s type is refused as `HeapExhausted`, with 285 values behind it, and `Mathlib.Data.Real.Basic` times out at an auxiliary of `Real.ofCauchy_sup`.  Fourth, 479 `UnequalTerms` refusals and a few others are not yet classified.  Depends on M2-9.
+
+## Tasks
+
+- [ ] The source of the unsolved metas, in `List.perm_inv_core` and in the sharing pass's auxiliaries, found and fixed in the printer or the sharing pass, or classified with its reason.
+- [ ] `Real`'s positivity blowup measured and its class named, as `ByteArray.IsValidUTF8`'s was for M3-6.
+- [ ] Every refusal of the three closures classified in `translator/tests/refusal-classes.txt`.
+- [ ] The three trees added to `translator/tests/goldens.txt` and the `goldens` workflow, one runner each if one runner would pass GitHub's six hours.
+
+## Acceptance criteria
+
+- [ ] `make goldens` passes for all twelve corpus entries and the four `Init` fragments, and the goldens workflow runs them.
 
 <!-- END GENERATED: milestone-2 -->
 
@@ -1224,7 +1318,7 @@ In profiles K and CC the target has no quotients, so the quotient primitives bec
 
 ---
 
-### Issue M3-6: Nat and String literals and kernel-accelerated arithmetic (#31)
+### Issue M3-6: Nat and String literals and kernel-accelerated arithmetic (#31, closed)
 
 **Labels:** `milestone-3-faithful`, `translator`, `foundations`, `performance`
 
@@ -1322,6 +1416,68 @@ Write `docs/foundations/faithfulness-init-std.md`: for `Init` and `Std`, the fra
 ## Acceptance criteria
 
 - [ ] The report exists with reproducible tables; the README cites it.
+
+---
+
+### Issue M3-11: String and Char as Lean's structures (#88)
+
+**Labels:** `milestone-3-faithful`, `translator`, `foundations`
+
+## Description
+
+Under profile U `String` is a postulate bound to `BUILTIN STRING`, with `String.ofByteArray` and `String.rec` postulated, so that Lean's string literals print as Agda's.  Lean's kernel expands a literal on demand to `String.ofList [c₁, …, cₙ]`, and the round trip `"ab" = String.ofList ['a', 'b']`, which Lean accepts by `rfl`, is refused by Agda; so are `String.noConfusion`, `String.ofByteArray.noConfusion` and `String.isValidUTF8` in the closures of `Init.Prelude` and `Init.Core`, which need `String.rec` to compute (M2-9's goldens, `docs/performance.md`).  M3-6 settled the representation (`docs/foundations/nat-operations.md`, "String and Char"): emit `String` and `Char` as the records Lean declares, print a literal as the kernel expands it, and drop `BUILTIN STRING`.  Agda's primitive strings would need `Char` postulated (`BUILTIN CHAR` binds only a postulate, probe `P32CharRecord`), which no safe profile allows.
+
+## Tasks
+
+- [ ] The closure counts `String.ofList`, `Char.ofNat`, `List.cons` and `List.nil` as dependencies of every constant with a string literal.
+- [ ] The printer prints a string literal as `String.ofList` over `Char.ofNat` applications, shared once per distinct literal.
+- [ ] `Scaffold.lean` emits `String` as any structure: no `BUILTIN STRING`, `String.rec` by pattern matching.
+- [ ] Goldens regenerated; `Init.Core`'s closure measured before and after.
+
+## Acceptance criteria
+
+- [ ] `"ab" = String.ofList ['a', 'b']` and `"a" = String.mk ['a']` check by `refl` in the emitted Agda, and `String.noConfusion` checks in `Init.Core`'s closure.
+
+---
+
+### Issue M3-12: Binder information Lean's kernel ignores (#89)
+
+**Labels:** `milestone-3-faithful`, `translator`, `foundations`
+
+## Description
+
+Lean's kernel compares Pi types up to binder information, so that `{a : α} → B` and `(a : α) → B` are definitionally equal, and so is a term of one with a term of the other.  Agda's are different types (`UnequalHiding`).  The printer's binder repair (`docs/translator/printing.md`, "Binder repair") prints each lambda with the visibility of the type it is checked against, and eta-expands an argument whose expected type is syntactically a Pi type; M2-9's goldens (`docs/performance.md`) show two forms it misses.  First, an expected type that is a Pi type only once unfolded: Mathlib's `Monotone f` is `∀ ⦃a b⦄, a ≤ b → f a ≤ f b`, and the auxiliary proof with explicit binders that `OrderHom.lfp` passes for it is refused, with every value that needs `OrderHom.lfp` to compute.  Second, two types that differ only in visibility, which no repair of a term reaches: `Nat.rec_eq_recCompiled : @Nat.rec = @Nat.recCompiled`, proved by `funext` at a type whose motive is explicit, and `List.cons_subset`, `le_sInf_iff` and `Set.forall_mem_image`, whose proofs rewrite along an equation between `∀ {a}, …` and `∀ a, …`.  Depends on M2-9.
+
+## Tasks
+
+- [ ] The printer's eta repair extended to an expected type that `whnf` exposes as a Pi type, with a fixture after `Monotone`.
+- [ ] A representation of two types that differ only in visibility (a coercion inserted where Lean's kernel compared them, or one visibility for both), recorded in an ADR.
+- [ ] Goldens regenerated, and the class's refusals counted before and after.
+
+## Acceptance criteria
+
+- [ ] No refusal of the class is left in the goldens of `translator/tests/goldens.txt`, or each one left is reclassified with its reason.
+
+---
+
+### Issue M3-13: The translator's first release: a tag, a citation file and a DOI (#90)
+
+**Labels:** `milestone-3-faithful`, `infrastructure`
+
+## Description
+
+A user who cites a translation, or reproduces one, needs a version of the translator to name.  The repository has no tag, no release, no `CITATION.cff` and no DOI; `CHANGELOG.md` has one entry, 0.1.0, listing pull requests.  The plan's only release, M5-6, is of the first generated library.  This issue releases the translator itself, at the end of this milestone: profile K on `Init` and `Std` (M3-8), the faithfulness report (M3-10), and the trust analysis for profile K (M7-2, whose body states no dependency on Milestones 4 to 6).  Depends on M3-8, M3-10, M7-2.
+
+## Tasks
+
+- [ ] `CITATION.cff`, validated with `cffconvert`, and the repository switched on in Zenodo, so that each GitHub release gets a version DOI and the repository a concept DOI.
+- [ ] Give each changelog entry a third part, what a user must change (an accepted input, the output layout, a profile's flags, a sidecar's format), which says "nothing" when nothing; the version rule of `docs/translator/architecture.md`, "The version", already says when the minor number goes up.
+- [ ] Tag the release, with `docs/releases/vX.Y.Z.md` as its body: what it translates under which profile, what a check of the output proves, the pins, and the commands that check it.
+- [ ] Check the tag from a fresh clone, with nothing from the environment, and from Zenodo's archive; and one CI run on the tag that misses the binary cache, named in the notes.
+
+## Acceptance criteria
+
+- [ ] The release resolves by its version DOI, `CITATION.cff` at the tag names it, and its notes name the fresh-clone check and the run without the cache.
 
 <!-- END GENERATED: milestone-3 -->
 

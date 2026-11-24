@@ -549,47 +549,53 @@ which must stay transparent for its own dependents, and a definition inside
 an `unfolding` block is opaque; the count is the same either way.  The
 harness compares the listing with a golden one.
 
-With every value printed and the recursors defined ([#19]), the golden
-scaffolds stand as follows (`values` counts the definitions, theorems and
-opaque constants printed with their values, recursors not among them; a
-value is `behind a refused type` when its own type was refused or its
-declaration was dropped with one; a declaration is a declaration of the
-Agda module, a data type or a record with its constructors being one, and
-a block of recursors one); in
-parentheses, the same on the code before [#19]:
+With every value printed, the recursors defined ([#19]) and the operation
+table of [#31], the golden scaffolds stand as follows (`values` counts the
+definitions, theorems and opaque constants of Lean's that are printed with
+their values, recursors and the table's helpers not among them; a value is
+`behind a refused type` when its own type was refused or its declaration
+was dropped with one; a declaration is a declaration of the Agda module, a
+data type or a record with its constructors being one, and a block of
+recursors one; each refusal is counted under the issue its class belongs
+to, as `translator/tests/refusal-classes.txt` assigns it and
+`scripts/python/refusal_report.py` counts it, [`../performance.md`][performance]):
 
-| Scaffold | Declarations | Data types and records | Values | Checked | Refused | Behind a refused type | Theorems | Unfolded |
+| Scaffold | Declarations | Data types and records | Values | Checked | Refused, by class | Behind a refused type | Theorems | Unfolded |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `list-reverse-reverse` | 34 | 6 | 21 | 21 (17) | 0 (4) | 0 | 10 | 0 |
-| `nat-gcd-succ` | 254 | 23 | 201 | 199 (142) | 2 (48) | 0 (11) | 65 | 0 |
-| `nat-gcd-self` | 322 | 24 | 266 | 262 (183) | 4 (61) | 0 (22) | 103 | 0 |
-| printing fixture | 340 (333) | 41, 40 checked | 255 (248) | 253 (199) | 2 (49) | 0 | 47 | 0 |
-| `Fixtures.selected` | 29 | 6 | 17 | 17 (15) | 0 (2) | 0 | 0 | 0 |
-| inductives fixture | 75 (77) | 24 | 29 | 29 (27) | 0 (2) | 0 | 1 | 0 |
-| `kinds` | 333 | 41, 40 checked | 246 | 244 (195) | 2 (51) | 0 | 51 | 1 (2, one in vain) |
-| recursor fixture | 638 | 42 | 554 | 552 | 2 | 0 | 122 | 0 |
+| `list-reverse-reverse` | 34 | 6 | 21 | 21 | 0 | 0 | 10 | 0 |
+| `nat-gcd-succ` | 261 | 23 | 201 | 199 | 2 ([#26] 1, [#31] 1) | 0 | 65 | 3, all in vain |
+| `nat-gcd-self` | 329 | 24 | 266 | 260 | 6 ([#26] 1, [#27] 2, [#31] 3) | 0 | 103 | 9, all in vain |
+| printing fixture | 349 | 41 | 255 | 253 | 2 ([#26] 1, [#31] 1) | 0 | 47 | 3, all in vain |
+| `Fixtures.selected` | 30 | 6 | 17 | 17 | 0 | 0 | 0 | 0 |
+| inductives fixture | 76 | 24 | 29 | 29 | 0 | 0 | 1 | 0 |
+| `kinds` | 342 | 41 | 246 | 244 | 2 ([#26] 1, [#31] 1) | 0 | 51 | 4, 3 in vain |
+| recursor fixture | 645 | 42 | 554 | 552 | 2 ([#26] 1, [#31] 1) | 0 | 122 | 3, all in vain |
 | `quotients` | 18 | 2 | 8 | 8 | 0 | 0 | 5 | 0 |
-| `Init.Core`'s inductive types | 537 (539) | 144, 143 checked | 246 | 244 (197) | 2 (49) | 0 | 48 | 0 |
+| `arithmetic` | 496 | 36 | 410 | 403 | 7 ([#26] 1, [#27] 2, [#31] 4) | 0 | 174 | 9, all in vain |
+| `arithmetic-lean` | 436 | 33 | 369 | 365 | 4 ([#26] 1, [#27] 3) | 0 | 154 | 0 |
+| `Init.Core`'s inductive types | 546 | 144 | 246 | 244 | 2 ([#26] 1, [#31] 1) | 0 | 48 | 3, all in vain |
 
-The printing fixture gained the eta repairs' declarations, and a
-nested or mutual block's recursors are one declaration now.  Every type
-checks but `ByteArray.IsValidUTF8`'s, in the three closures that hold it:
-the compiled matcher of `Nat.zero_lt_of_ne_zero` and
-`Nat.modCore.go.eq_1`, which needed `n + 1` to be `Nat.succ n`, check now
-that `Nat.add` computes through `Nat.rec`.  None of the refusals left is
-a recursor's; they fall into three classes, as follows:
+Every data type and record checks, `ByteArray.IsValidUTF8` among them
+since [#31], and no refusal is a recursor's.  The refusals fall into three
+classes, as follows:
 
-+  two proofs of one proposition compared, `Nat.modCore_lt`
-   (`hy₂ != h₃`), `dif_pos` and `dif_neg`, which Lean accepts by
-   definitional proof irrelevance ([#27]);
++  two proofs of one proposition compared, `dif_pos` and `dif_neg`
+   (`h₆ != hc₂`), which Lean accepts by definitional proof irrelevance
+   ([#27]); under `--arithmetic lean`, `Nat.modCore_lt` too;
 +  `K`-like reduction of `Eq.rec` on `h : α = α` in `eq_of_heq`, which
    Agda reduces only on `Eq.refl` and which the normalizer of [#26] is to
    make explicit;
-+  `ByteArray.IsValidUTF8`, refused as `HeapExhausted` with its recursor,
-   `String.ofByteArray` and `String.rec` behind it: Agda's positivity check
-   normalizes its field's type, whose normal form is exponential once
-   Lean's `Nat.ble` computes in unary, the operation table of [#31]
-   ([`recursors.md`][recursors]).
++  the equations the operation table gives up ([#31],
+   [`nat-operations.md`][nat-operations]): `Nat.modCoreGo_lt`, wherever
+   `Init.Prelude`'s closure holds it, `Nat.div.go.eq_1`,
+   `Nat.modCore.go.eq_1` and their private `fuel_congr._f`, and the
+   arithmetic fixture's `bitwise_zero_left`.
+
+The goldens of [#23] add two classes beyond these: `String`'s recursor,
+which [#88] is to make compute, and binder information, which Lean's
+kernel ignores and Agda does not, [#89]'s ([`../performance.md`][performance]).
+On the code before [#19] the same scaffolds checked 17, 142 and 183 of the
+three corpus closures' values; the dated reports have those tables.
 
 `Quot.lift` in `funext` was a class of its own until [#21]: with the
 quotient's computation rules, `funext` checks in both gcd scaffolds, and
@@ -674,8 +680,10 @@ broke each rule in turn and showed which checks fail:
    closure's heap refusals in `Init.Prelude` make the loop take more
    than 50 minutes).
 
-`make scaffold-corpus` is the check over all twelve corpus entries; it
-needs Mathlib's cache, and no CI job runs it.
+`make scaffold-corpus` is the check over all twelve corpus entries, the
+corpus lines of `make goldens`, which also checks the four `Init`
+fragments ([`../performance.md`][performance]); both need Mathlib's cache,
+and the `goldens` workflow, not the pull-request job, runs them.
 
 ## Hand-off to the emitters
 
@@ -735,6 +743,7 @@ It assumes the following of its callers:
 [#20]: https://github.com/formalverification/lean2agda/issues/20
 [#21]: https://github.com/formalverification/lean2agda/issues/21
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#23]: https://github.com/formalverification/lean2agda/issues/23
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#28]: https://github.com/formalverification/lean2agda/issues/28
@@ -742,6 +751,8 @@ It assumes the following of its callers:
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [#86]: https://github.com/formalverification/lean2agda/pull/86
+[#88]: https://github.com/formalverification/lean2agda/issues/88
+[#89]: https://github.com/formalverification/lean2agda/issues/89
 [report]: ../reports/printing-blowup-2026-10-12.md
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
@@ -756,3 +767,4 @@ It assumes the following of its callers:
 [related]: ../related-work.md
 [catalog-let]: ../foundations/gap-catalog.md#projections-and-let
 [nat-operations]: ../foundations/nat-operations.md
+[performance]: ../performance.md

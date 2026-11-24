@@ -250,6 +250,18 @@ that is, as follows.
    `fuel_congr._f` of each wherever `Init.Data.Nat.Div.Basic` is
    reached, and the fixture's `bitwise_zero_left`; nothing else.  It
    gains `Nat.modCore_lt` everywhere.
++  **A fifth equation, found later**.  The goldens of issue [#23]
+   ([`../performance.md`][performance]) reach `Init.Data.Nat.Basic`'s
+   closure, which the closures above do not, and there the table also
+   costs `Nat.beq.eq_def`, the unfolding equation `Nat.beq x y = match x,
+   y with …` at two variables.  Lean's kernel proves it by unfolding
+   `Nat.beq` to its `brecOn` body; the builtin `NATEQUALS` is stuck on two
+   variables and the match is not, so Agda refuses it, and under
+   `--arithmetic lean` it checks (2026-11-22).  The table's four defining
+   equations of `Nat.beq` (above) hold on constructors; the unfolding at
+   variables is what is lost, and it is lost for every operation the table
+   replaces, though only `Nat.beq`'s `eq_def` occurs in the closures
+   measured.
 
 The checker's fallback met the first of these, in a way that mattered:
 when Agda refuses `Nat.modCoreGo_lt`, its message names three theorems
@@ -548,6 +560,7 @@ builtins through `Agda.Builtin.Nat` (`P28CubicalLiterals`).
 [#19]: https://github.com/formalverification/lean2agda/issues/19
 [#21]: https://github.com/formalverification/lean2agda/issues/21
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#23]: https://github.com/formalverification/lean2agda/issues/23
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#30]: https://github.com/formalverification/lean2agda/issues/30
@@ -559,6 +572,7 @@ builtins through `Agda.Builtin.Nat` (`P28CubicalLiterals`).
 [catalog-literals]: gap-catalog.md#literals
 [recursors-positivity]: ../translator/recursors.md#agdas-positivity-check-and-leans-arithmetic
 [pinning]: ../pinning.md
+[performance]: ../performance.md
 [probes]: probes/
 [lean-findings]: ../lean-findings.md
 [adr]: ../adr/0001-translation-architecture.md

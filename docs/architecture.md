@@ -341,7 +341,9 @@ python3 ../scripts/python/agda_check.py --refusals --messages out   # the refusa
 cd ..
 make atlas             # the atlas and its report, about three minutes and 7.5 GiB
 make corpus-check      # Agda on every corpus entry
-make scaffold-corpus   # print all twelve scaffolds and check them module by module
+make goldens           # the corpus and Init golden trees, checked and tabulated (docs/performance.md)
+make goldens GOLDENS=init-core RESULTS=out   # one of them, keeping its trees and tables in out/
+make scaffold-corpus   # the twelve corpus entries alone
 make test              # the Python suite and the translator's semantic and golden tests
 make test-unit         # the translator's Lean unit checks alone: lake test in translator/
 ```

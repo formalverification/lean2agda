@@ -240,12 +240,17 @@ rules), [#31]'s.  With [#31]'s operation table those 70 check, and
 `ByteArray.IsValidUTF8.rec` is defined; of the values the type hid, five
 are refused (`String.decEq`, its `_proof_2` and
 `String.ofByteArray.injEq`, [#27]'s; `String.noConfusion` and
-`String.ofByteArray.noConfusion`, which need `String.rec` to compute), and
-the table refuses `Nat.modCoreGo_lt`, whose proof needs a fuel equation
-the table gives up, and checks `Nat.modCore_lt`, whose comparison of two
-proofs it removes ([`nat-operations.md`][nat-operations], The
-measurements); the nine declarations more are the table's six builtin
-helpers and `Nat.sub`'s three rewrite rules.
+`String.ofByteArray.noConfusion`, which need `String.rec` to compute,
+[#88]'s), and the table refuses `Nat.modCoreGo_lt`, whose proof needs a
+fuel equation the table gives up, and checks `Nat.modCore_lt`, whose
+comparison of two proofs it removes ([`nat-operations.md`][nat-operations],
+The measurements); the nine declarations more are the table's six builtin
+helpers and `Nat.sub`'s three rewrite rules.  The goldens of [#23]
+measured the same counts again on the merged code (2026-11-22, 37 Agda
+runs, 424 s at `-j 4` and load averages of 2 to 5), and count the 21
+refused values by class: 16 [#27], 2 [#26] (`eq_of_heq` and `cast_eq`),
+2 [#88] and 1 [#31], with the 4 values behind `apply_eqRec`'s refused
+type [#27]'s ([`../performance.md`][performance]).
 
 The fallback fired five times, and each unfolding helped:
 `Quotient.sound` for `Quotient.rec`, as before; `Setoid.refl` and
@@ -334,10 +339,12 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 [#19]: https://github.com/formalverification/lean2agda/issues/19
 [#21]: https://github.com/formalverification/lean2agda/issues/21
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#23]: https://github.com/formalverification/lean2agda/issues/23
 [#25]: https://github.com/formalverification/lean2agda/issues/25
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#31]: https://github.com/formalverification/lean2agda/issues/31
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 [printing]: printing.md
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
 [printing-checks]: printing.md#what-agda-checks-and-the-fallback
@@ -346,3 +353,4 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 [inductives]: inductives.md
 [probes]: probes/
 [nat-operations]: ../foundations/nat-operations.md
+[performance]: ../performance.md
