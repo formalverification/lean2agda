@@ -1,0 +1,3 @@
+checked 1968 of 1972 declarations, 144 of 144 data types and records
+unfolded 8 of 510 theorems, 3 in vain
+defined 146 of 146 recursors by pattern matching, 0 refused by the termination checker

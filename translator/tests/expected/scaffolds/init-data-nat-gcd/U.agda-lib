@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of Nat:div~ugcd~upos~uof~upos~uleft Nat:div~ugcd~upos~uof~upos~uright Nat:dvdProdDvdOfDvdProd Nat:dvd~ugcd Nat:dvd~ugcd~uiff and 130 more
+name: U
+include: .

@@ -1,0 +1,22 @@
+opaque	Array.get!InternalBorrowed	unsafe: exempt from Lean's kernel
+opaque	Array.getInternalBorrowed	unsafe: exempt from Lean's kernel
+axiom	lcProof	unsafe: exempt from Lean's kernel
+definition	unsafeCast._proof_1	unsafe: exempt from Lean's kernel
+definition	unsafeCast	unsafe: exempt from Lean's kernel
+definition	Lean.Macro.getMethodsImp	unsafe: exempt from Lean's kernel
+definition	Lean.Macro.mkMethodsImp	unsafe: exempt from Lean's kernel
+definition	Lean.Name.anonymous._override	unsafe: exempt from Lean's kernel
+definition	Lean.Name.casesOn._override	unsafe: exempt from Lean's kernel
+definition	Lean.Name.hash._override	unsafe: exempt from Lean's kernel
+definition	Lean.Name.num._override	unsafe: exempt from Lean's kernel
+definition	Lean.Name.str._override	unsafe: exempt from Lean's kernel
+definition	Lean.TSyntaxArray.mkImpl	unsafe: exempt from Lean's kernel
+definition	Lean.TSyntaxArray.rawImpl	unsafe: exempt from Lean's kernel
+axiom	Quot.lcInv	unsafe: exempt from Lean's kernel
+axiom	isScalarObj	unsafe: exempt from Lean's kernel
+axiom	lcAny	unsafe: exempt from Lean's kernel
+axiom	lcCast	unsafe: exempt from Lean's kernel
+axiom	lcErased	unsafe: exempt from Lean's kernel
+axiom	lcUnreachable	unsafe: exempt from Lean's kernel
+axiom	lcVoid	unsafe: exempt from Lean's kernel
+axiom	sorryAx	sorryAx: a proof left to sorry

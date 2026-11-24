@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of Nat:Nat:instAntisymmNotLt Nat:add~uassoc Nat:add~uassoc:~uf Nat:add~ucomm Nat:add~ucomm:~uf and 472 more
+name: U
+include: .
