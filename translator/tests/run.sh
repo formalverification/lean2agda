@@ -70,6 +70,13 @@ check_tree() {
   diff -r "tests/expected/scaffolds/$name" "$actual"
 }
 
+# The listings alone, for a tree whose modules another golden already
+# pins up to an option.
+check_listed() {
+  check_listings "$@"
+  diff -r "tests/expected/scaffolds/$1" "$scratch/actual-$1"
+}
+
 check_tree list-reverse-reverse Init.Data.List.Lemmas -- List.reverse_reverse
 check_tree nat-gcd-succ Init.Data.Nat.Gcd -- Nat.gcd_succ
 check_tree nat-gcd-self Init.Data.Nat.Gcd -- Nat.gcd_self
@@ -88,6 +95,18 @@ check_tree inductives TranslatorTests.Input.Inductives -- InductiveFixtures.Vec 
 check_tree kinds TranslatorTests.Input.Kinds
 check_tree recursors TranslatorTests.Input.Recursors
 check_tree quotients TranslatorTests.Input.Quotients
+
+# The Prop-instantiation specialization (issue M3-3): the closure of the
+# fixture's instances, each a declaration of its own and each use naming
+# its instance.  Then the measurement's printing of a sort at level zero
+# as Prop, listings only: with the specialization, where what Agda
+# refuses is the elimination of Eq's recursor into a type, what needs
+# it, and the computation rule of a quotient of a proposition; and
+# without it, the control, where a constant printed with Set is used at
+# Prop (UnequalSorts).
+check_tree levels --specialize TranslatorTests.Input.Levels
+check_listed levels-prop --specialize --prop TranslatorTests.Input.Levels
+check_listed levels-prop-control --prop TranslatorTests.Input.Levels
 
 # The operation table (issue M3-6): Lean's equations for the accelerated
 # operations, on variables, and computations on numerals past 2^64,
@@ -168,6 +187,13 @@ diff -u "$scratch/expected-naming-init.txt" "$scratch/naming-init.txt"
 timeout 60 "$lake_cmd" exe lean2agda --stats Init.Data.Nat.Gcd -- Nat.gcd_self > "$scratch/gcd.txt"
 tail -n +2 tests/expected/gcd-self.txt > "$scratch/expected-gcd.txt"
 diff -u "$scratch/expected-gcd.txt" "$scratch/gcd.txt"
+
+# The specialization's counts for the closure of Init.Core's
+# declarations, under both rules (issue M3-3's criterion).
+timeout 120 "$lake_cmd" exe lean2agda --specialize --stats Init.Core > "$scratch/init-core-stats.txt"
+sed -n '/^# specialization/,$p' "$scratch/init-core-stats.txt" > "$scratch/levels-init-core.txt"
+tail -n +2 tests/expected/levels-init-core.txt > "$scratch/expected-levels-init-core.txt"
+diff -u "$scratch/expected-levels-init-core.txt" "$scratch/levels-init-core.txt"
 
 "$lake_cmd" exe lean2agda --profile U --out "$scratch/out with spaces" \
   TranslatorTests.Input.Consumer -- Fixtures.selected > "$scratch/selected.txt"

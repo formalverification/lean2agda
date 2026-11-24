@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of LevelFixtures:Box LevelFixtures:Box:~usizeOf~u1 LevelFixtures:Box:~usizeOf~uinst LevelFixtures:Box:casesOn LevelFixtures:Box:ctorIdx and 149 more
+name: U
+include: .
