@@ -4,6 +4,7 @@ File: translator/Lean2Agda/Core/Scaffold.lean
 import Lean2Agda.Core.Arithmetic
 import Lean2Agda.Core.Recursor
 import Lean2Agda.Core.Share
+import Lean2Agda.Core.Specialize
 
 /-!
 # The profile U scaffold
@@ -65,6 +66,10 @@ open Lean
 computation rules are rewrite rules. -/
 def profileUOptions : String := "{-# OPTIONS --type-in-type --rewriting #-}"
 
+/-- The options of the measurement that prints a sort at level zero as
+`Prop` (`--prop`): profile U's, with Agda's `Prop`. -/
+def profileUPropOptions : String := "{-# OPTIONS --prop --type-in-type --rewriting #-}"
+
 /-- One declaration of a module: the identifiers it declares, those its
 text refers to, and its text.  A declaration with a value also carries
 its fallback, the references and text of a postulate of its type.  A
@@ -101,13 +106,16 @@ structure Refusal where
   via : Option Name := none
   deriving Inhabited
 
-/-- The reason, as `refusals.txt` prints it. -/
-def Refusal.reason (r : Refusal) : String :=
+/-- The reason, as `refusals.txt` prints it; `display` prints a name, a
+key of a closure of instances as `keyDisplay` does. -/
+def Refusal.reason (r : Refusal) (display : Name → String := fun n => toString n) : String :=
   match r.via with
   | none => match r.cause with
     | .sorryAx => "sorryAx: a proof left to sorry"
     | .unsafeDecl => "unsafe: exempt from Lean's kernel"
-  | some d => if d == r.root then s!"depends on {r.root}" else s!"depends on {d}, and through it on {r.root}"
+  | some d =>
+    if d == r.root then s!"depends on {display r.root}"
+    else s!"depends on {display d}, and through it on {display r.root}"
 
 /-- The declarations to refuse: `sorryAx`, every `unsafe` declaration,
 and whatever depends on a refused one, which the pass reaches by
@@ -120,7 +128,7 @@ def refuseDeclarations (decls : Array Declaration) : Std.HashMap Name Refusal :=
     for d in decls do
       unless refused.contains d.name do
         let own : Option RefusalRoot :=
-          if d.name == ``sorryAx then some .sorryAx
+          if d.info.name == ``sorryAx then some .sorryAx
           else if d.info.isUnsafe then some .unsafeDecl
           else none
         let refusal : Option Refusal := match own with
@@ -203,7 +211,7 @@ def breakCycles (items : Array ScaffoldItem) : Array ScaffoldItem := Id.run do
 
 def postulateItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type decl.info.type
-  let name := agdaIdent decl.name
+  let name := p.naming.ident decl.name
   return ({ provides := #[name], references := t.references p.naming,
             text := s!"postulate {name} : {t.render}\n" }, counts)
 
@@ -215,7 +223,7 @@ def valueItem (p : Printer) (decl : Declaration) (layout : String → String →
     | throw s!"{decl.name} has no value to print"
   let (t, c₁) ← p.type decl.info.type
   let (clause, c₂) ← p.clause decl.info.type value
-  let name := agdaIdent decl.name
+  let name := p.naming.ident decl.name
   let signature := s!"{name} : {t.render}"
   let references := (clause.body.references p.naming).foldl (fun acc n => if acc.contains n then acc else acc.push n)
     (t.references p.naming)
@@ -243,7 +251,7 @@ structural, since several of the clauses recur, as a recursor's do. -/
 def tableItem (p : Printer) (helperName : String → String) (decl : Declaration) (entry : TableEntry) :
     Except String (ScaffoldItem × PrintCounts) := do
   let (t, counts) ← p.type decl.info.type
-  let name := agdaIdent decl.name
+  let name := p.naming.ident decl.name
   let q : TableNaming := ⟨p.naming.constant, helperName⟩
   let signature := s!"{name} : {t.render}"
   let references := (t.references p.naming ++ entry.uses.map helperName ++
@@ -320,6 +328,20 @@ def quotRule? (n : Name) : Option (String × Expr) :=
   else if n == ``Quot.ind then some (agdaIdent n ++ "-β", quotIndRuleType)
   else none
 
+/-- The computation rule that follows the postulate of a declaration: a
+quotient primitive's, or, in a closure of instances, that of one instance
+of `Quot.lift` or `Quot.ind`, whose identifier is the instance's with
+`-β` and whose type is the rule's at the instance's levels, so that it is
+stated over the instances of `Quot.mk` and `Eq` that the instance's own
+type names (the rule's level parameters are the primitive's, `u` and
+`v`). -/
+def declarationRule? (p : Printer) (splits : Splits) (decl : Declaration) : Option (String × Expr) := do
+  let (name, type) ← quotRule? decl.info.name
+  if !p.specialized then return (name, type)
+  let params := if decl.info.name == ``Quot.lift then [`u, `v] else [`u]
+  let assign := assignment params (splits.mask decl.info.name) (lettersPattern decl.pattern)
+  return (p.naming.ident decl.name ++ "-β", normalizeLevels assign type)
+
 /-- A computation rule as a rewrite rule: a postulate of its equation,
 under the comment `-- computation rule`, then its `REWRITE` pragma.  The
 printer gives `Quot.lift` and `Quot.mk` the visibilities of their types,
@@ -335,8 +357,8 @@ def ruleItem (p : Printer) (name : String) (type : Expr) : Except String (Scaffo
 /-- A block of inductive types as one item, declaring its types and
 constructors. -/
 def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : InductiveVal)
-    (arithmetic : Arithmetic) : Except String (ScaffoldItem × PrintCounts) := do
-  let d ← inductiveDecl p (← blockMembers (fun n => byName[n]?.map (·.info)) v)
+    (arithmetic : Arithmetic) (pattern : String := "") : Except String (ScaffoldItem × PrintCounts) := do
+  let d ← inductiveDecl p (← blockMembers (fun n => byName[instanceKey n pattern]?.map (·.info)) v) pattern
   -- The operation table binds `Bool` to Agda's builtin booleans, which
   -- `NATEQUALS` and `NATLESS` need.
   let lines := if v.name == ``Bool && arithmetic == .agda then d.lines ++ boolPragmas else d.lines
@@ -346,8 +368,9 @@ def inductiveItem (p : Printer) (byName : Std.HashMap Name Declaration) (v : Ind
 /-- The recursors of a block of inductive types as one structural item
 under the comment `-- recursor`, with the postulates of their types as
 its fallback. -/
-def recursorItem (p : Printer) (members : Array RecursorVal) : Except String (ScaffoldItem × PrintCounts) := do
-  let d ← recursorDecl p members
+def recursorItem (p : Printer) (members : Array RecursorVal) (pattern : String := "") :
+    Except String (ScaffoldItem × PrintCounts) := do
+  let d ← recursorDecl p members pattern
   let postulates := "\n".intercalate d.postulates.toList ++ "\n"
   return ({ provides := d.provides, references := d.references,
             text := "-- recursor\n" ++ "\n".intercalate d.lines.toList ++ "\n",
@@ -355,12 +378,16 @@ def recursorItem (p : Printer) (members : Array RecursorVal) : Except String (Sc
             structural := true }, d.counts)
 
 /-- The recursors of each block of inductive types in a closure, keyed by
-the block's first type, in `recursorRank`'s order. -/
+the block's first type, in `recursorRank`'s order; in a closure of
+instances, the recursors of one pattern, keyed by the first type's name
+with that pattern (`instanceKey`). -/
 def recursorBlocks (decls : Array Declaration) : Std.HashMap Name (Array RecursorVal) :=
   let blocks := decls.foldl (init := ({} : Std.HashMap Name (Array RecursorVal))) fun m d =>
     match d.info with
     | .recInfo r => match r.all.head? with
-      | some first => m.insert first ((m.getD first #[]).push r)
+      | some first =>
+        let key := instanceKey first d.pattern
+        m.insert key ((m.getD key #[]).push r)
       | none => m
     | _ => m
   blocks.fold (init := {}) fun m first members => m.insert first <| members.qsort fun a b =>
@@ -380,19 +407,19 @@ def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration)
   | .inductInfo v =>
     if v.name == ``String then return some (← stringItem p decl)
     if v.all.head? != some v.name then return none
-    return some (← inductiveItem p byName v arithmetic)
+    return some (← inductiveItem p byName v arithmetic decl.pattern)
   | .ctorInfo c =>
     if c.induct == ``String then return some (← postulateItem p decl)
     return none
   | .recInfo r =>
     -- `String` is a postulate, and so is its recursor.
     if r.all.contains ``String then return some (← postulateItem p decl)
-    let members := (r.all.head?.bind (recursors[·]?)).getD #[r]
+    let members := (r.all.head?.bind (recursors[instanceKey · decl.pattern]?)).getD #[r]
     if members[0]?.map (·.name) != some r.name then return none
-    return some (← recursorItem p members)
+    return some (← recursorItem p members decl.pattern)
   | .defnInfo _ =>
     if arithmetic == .agda then
-      if let some entry ← tableEntry? decl.name decl.info.type then
+      if let some entry ← tableEntry? decl.info.name decl.info.type then
         return some (← tableItem p helperName decl entry)
     return some (← definitionItem p decl)
   | .thmInfo _ => return some (← opaqueItem p decl "theorem")

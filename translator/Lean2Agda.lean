@@ -9,6 +9,8 @@ import Lean2Agda.Core.Stats
 import Lean2Agda.Core.Naming
 import Lean2Agda.Core.ReverseMap
 import Lean2Agda.Core.InductiveShape
+import Lean2Agda.Core.Levels
+import Lean2Agda.Core.Specialize
 import Lean2Agda.Core.Print
 import Lean2Agda.Core.Inductive
 import Lean2Agda.Core.Recursor

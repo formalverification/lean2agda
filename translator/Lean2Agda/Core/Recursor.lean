@@ -112,7 +112,7 @@ def recursorClause (r : RecursorVal) (binders : Array (Visibility × String × A
   -- Lean's parameters that Agda keeps as indices, which the constructor
   -- binds with its own visibilities.
   let promoted := (leadingBinderInfos c.type ind.numParams).drop (agdaParamCount env ind)
-  let ctorPattern := Pattern.ctor ((← read).naming.constant rule.ctor)
+  let ctorPattern := Pattern.ctor ((← read).naming.constant (← referenceName rule.ctor us))
     (promoted.toArray.map (fun bi => (Visibility.ofBinderInfo bi, Pattern.wild)) ++ fieldPatterns)
   let major := mkAppN (.const rule.ctor us) (ctorParams ++ fields)
   let expected ← instantiateRecursorTail scope tail (indices.push major)
@@ -155,7 +155,10 @@ declares, those its text refers to (the constructors it matches among
 them, each as the printer's naming spells it, qualified when another
 module declares it), and the postulates of its members' types, which stand for it when
 Agda refuses it.  A lone recursor is its signature and clauses; several
-are one `mutual` block, the signatures first. -/
+are one `mutual` block, the signatures first.  In a closure of instances
+the members are one pattern's, declared under their keys' identifiers,
+and each clause matches the constructor's instance at the levels of the
+major premise. -/
 structure RecursorDecl where
   lines : Array String
   provides : Array String
@@ -165,14 +168,21 @@ structure RecursorDecl where
   counts : PrintCounts
   deriving Inhabited
 
-def recursorDecl (p : Printer) (members : Array RecursorVal) : Except String RecursorDecl := do
+/-- The constructors a clause's patterns match, as printed. -/
+partial def Pattern.constructors : Pattern → Array String
+  | .ctor name args => args.foldl (fun acc (_, a) => acc ++ a.constructors) #[name]
+  | _ => #[]
+
+def recursorDecl (p : Printer) (members : Array RecursorVal) (pattern : String := "") :
+    Except String RecursorDecl := do
   let (printed, counts) ← runPrint p (members.mapM recursorClauses)
-  let names := members.map (agdaIdent ·.name)
+  let names := members.map fun r => p.naming.ident (instanceKey r.name pattern)
   let signatures := (names.zip printed).map fun (n, (t, _)) => s!"{n} : {t.render}"
   let clauses := (names.zip printed).foldl (fun acc (n, (_, cs)) => acc ++ cs.map (·.render n)) #[]
   let lines := if members.size == 1 then signatures ++ clauses
     else #["mutual"] ++ (signatures ++ clauses).map ("  " ++ ·)
-  let ctors := members.foldl (fun acc r => acc ++ r.rules.toArray.map (p.naming.constant ·.ctor)) #[]
+  let ctors := printed.foldl (fun acc (_, cs) =>
+    cs.foldl (fun acc c => c.patterns.foldl (fun acc (_, q) => acc ++ q.constructors) acc) acc) #[]
   let terms := printed.foldl (fun acc (t, cs) => (acc.push t) ++ cs.filterMap (·.body)) #[]
   let distinct (ns : Array String) : Array String := ns.foldl (fun acc n =>
     if acc.contains n || names.contains n then acc else acc.push n) #[]
