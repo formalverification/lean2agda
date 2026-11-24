@@ -6,6 +6,7 @@ import Lean2Agda.Core.Naming
 import Lean2Agda.Core.Share
 import Lean2Agda.Core.Modules
 import Lean2Agda.Core.Arithmetic
+import Lean2Agda.Core.Specialize
 import Lean.Syntax
 
 namespace Lean2Agda
@@ -14,7 +15,8 @@ open Lean
 
 def usage : String :=
   "usage: lean2agda [--profile U] [--root NAME] [--out DIR] [--share N] [--split BYTES]\n" ++
-  "                 [--arithmetic agda|lean] [--stats] MODULE... [-- DECL...]\n" ++
+  "                 [--arithmetic agda|lean] [--specialize] [--prop] [--stats]\n" ++
+  "                 MODULE... [-- DECL...]\n" ++
   "       lean2agda --help | --version"
 
 structure Args where
@@ -29,6 +31,12 @@ structure Args where
   /-- Which definitions of Lean's accelerated operations on `Nat` the
   scaffold emits: the operation table's, or Lean's compiled ones. -/
   arithmetic : Arithmetic := .agda
+  /-- Emit each constant's instances, one per pattern of its split level
+  parameters at zero (issue M3-3), in place of the constant. -/
+  specialize : Bool := false
+  /-- Print a sort whose level is zero as `Prop`, under `--prop`: a
+  measurement for the encoding of `Prop`, never a deliverable. -/
+  prop : Bool := false
   stats : Bool := false
   help : Bool := false
   version : Bool := false
@@ -67,6 +75,8 @@ private def parseArgsAux (args : Args) : List String → Except String Args
   | "--arithmetic" :: value :: rest => do
     let some arithmetic := Arithmetic.parse? value | throw "--arithmetic needs agda or lean"
     parseArgsAux { args with arithmetic } rest
+  | "--specialize" :: rest => parseArgsAux { args with specialize := true } rest
+  | "--prop" :: rest => parseArgsAux { args with prop := true } rest
   | "--stats" :: rest => parseArgsAux { args with stats := true } rest
   | "--help" :: rest => parseArgsAux { args with help := true } rest
   | "--version" :: rest => parseArgsAux { args with version := true } rest
