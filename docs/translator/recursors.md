@@ -73,8 +73,9 @@ with `p != Eq:rec p h`), which is the normalizer's to supply ([#26]).
 ## Which recursors, and blocks of them
 
 Every recursor of a closure is defined, the nested types' `rec_N` and the
-`K`-like ones (`Eq.rec`, `HEq.rec`, `True.rec`) among them, except
-`String.rec`: `String` is a postulate for `BUILTIN STRING`, and so are its
+`K`-like ones (`Eq.rec`, `HEq.rec`, `True.rec`) among them, and
+`String.rec` since [#88], when `String` became the record Lean declares;
+until then `String` was a postulate for `BUILTIN STRING`, and so were its
 constructor and recursor.  `casesOn`, `recOn`, `below` and `brecOn` are
 Lean definitions and compute through the recursor.
 
@@ -214,6 +215,7 @@ both:
 | before [#19] | 1,965 | 1,660 | 1,351 | 305 | 4 | 1 | 4, one in vain | 0 of 146 |
 | after | 1,963 | 1,660 | 1,570 | 16 | 74 | 2 | 5, none in vain | 145 of 146 |
 | after [#31]'s operation table | 1,972 | 1,660 | 1,635 | 21 | 4 | 1 | 8, three in vain | 146 of 146 |
+| after [#88], `String` a record | 2,079 | 1,768 | 1,746 | 18 | 4 | 1 | 8, three in vain | 147 of 147 |
 
 The 147 recursors are 145 inductive types' and `Lean.Syntax`'s two
 `rec_N`; `String.rec` stays a postulate, and `ByteArray.IsValidUTF8.rec`
@@ -238,14 +240,22 @@ behind a refused type are `apply_eqRec` with the 3 behind it
 `Lean.Name.beq`, the macro scopes and `Init.Core`'s macro and unexpander
 rules), [#31]'s.  With [#31]'s operation table those 70 check, and
 `ByteArray.IsValidUTF8.rec` is defined; of the values the type hid, five
-are refused (`String.decEq`, its `_proof_2` and
-`String.ofByteArray.injEq`, [#27]'s; `String.noConfusion` and
-`String.ofByteArray.noConfusion`, which need `String.rec` to compute), and
+are refused (`String.decEq` and `String.ofByteArray.injEq`, [#27]'s;
+`String.decEq._proof_2`, `String.noConfusion` and
+`String.ofByteArray.noConfusion`, which need `String.rec` or a projection
+from a `String` to compute), and
 the table refuses `Nat.modCoreGo_lt`, whose proof needs a fuel equation
 the table gives up, and checks `Nat.modCore_lt`, whose comparison of two
 proofs it removes ([`nat-operations.md`][nat-operations], The
 measurements); the nine declarations more are the table's six builtin
-helpers and `Nat.sub`'s three rewrite rules.
+helpers and `Nat.sub`'s three rewrite rules.  With `String` a record
+([#88]) `String.rec` is defined too, and those three values check; the
+107 declarations more are the 85 definitions of the closure's distinct
+string literals, the twelve constants a literal now reaches
+(`String.ofList`, `Char.ofNat` and what they use), the sharing pass's
+eleven auxiliaries of `Char.ofNat`'s two proofs, and `String` as one
+record and one recursor where it was three postulates
+([`nat-operations.md`][nat-operations], "`String` and `Char`").
 
 The fallback fired five times, and each unfolding helped:
 `Quotient.sound` for `Quotient.rec`, as before; `Setoid.refl` and
@@ -266,7 +276,7 @@ fuel-based in any case, its recursion `Nat.rec` on the fuel;
 +  `tests/Recursors.lean`: the clauses of `Nat.rec` (a recursive field),
    `Eq.rec` and `HEq.rec` (a parameter Agda keeps as an index), `Acc.rec`
    (a recursive field of function type), `False.rec` (the absurd clause)
-   and `Prod.rec` (a record); `String.rec` left a postulate;
+   and `Prod.rec` (a record), and `String.rec`, a record's;
    `Lean.Syntax`'s three recursors as one `mutual` item, `rec` first,
    `rec_1` matching `Array:mk` and referring to the constructors it
    matches; the fixture's mutual pair as one item in the order of `all`;
@@ -338,6 +348,7 @@ refused with `UnsolvedConstraints`, and nine of its dependents with it.
 [#26]: https://github.com/formalverification/lean2agda/issues/26
 [#27]: https://github.com/formalverification/lean2agda/issues/27
 [#31]: https://github.com/formalverification/lean2agda/issues/31
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 [printing]: printing.md
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
 [printing-checks]: printing.md#what-agda-checks-and-the-fallback
