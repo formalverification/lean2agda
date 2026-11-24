@@ -14,11 +14,9 @@ module.  It declares every constant of the closure that it does not
 refuse, by kind, as follows:
 
 +  the inductive types, each block of them one declaration
-   (`Inductive.lean`): a record for each structure-like type and a data
-   type for each other, `Nat` among them, bound to `BUILTIN NATURAL` so
-   that literals print as decimals;
-+  `String`, a postulate bound to `BUILTIN STRING`, which needs one, and
-   so its constructor and recursor are postulates too;
+   (`Inductive.lean`): a record for each structure-like type, `String`
+   and `Char` among them, and a data type for each other, `Nat` among
+   them, bound to `BUILTIN NATURAL` so that literals print as decimals;
 +  the recursive cores of Lean's accelerated operations on `Nat`, by the
    operation table (`Arithmetic.lean`): Agda's builtins and Lean's
    equations over them, with the helpers they use, the rewrite rule that
@@ -31,7 +29,8 @@ refuse, by kind, as follows:
 +  a definition (`defnInfo`, `partial` companions and the projection
    functions of records included) as a transparent definition with its
    printed clause, since Lean's terms rely on unfolding it; the sharing
-   pass's auxiliary definitions are such definitions too;
+   pass's auxiliary definitions are such definitions too, the definition
+   of each distinct string literal, its kernel expansion, among them;
 +  a theorem (`thmInfo`) inside an `opaque` block of its own, so that
    Agda's conversion checking never unfolds a proof; when a dependent
    needs one to unfold, `scripts/python/scaffold_check.py` re-emits that
@@ -261,12 +260,6 @@ def helperItem (q : TableNaming) (h : Helper) : ScaffoldItem :=
   { provides := #[h.name], references, structural := true,
     text := "\n".intercalate ("-- operation table" :: (h.lines q).toList) ++ "\n" }
 
-/-- `String`, a postulate, since `BUILTIN STRING` binds Agda's string
-literals to a postulated type, whether or not it is a root. -/
-def stringItem (p : Printer) (decl : Declaration) : Except String (ScaffoldItem × PrintCounts) := do
-  let (item, counts) ← postulateItem p decl
-  return ({ item with text := item.text ++ s!"\{-# BUILTIN STRING {agdaIdent ``String} #-}\n" }, counts)
-
 /-! ## The quotient's computation rules -/
 
 /-- `∀ (x₁ : T₁) … (xₙ : Tₙ), body`, the binders outermost first, where a
@@ -378,15 +371,10 @@ def scaffoldItem (p : Printer) (byName : Std.HashMap Name Declaration)
     Except String (Option (ScaffoldItem × PrintCounts)) := do
   match decl.info with
   | .inductInfo v =>
-    if v.name == ``String then return some (← stringItem p decl)
     if v.all.head? != some v.name then return none
     return some (← inductiveItem p byName v arithmetic)
-  | .ctorInfo c =>
-    if c.induct == ``String then return some (← postulateItem p decl)
-    return none
+  | .ctorInfo _ => return none
   | .recInfo r =>
-    -- `String` is a postulate, and so is its recursor.
-    if r.all.contains ``String then return some (← postulateItem p decl)
     let members := (r.all.head?.bind (recursors[·]?)).getD #[r]
     if members[0]?.map (·.name) != some r.name then return none
     return some (← recursorItem p members)

@@ -9,3 +9,4 @@ import TranslatorTests.Input.Numerals
 import TranslatorTests.Input.Printing
 import TranslatorTests.Input.Quotients
 import TranslatorTests.Input.Recursors
+import TranslatorTests.Input.Strings

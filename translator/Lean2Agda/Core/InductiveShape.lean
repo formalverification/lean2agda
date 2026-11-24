@@ -56,16 +56,15 @@ def agdaParamCount (env : Environment) (v : InductiveVal) : Nat :=
   (List.range v.numParams).takeWhile (fun j => v.ctors.all (keeps · j)) |>.length
 
 /-- Whether a type becomes an Agda record: one constructor and no
-indices, the types Lean's kernel projects from with `Expr.proj`; every
-parameter an Agda parameter, since a record has no indices; and not
-`String`, which `BUILTIN STRING` needs as a postulate.  A record has eta
-in Agda, as a structure-like type (one that is also not recursive) has in
-Lean; a recursive one is declared without eta, as Lean gives it none, but
-with its projections, which Lean's kernel reduces on a constructor as
-Agda's do.  Everything else becomes `data`. -/
+indices, the types Lean's kernel projects from with `Expr.proj`; and
+every parameter an Agda parameter, since a record has no indices.
+`String` and `Char` are records too, as Lean declares them.  A record
+has eta in Agda, as a structure-like type (one that is also not
+recursive) has in Lean; a recursive one is declared without eta, as Lean
+gives it none, but with its projections, which Lean's kernel reduces on a
+constructor as Agda's do.  Everything else becomes `data`. -/
 def isAgdaRecord (env : Environment) (v : InductiveVal) : Bool :=
-  v.ctors.length == 1 && v.numIndices == 0 && v.name != ``String &&
-    agdaParamCount env v == v.numParams
+  v.ctors.length == 1 && v.numIndices == 0 && agdaParamCount env v == v.numParams
 
 def isAgdaRecordName (env : Environment) (n : Name) : Bool :=
   match env.find? n with

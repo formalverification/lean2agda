@@ -45,8 +45,10 @@ definition the pass order names renames it here.
    strongly connected component of the dependency graph, dependencies
    first.
 +  The **shared closure** is the closure after the sharing pass: each
-   declaration's large repeated closed subterms replaced by references to
-   **auxiliary** definitions, which the closure then holds too, flagged
+   string literal replaced by a reference to its definition, one per
+   distinct literal (the **table of literals**), and each declaration's
+   large repeated closed subterms by references to further definitions;
+   the closure then holds these **auxiliary** definitions too, flagged
    `auxiliary`.
 +  The **scaffold** is the tree of Agda modules the translator writes for
    a closure under profile U (`--type-in-type --rewriting`, postulates
@@ -92,7 +94,8 @@ each module in dependency order.
 | `renderClosure` | `translator/Lean2Agda/Core/Render.lean` | the profile and the closure | the listing: standard output, and `closure.txt` with `--out` |
 | `writeOutputs` | `translator/Lean2Agda/Main.lean` | the environment, `Args`, the directory, the closure, the listing | the files of `--out` |
 | `strayModules` | `translator/Lean2Agda/Main.lean` | the directory and the paths the run writes | the `.agda` files there it does not write, which refuse the run |
-| `shareClosure` | `translator/Lean2Agda/Core/Share.lean` | the environment, the threshold (`--share`), the closure | the shared closure, by `shareDeclaration` on each safe declaration |
+| `shareClosure` | `translator/Lean2Agda/Core/Share.lean` | the environment, the threshold (`--share`), the closure | the shared closure: its literals tabulated, then `shareDeclaration` on each safe declaration |
+| `tabulateLiterals` | `translator/Lean2Agda/Core/Share.lean` | the environment and the closure, inside `shareClosure` | the closure with each string literal a reference to its definition, by `literalDeclaration` over `stringLiteralExpansion`, in `String.ofList`'s module |
 | `moduleNameMaps` | `translator/Lean2Agda/Core/ReverseMap.lean` | the root (`--root`) and the shared closure | one `ModuleNames` per source module; `ModuleNames.render` writes each sidecar |
 | `scaffoldTree` | `translator/Lean2Agda/Core/Modules.lean` | the environment, the root, the shared closure, the split threshold, the arithmetic (`--arithmetic`) | the `ScaffoldTree`: its `AgdaModule`s, its counts, its refusals |
 | `addAuxiliaries` | `translator/Lean2Agda/Core/Share.lean` | the environment and the shared closure | the environment with the auxiliary definitions added, checked by the kernel |
@@ -139,7 +142,7 @@ structures are, and each Python one is a frozen dataclass.
 | `Helper` | `translator/Lean2Agda/Core/Arithmetic.lean` | `helpers` and `subRules` | `helperClosure`, `helperItem`, `scaffoldTree` |
 | `TableNaming` | `translator/Lean2Agda/Core/Arithmetic.lean` | `scaffoldTree`, per module, from its `Naming` and the helpers' homes | `tableItem`, `helperItem`, the table's clauses |
 | `Kind` | `translator/Lean2Agda/Core/Types.lean` | `Kind.ofConstantInfo` | `renderClosure`, `Stats.add`, the refusals |
-| `Declaration` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `shareDeclaration` for an auxiliary | every pass after loading |
+| `Declaration` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `shareDeclaration` and `literalDeclaration` for an auxiliary | every pass after loading |
 | `Closure` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `shareClosure` for the shared closure | `renderClosure`, `Closure.stats`, `moduleNameMaps`, `scaffold` |
 | `Stats` | `translator/Lean2Agda/Core/Stats.lean` | `Closure.stats` | `run`, through `Stats.render` |
 | `Root` | `translator/Lean2Agda/Core/Naming.lean` | `parseArgs`, from `--root` | `agdaModule`, `moduleNameMaps`, `scaffold` |
@@ -200,12 +203,13 @@ and `translator/Lean2Agda/Main.lean`.
 | `translator/Lean2Agda.lean` | library root | | the core, imported whole | pure | |
 | `translator/Lean2Agda/Core/CommandLine.lean` | command line | the arguments | `Args`, the usage text | pure | [`README.md`][translator-readme] |
 | `translator/Lean2Agda/Core/Types.lean` | load | `ConstantInfo` | `Kind`, `Declaration`, `Closure` | pure | [`loading.md`][loading] |
+| `translator/Lean2Agda/Core/Literals.lean` | load and emit: literals | a string literal | its kernel expansion, and the constants that names | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/Closure.lean` | load | the environment, the roots | the closure in dependency order | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Render.lean` | load | the closure | the listing | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Stats.lean` | load | the closure | the counts by kind | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Naming.lean` | emit: names | a Lean name, a root and a module | its Agda identifier and module path | pure | [`naming.md`][naming] |
 | `translator/Lean2Agda/Core/ReverseMap.lean` | emit: names | the shared closure; a sidecar's text | the sidecars, rendered and parsed | pure | [`naming.md`][naming] |
-| `translator/Lean2Agda/Core/Share.lean` | emit: sharing | the environment and the closure | the shared closure; the environment with its auxiliaries | pure | [`printing.md`][printing] |
+| `translator/Lean2Agda/Core/Share.lean` | emit: sharing | the environment and the closure | the table of literals and the shared closure; the environment with its auxiliaries | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/InductiveShape.lean` | emit: inductives | an inductive type | record or data, the parameters kept, a field's binder | pure | [`inductives.md`][inductives] |
 | `translator/Lean2Agda/Core/Print.lean` | emit: printer | a kernel expression | `AgdaTerm`, its text, a clause, `PrintCounts` | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/Inductive.lean` | emit: inductives | a block of inductive types | its Agda declaration | pure | [`inductives.md`][inductives] |
@@ -249,13 +253,13 @@ named checks only.
 | --- | --- | --- |
 | `translator/tests/UnitTests.lean` | `lake test` | the driver: runs the checks below, or those named, and reports each |
 | `translator/tests/Arithmetic.lean` | `lake test` (`arithmetic`) | the operation table's rows, helpers, homes and qualified names, `Bool`'s pragmas and `Nat.sub`'s rule under `--arithmetic agda`, none of them under `lean`, and the arity guard, on `Arithmetic` |
-| `translator/tests/Check.lean` | `lake test` (`check`) | the parser, root selection, dependencies, cycles, order, statistics, and the closure's axioms against `tests/atlas-gcd-self.json` and `Atlas.Graph` |
+| `translator/tests/Check.lean` | `lake test` (`check`) | the parser, root selection, dependencies, cycles, order, statistics, the closure's axioms against `tests/atlas-gcd-self.json` and `Atlas.Graph`, and a string literal's expansion against Lean's `toExpr` and its kernel |
 | `translator/tests/Modules.lean` | `lake test` (`modules`) | owners, qualified references, imports, auxiliaries, the library files, and the split rule, on `Base` and `Consumer` |
 | `translator/tests/Inductives.lean` | `lake test` (`inductives`) | record or data, parameters kept, the declarations of core types and the fixtures, projections, sharing in constructor types |
 | `translator/tests/Naming.lean` | `lake test` (`naming`) | identifiers, reverse maps, injectivity over samples and `Init`, module paths; writes `NamingLexical.agda` and `NamingImport.agda` to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/Printing.lean` | `lake test` (`printing`) | the layout, binder names, constructors, telescopes, repairs, sharing; writes `PrintingLexical.agda` to `PRINTING_AGDA_TEST_DIR` |
-| `translator/tests/Recursors.lean` | `lake test` (`recursors`) | the recursors' clauses, a parameter Agda keeps as an index, the absurd clause, `String`'s recursor postulated, nested and mutual blocks in `recursorRank`'s order, the patterns' layout, `breakCycles` leaving a recursor's recursion alone |
-| `translator/tests/Scaffold.lean` | `lake test` (`scaffold`) | each kind's item, a class's recursor by its clause, refusals, `unsafe` and sharing, cycles, builtins, the quotient's computation rules against `Quot.liftBeta` and `Quot.indBeta` |
+| `translator/tests/Recursors.lean` | `lake test` (`recursors`) | the recursors' clauses, a parameter Agda keeps as an index, the absurd clause, `String`'s recursor by its clause, nested and mutual blocks in `recursorRank`'s order, the patterns' layout, `breakCycles` leaving a recursor's recursion alone |
+| `translator/tests/Scaffold.lean` | `lake test` (`scaffold`) | each kind's item, a class's recursor by its clause, refusals, `unsafe` and sharing, cycles, the table of literals and `String` a record, the quotient's computation rules against `Quot.liftBeta` and `Quot.indBeta` |
 | `translator/tests/NamingAtlasFixture.lean` | `run.sh`, `lake env lean` | writes the NDJSON fixtures `naming-check-atlas` runs on, valid and defective, to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/NamingGolden.lean` | `run.sh`, `lake env lean` | prints the names `Init.Data.Nat.Gcd` owns, diffed with `tests/expected/naming-init.txt` |
 | `translator/tests/NamingSidecars.lean` | `run.sh`, `lake env lean` | the sidecars a run wrote to `NAMING_OUTPUT_DIR`, under `NAMING_ROOT`, against the closure's |
@@ -271,7 +275,8 @@ named checks only.
 | `translator/tests/TranslatorTests/Input/Printing.lean` | fixture | every expression constructor and binder visibility, the repairs, a sharing blowup |
 | `translator/tests/TranslatorTests/Input/Quotients.lean` | fixture | theorems that hold by `rfl` only through a quotient's computation rule |
 | `translator/tests/TranslatorTests/Input/Recursors.lean` | fixture | values that compute through recursors: structural recursion, an indexed family, nested and mutual types, a `K`-like family, a type without constructors |
-| `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden trees and their listings through `agda_check.py --refusals`; a kept tree checked as it is; split trees against uncut ones; the `quotients` tree with its rewrite rules removed; the `arithmetic` trees under both settings of `--arithmetic`; `Init.Core`'s inductive types; the golden listings and sidecars; `--version`; the command line's failures, a stale `--out` among them |
+| `translator/tests/TranslatorTests/Input/Strings.lean` | fixture | string literals: `"ab" = String.ofList ['a', 'b']` and `"a" = String.mk ['a']` by `rfl`, a projection, an escape, the empty string, a character of each UTF-8 length, one literal in two declarations |
+| `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden trees and their listings through `agda_check.py --refusals`; a kept tree checked as it is; split trees against uncut ones; the `quotients` tree with its rewrite rules removed; the `arithmetic` trees under both settings of `--arithmetic`; the `strings` tree under the operation table; `Init.Core`'s inductive types; the golden listings and sidecars; `--version`; the command line's failures, a stale `--out` among them |
 
 The fixture `Consumer.lean` declares an `initialize`, so it mentions `IO`;
 the fixtures and tests carry no Effects cell, since every test does IO.

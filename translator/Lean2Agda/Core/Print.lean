@@ -3,6 +3,7 @@ File: translator/Lean2Agda/Core/Print.lean
 -/
 import Lean2Agda.Core.Naming
 import Lean2Agda.Core.InductiveShape
+import Lean2Agda.Core.Literals
 import Lean.Environment
 import Lean.LocalContext
 
@@ -62,7 +63,6 @@ inductive AgdaTerm where
   | field (record name : String)
   | sort
   | nat (value : Nat)
-  | str (value : String)
   | app (fn : AgdaTerm) (visibility : Visibility) (arg : AgdaTerm)
   | lam (visibility : Visibility) (name : String) (type body : AgdaTerm)
   | pi (visibility : Visibility) (name : Option String) (type body : AgdaTerm)
@@ -80,16 +80,6 @@ def AgdaTerm.prec : AgdaTerm → Nat
   | .app .. => 1
   | _ => 2
 
-/-- Agda's string literals take Haskell's escapes.  Everything outside
-printable ASCII is written as a decimal escape closed by `\&`, so the
-output does not depend on how a reader decodes Unicode. -/
-def agdaStringLiteral (s : String) : String :=
-  s.foldl (init := "\"") (fun out c =>
-    if c == '"' then out ++ "\\\""
-    else if c == '\\' then out ++ "\\\\"
-    else if c.toNat < 0x20 || c.toNat > 0x7e then out ++ s!"\\{c.toNat}\\&"
-    else out.push c) ++ "\""
-
 /-- Append `t` to `out`, parenthesized when its precedence is below
 `min`.  Threading one accumulator keeps the layout linear in its size. -/
 def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
@@ -100,7 +90,6 @@ def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
     | .field r f => out ++ r ++ "." ++ f
     | .sort => out ++ "Set"
     | .nat n => out ++ toString n
-    | .str s => out ++ agdaStringLiteral s
     | .app f v a =>
       let out := f.renderTo out 1 ++ " "
       match v with
@@ -154,16 +143,16 @@ def Naming.qualified (root : Root) (owner : Name → Option ModuleName) : Naming
     | none => agdaIdent n⟩
 
 /-- The constants a printed term refers to, as `naming` prints them, in
-order of first occurrence, and `Nat` or `String` when the term holds a
-literal of that type: a literal needs the type's builtin, which only a
-module that imports the type's module, directly or not, has. -/
+order of first occurrence, and `Nat` when the term holds a natural number
+literal: a literal needs `Nat`'s builtin, which only a module that
+imports `Nat`'s module, directly or not, has.  A string literal prints as
+its expansion, whose constants are the term's own. -/
 def AgdaTerm.references (naming : Naming) (t : AgdaTerm) : Array String :=
   let add (acc : Array String) (n : String) := if acc.contains n then acc else acc.push n
   (literals t #[]).foldl add t.constants
 where
   literals : AgdaTerm → Array String → Array String
     | .nat _, acc => if acc.contains (naming.constant ``Nat) then acc else acc.push (naming.constant ``Nat)
-    | .str _, acc => if acc.contains (naming.constant ``String) then acc else acc.push (naming.constant ``String)
     | .app f _ a, acc => literals a (literals f acc)
     | .lam _ _ ty b, acc | .pi _ _ ty b, acc => literals b (literals ty acc)
     | .letE _ ty v b, acc => literals b (literals v (literals ty acc))
@@ -314,16 +303,14 @@ where
     | _, _ => .bvar (n - 1 - i)
 
 /-- `Expr.proj S i t` for a structure-like `S` that is not an Agda record
-(`String`, which stays a postulate for `BUILTIN STRING`, or a type whose
-constructor binds a parameter explicitly), as an application of `S`'s
-recursor:
+(a type whose constructor binds a parameter explicitly), as an
+application of `S`'s recursor:
 `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`, where `Tᵢ` is the
 field's type with each earlier field `fⱼ` replaced by `proj S j self`,
 exactly as the kernel types a projection.  The motive's universe is not
 printed under U, so the level it is given here is zero.  A field whose
 type mentions an earlier field checks because the recursor computes on
-the constructor, by its clause (`Recursor.lean`); `String`'s recursor
-stays a postulate, and so do such projections from a `String`. -/
+the constructor, by its clause (`Recursor.lean`). -/
 def projectionAsRecursor (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM Expr := do
   let env := (← read).env
   let some (.inductInfo ind) := env.find? S
@@ -410,7 +397,10 @@ partial def printExpr (s : Scope) (e : Expr) : PrintM AgdaTerm := do
   | .sort _ => return .sort
   | .const n _ => return .const ((← read).naming.constant n)
   | .lit (.natVal n) => return .nat n
-  | .lit (.strVal v) => return .str v
+  -- Agda has no string literal of Lean's `String`, the record; the
+  -- scaffold refers to a literal's definition instead (`Share.lean`),
+  -- and a literal printed directly prints as that definition's value.
+  | .lit (.strVal v) => printExpr s (stringLiteralExpansion v)
   | .mdata _ b => printExpr s b
   | .proj S i t =>
     if isAgdaRecordName (← read).env S then printFieldProjection s S i t

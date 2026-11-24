@@ -2,6 +2,7 @@
 File: translator/Lean2Agda/Core/Share.lean
 -/
 import Lean2Agda.Core.Closure
+import Lean2Agda.Core.Literals
 import Lean.Util.CollectLevelParams
 import Lean.Util.ReplaceExpr
 
@@ -19,6 +20,11 @@ the measurements.
 
 Subterms are identified by structural equality that keeps binder names
 and binder information (`ExprStructEq`), because the printer prints both.
+
+Before it shares anything, the pass gives each distinct string literal of
+the closure one definition, the literal's kernel expansion
+(`Literals.lean`), and refers to it wherever the literal occurs, in every
+declaration: the table of literals, the one sharing across declarations.
 -/
 
 namespace Lean2Agda
@@ -215,23 +221,76 @@ def shareDeclaration (env : Environment) (threshold : Nat) (decl : Declaration) 
   return { declaration := { decl with info, dependencies := decl.dependencies ++ references },
            auxiliaries }
 
-/-- Share every declaration of a closure but the `unsafe` ones, then order
-the result again by strongly connected groups, so that each auxiliary
-precedes its users and follows what it uses.  An `unsafe` declaration is
-left as it is: the scaffold refuses it, and the kernel would refuse a safe
-auxiliary definition made from a subterm of its value. -/
-def shareClosure (env : Environment) (threshold : Nat) (closure : Closure) : Except String Closure := do
-  if threshold == 0 then return closure
-  let shared ← closure.declarations.mapM fun d =>
-    if d.info.isUnsafe then pure { declaration := d, auxiliaries := #[] }
-    else shareDeclaration env threshold d
-  let all := shared.foldl (fun acc s => acc.push s.declaration ++ s.auxiliaries) #[]
-  let byName : Std.HashMap Name Declaration := all.foldl (fun m d => m.insert d.name d) {}
-  let names := sortNames (all.map (·.name))
+/-- A closure's declarations ordered again by strongly connected groups,
+each group after those it depends on, as `dependencyClosure` orders them. -/
+def regroup (roots : Array Name) (decls : Array Declaration) : Closure :=
+  let byName : Std.HashMap Name Declaration := decls.foldl (fun m d => m.insert d.name d) {}
+  let names := sortNames (decls.map (·.name))
   let groups := SCC.scc names.toList fun n =>
     (byName[n]!.dependencies.filter byName.contains).toList
-  return { roots := closure.roots, groups := groups.toArray.map fun group =>
-    (sortNames group.toArray).map (byName[·]!) }
+  { roots, groups := groups.toArray.map fun group => (sortNames group.toArray).map (byName[·]!) }
+
+/-! ## The table of string literals -/
+
+/-- The name of the definition of the string literal `s`: `String._lit`
+followed by the literal's text as one more component.  It is the
+literal's alone, whatever else a closure holds, and Agda's identifier
+escapes the text injectively (`String:~ulit:ab` for `"ab"`,
+`docs/translator/naming.md`), so no two literals share one. -/
+def literalName (s : String) : Name := .str (.str ``String "_lit") s
+
+/-- The distinct string literals of `e`. -/
+def stringLiterals (e : Expr) : Std.HashSet String := runST fun σ => do
+  let found : ST.Ref σ (Std.HashSet String) ← ST.mkRef {}
+  e.forEach (ω := σ) (m := ST σ) fun sub => do
+    match sub with
+    | .lit (.strVal s) => found.modify (·.insert s)
+    | _ => pure ()
+  found.get
+
+/-- `e` with every string literal replaced by a reference to its
+definition. -/
+def referToLiterals (e : Expr) : Expr :=
+  e.replace fun
+    | .lit (.strVal s) => some (.const (literalName s) [])
+    | _ => none
+
+/-- The definition of the string literal `s`: its kernel expansion, of
+type `String`, an auxiliary definition of the module `home`. -/
+def literalDeclaration (home : Name) (s : String) : Declaration :=
+  let name := literalName s
+  let value := stringLiteralExpansion s
+  let type : Expr := .const ``String []
+  { name, sourceModule := some home, auxiliary := true,
+    info := .defnInfo { name, levelParams := [], type, value, hints := .abbrev, safety := .safe, all := [name] },
+    dependencies := uniqueNames (expressionDependencies type ++ expressionDependencies value) }
+
+/-- Give each distinct string literal of a closure one definition
+(`literalDeclaration`), and refer to it wherever the literal occurs in a
+declaration's type or value, so that a literal prints once however many
+declarations hold it.  The definitions belong to the module of
+`String.ofList`, `Init.Prelude`, which every module holding a literal
+imports, since it declares `String`; their values name only constants of
+that module, and the closure of those constants holds no literal, so no
+definition refers back to itself.  A recursor's computation rules are
+left as they are, as the sharing pass leaves them, and the printer
+prints a literal there as its expansion. -/
+def tabulateLiterals (env : Environment) (closure : Closure) : Except String Closure := do
+  let decls := closure.declarations
+  let used := decls.map fun d =>
+    (constantExprs d.info).foldl (fun acc e => (stringLiterals e).fold (·.insert ·) acc) ({} : Std.HashSet String)
+  let literals := (used.foldl (fun acc ls => ls.fold (·.insert ·) acc) ({} : Std.HashSet String)).toArray.qsort (· < ·)
+  if literals.isEmpty then return closure
+  let some home := moduleOf env ``String.ofList
+    | throw "a string literal, and no String.ofList to expand it to"
+  for s in literals do
+    if env.contains (literalName s) then throw s!"the literal's name {literalName s} is already a constant"
+  let rewritten := (decls.zip used).map fun (d, ls) =>
+    if ls.isEmpty then d else
+      let exprs := (constantExprs d.info).map referToLiterals
+      { d with info := replaceExprs d.info exprs[0]! exprs[1]?,
+               dependencies := uniqueNames (d.dependencies ++ ls.toArray.map literalName) }
+  return regroup closure.roots (rewritten ++ literals.map (literalDeclaration home))
 
 /-- The environment with a closure's auxiliary definitions added, so that
 the printer and the kernel's `whnf` can see them.  The kernel checks each
@@ -252,5 +311,23 @@ partial def addAuxiliaries (env : Environment) (closure : Closure) : Except Stri
     | .error _ => throw s!"the kernel rejected the auxiliary definition {n}"
   closure.declarations.foldlM (init := env) fun env d =>
     if d.auxiliary then add d.name env else pure env
+
+/-- Tabulate a closure's string literals (`tabulateLiterals`), then share
+every declaration but the `unsafe` ones, and order the result again by
+strongly connected groups, so that each auxiliary precedes its users and
+follows what it uses.  An `unsafe` declaration is left as it is: the
+scaffold refuses it, and the kernel would refuse a safe auxiliary
+definition made from a subterm of its value.  A threshold of zero shares
+no subterm, and the literals are tabulated all the same. -/
+def shareClosure (env : Environment) (threshold : Nat) (closure : Closure) : Except String Closure := do
+  let closure ← tabulateLiterals env closure
+  if threshold == 0 then return closure
+  -- A shared subterm can mention a literal's definition, whose type the
+  -- kernel needs to infer the subterm's.
+  let env ← addAuxiliaries env closure
+  let shared ← closure.declarations.mapM fun d =>
+    if d.info.isUnsafe then pure { declaration := d, auxiliaries := #[] }
+    else shareDeclaration env threshold d
+  return regroup closure.roots (shared.foldl (fun acc s => acc.push s.declaration ++ s.auxiliaries) #[])
 
 end Lean2Agda
