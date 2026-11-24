@@ -1,0 +1,12 @@
+checked 42 of 42 declarations, 1 of 1 data types and records
+unfolded 0 of 30 theorems, 0 in vain
+defined 1 of 1 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms FirstOrder:Language:ClosedUnder:inf | U.Mathlib.Order.Lattice.Lattice.inf₂
+refused value UnequalTerms FirstOrder:Language:Substructure:instSetLike:~uproof~u1 | U.Init.Prelude.Eq:rec funmem₇ h₁₃ f₅ x₆ x != funmem₁₁ f₅ x₆ x of
+refused value UnequalTerms FirstOrder:Language:Substructure:instCompleteLattice:~uproof~u1 | {x₅ : M₁} →
+refused value CannotApply FirstOrder:Language:Substructure:instCompleteLattice:~uproof~u11 | Expression used as function but does not have function type:
+refused value UnequalTerms FirstOrder:Language:Substructure:instInf | U.Init.Prelude.And
+refused value UnequalTerms FirstOrder:Language:Substructure:instCompleteLattice | (x₅ : M₁) →
+refused value UnequalTerms FirstOrder:Language:Substructure:closure:~uproof~u1 | U.Init.Prelude.LE.le₁
+refused value UnequalTerms FirstOrder:Language:Substructure:closed | {x₄ : M₁}
+refused value UnequalTerms FirstOrder:Language:Substructure:closure~ule | U.Init.Prelude.LE.le₁

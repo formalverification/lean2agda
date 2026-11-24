@@ -1,0 +1,7 @@
+checked 17 of 17 declarations, 0 of 0 data types and records
+unfolded 2 of 15 theorems, 1 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms Iff:mpr for iInf~ucongr~uProp, in vain | U.Init.Core.Iff:mpr pq₉ x₁₁ != x₁₁ of type p₂
+unfolded UnequalTerms Subtype:property for iInf~usubtype~x27~ | U.Init.Prelude.Subtype:property (U.Init.Prelude.Subtype:mk y₄ y₅)
+refused value UnequalTerms iInf~ucongr~uProp | U.Init.Core.Iff:mpr pq₉ x₁₁ != x₁₁ of type p₂
+refused value UnequalTerms iInf~upos | x₅ != hp₄ of type p₂

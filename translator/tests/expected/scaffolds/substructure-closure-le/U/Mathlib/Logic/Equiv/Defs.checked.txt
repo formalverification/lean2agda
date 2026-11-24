@@ -1,0 +1,4 @@
+checked 13 of 13 declarations, 1 of 1 data types and records
+unfolded 0 of 4 theorems, 0 in vain
+defined 1 of 1 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms Equiv:instEquivLike:~uproof~u1 | U.Init.Prelude.Eq:rec (U.Init.Prelude.Eq:ndrec leftinv₈ h₁₉) h₁₈ x₄

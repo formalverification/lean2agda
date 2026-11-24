@@ -1,0 +1,4 @@
+checked 13 of 13 declarations, 2 of 2 data types and records
+unfolded 0 of 3 theorems, 0 in vain
+defined 2 of 2 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms NonemptyChain:ext | Nonempty₄ != Nonempty₁₂ of type

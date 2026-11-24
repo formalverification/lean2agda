@@ -1,0 +1,5 @@
+checked 40 of 40 declarations, 3 of 3 data types and records
+unfolded 0 of 23 theorems, 0 in vain
+defined 3 of 3 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms sSup~ule | (s₂ a₄) !=< α₀
+refused value UnequalTerms le~usInf | (s₂ a₄) !=< α₀

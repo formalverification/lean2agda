@@ -1,0 +1,3 @@
+checked 190 of 190 declarations, 21 of 21 data types and records
+unfolded 7 of 53 theorems, 3 in vain
+defined 21 of 21 recursors by pattern matching, 0 refused by the termination checker
