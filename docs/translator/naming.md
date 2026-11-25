@@ -78,6 +78,37 @@ Changing the input order therefore cannot change an identifier.  Escaping
 Unicode sacrifices some readability to make lexical acceptance independent
 of Unicode categories and the host filesystem's interpretation of them.
 
+## Instances
+
+With `--specialize` (issue [#28], [`levels.md`][levels]) the translator
+emits, in place of a universe-polymorphic constant, its instances: the
+constant with each split level parameter fixed as zero or as nonzero.  An
+instance's identifier is the constant's followed by `#` and one letter per
+split parameter, in the order of the constant's parameters, `z` for zero
+and `n` for nonzero, as follows:
+
++  `Eq` at a type is `Eq#n` and at a proposition `Eq#z`; `Eq.rec`, whose
+   first parameter is its motive's level, is `Eq:rec#zn` at a motive in
+   `Prop` over a type.
++  A constant without a split parameter keeps its identifier: `ULift`,
+   `Nat:gcd~uself`.
++  An auxiliary definition of the sharing pass made from an instance
+   keeps the letters where the instance has them: `A:b#n:~ushare:~n1`.
+
+The output alphabet of the encoding above has no `#`, which it escapes as
+`~x23~`, so no Lean name's identifier is an instance's, and two instances
+share one only when they are the same constant at the same pattern.  The
+letters depend on the constant and on what it depends on, not on what
+else a run selects.  Agda reads `#` as a name character
+(`probes/L01InstanceNames.agda`).  Inside the translator an instance is
+held under a key, the constant's name with one more component, `#` and
+the letters (`instanceKey`), and `instanceIdent` gives a key's identifier;
+a closure holding a Lean constant with such a component is refused, so
+that a key is never a constant's name.  lyphyser's tool writes the same
+suffix with a letter per level clause, and rocq-lean-import appends
+`_inst` and the decimal of a bit mask, which a Lean name can also end
+with ([`../related-work.md`][related-work]).
+
 ## Classification and predecessors
 
 Classification is metadata, not a reason to discard or shorten a name.
@@ -191,6 +222,23 @@ complete one-record sidecar is as follows:
 {"end":{"records":1}}
 ```
 
+The sidecars of a closure of instances are version 2.  A record's `lean`
+is then the instance's key, in which the component holding the pattern is
+tagged `levels` and carries the letters alone, after the constant's own
+components, and `agda` is `instanceIdent`'s identifier:
+
+```json
+{"naming":{"root":[{"str":"U"}],"source":[{"str":"Init"},{"str":"Prelude"}],"target":["U","Init","Prelude"],"version":2}}
+{"agda":"Eq:rec#zn","lean":[{"str":"Eq"},{"str":"rec"},{"levels":"zn"}]}
+{"agda":"Nat","lean":[{"str":"Nat"}]}
+{"end":{"records":2}}
+```
+
+A reader drops the `levels` component to get the Lean constant and reads
+from its letters which split parameters are zero.  Version 1 has no such
+component, and in version 2 a string component of a pattern's form is an
+error.  Without `--specialize` the sidecars are version 1, as before.
+
 The pure reverse-map parser checks the version, tagged names, recomputed
 identifier and target path, record ordering, uniqueness, footer count, and
 absence of trailing data.  Duplicate input declarations are deduplicated
@@ -225,6 +273,7 @@ text format cannot represent every possible `Name`; generated structured
 samples and the direct `Init` scan cover cases absent from that format.
 
 [#17]: https://github.com/formalverification/lean2agda/issues/17
+[#28]: https://github.com/formalverification/lean2agda/issues/28
 [#37]: https://github.com/formalverification/lean2agda/issues/37
 [lyphyser]: https://github.com/lyphyser/lean2agda/blob/fbd86b6/Lean2Agda/Aux/Ident.lean
 [rocq-name]: https://github.com/rocq-community/rocq-lean-import/blob/2d28bbe/src/leanName.ml
@@ -238,3 +287,5 @@ samples and the direct `Init` scan cover cases absent from that format.
 [agda-lexer]: https://github.com/agda/agda/blob/v2.8.0/src/full/Agda/Syntax/Parser/Lexer.x#L159-L207
 [printing]: printing.md
 [modules]: modules.md
+[levels]: levels.md
+[related-work]: ../related-work.md

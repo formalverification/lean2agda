@@ -3,6 +3,7 @@ File: translator/Lean2Agda/Core/Print.lean
 -/
 import Lean2Agda.Core.Naming
 import Lean2Agda.Core.InductiveShape
+import Lean2Agda.Core.Levels
 import Lean.Environment
 import Lean.LocalContext
 
@@ -54,13 +55,15 @@ def Visibility.closing : Visibility → String
   | .instance => " ⦄"
 
 /-- The Agda terms the printer produces.  `sort` is `Set`, the only sort
-under profile U; a Pi type without a name is non-dependent; `field r f`
-is Agda's projection `r.f` of field `f` from record `r`. -/
+under profile U; `prop` is `Prop`, which only the measurement of `--prop`
+prints; a Pi type without a name is non-dependent; `field r f` is Agda's
+projection `r.f` of field `f` from record `r`. -/
 inductive AgdaTerm where
   | var (name : String)
   | const (name : String)
   | field (record name : String)
   | sort
+  | prop
   | nat (value : Nat)
   | str (value : String)
   | app (fn : AgdaTerm) (visibility : Visibility) (arg : AgdaTerm)
@@ -99,6 +102,7 @@ def AgdaTerm.renderTo (out : String) (min : Nat) (t : AgdaTerm) : String :=
     | .var n | .const n => out ++ n
     | .field r f => out ++ r ++ "." ++ f
     | .sort => out ++ "Set"
+    | .prop => out ++ "Prop"
     | .nat n => out ++ toString n
     | .str s => out ++ agdaStringLiteral s
     | .app f v a =>
@@ -140,18 +144,23 @@ where
 
 /-- How constant references print.  Within one module every constant is
 its `agdaIdent`; `Naming.qualified` prefixes the owner's module path to a
-constant owned by another module, as `docs/translator/naming.md` says. -/
+constant owned by another module, as `docs/translator/naming.md` says.
+`ident` is the identifier a declaration is declared under, from the name
+the closure holds it by: `agdaIdent`, or `instanceIdent` when the closure
+holds instances, whose names are keys (`Specialize.lean`). -/
 structure Naming where
   constant : Name → String
+  ident : Name → String := agdaIdent
 
-def Naming.unqualified : Naming := ⟨agdaIdent⟩
+def Naming.unqualified : Naming := { constant := agdaIdent }
 
 /-- `owner` gives the source module of a constant that another module
 owns, and `none` for a constant of the module being printed. -/
-def Naming.qualified (root : Root) (owner : Name → Option ModuleName) : Naming :=
-  ⟨fun n => match owner n with
-    | some m => ".".intercalate (agdaModule root m) ++ "." ++ agdaIdent n
-    | none => agdaIdent n⟩
+def Naming.qualified (root : Root) (owner : Name → Option ModuleName)
+    (ident : Name → String := agdaIdent) : Naming :=
+  { ident, constant := fun n => match owner n with
+      | some m => ".".intercalate (agdaModule root m) ++ "." ++ ident n
+      | none => ident n }
 
 /-- The constants a printed term refers to, as `naming` prints them, in
 order of first occurrence, and `Nat` or `String` when the term holds a
@@ -228,9 +237,17 @@ def PrintCounts.add (a b : PrintCounts) : PrintCounts :=
     etaRepairs := a.etaRepairs + b.etaRepairs, projections := a.projections + b.projections,
     fieldProjections := a.fieldProjections + b.fieldProjections }
 
+/-- The printer's configuration: the environment, how names print, and,
+for a closure of instances (`Specialize.lean`, `specialized`), `resolve`,
+which gives the key of the instance a reference `c.{us}` selects; without
+instances a reference names its constant.  `prop` prints a sort whose
+level is zero as `Prop`, the measurement of `--prop`. -/
 structure Printer where
   env : Environment
   naming : Naming := .unqualified
+  resolve : Name → List Level → Except String Name := fun n _ => .ok n
+  specialized : Bool := false
+  prop : Bool := false
 
 abbrev PrintM := ReaderT Printer (StateT PrintCounts (Except String))
 
@@ -262,6 +279,20 @@ def Scope.nameOf (s : Scope) (id : FVarId) : Except String String :=
 def describe (e : Expr) : String :=
   let text := toString e
   if text.length ≤ 200 then text else String.ofList (text.toList.take 200) ++ "…"
+
+/-- The name a reference to `n` at levels `us` prints: the constant's, or
+the key of the instance the levels select. -/
+def referenceName (n : Name) (us : List Level) : PrintM Name := do
+  match (← read).resolve n us with
+  | .ok key => return key
+  | .error e => throw e
+
+/-- Whether a level is zero whatever its parameters are; a level without
+a normal form is not. -/
+def isZeroLevel (l : Level) : Bool :=
+  match normalLevel l with
+  | .ok n => n.isZero
+  | .error _ => false
 
 def kernelWhnf (s : Scope) (e : Expr) : PrintM Expr := do
   match Kernel.whnf (← read).env s.lctx e with
@@ -304,6 +335,15 @@ def argumentBinders (s : Scope) (f : Expr) (args : Array Expr) :
     type := b.instantiate1 a
   return binders
 
+/-- The level of the sort a type lives in, as the kernel infers it. -/
+def sortLevel (lctx : LocalContext) (type : Expr) : PrintM Level := do
+  let env := (← read).env
+  match Kernel.check env lctx type with
+  | .ok sort => match Kernel.whnf env lctx sort with
+    | .ok (.sort l) => return l
+    | _ => throw s!"the kernel found no sort for {describe type}"
+  | .error _ => throw s!"the kernel could not infer the sort of {describe type}"
+
 /-- The fields of a constructor's type, after its parameters, as lambdas
 returning field `i` of `n`. -/
 def fieldsAsLambdas (fields : Expr) (n i : Nat) : Expr :=
@@ -320,7 +360,9 @@ recursor:
 `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`, where `Tᵢ` is the
 field's type with each earlier field `fⱼ` replaced by `proj S j self`,
 exactly as the kernel types a projection.  The motive's universe is not
-printed under U, so the level it is given here is zero.  A field whose
+printed under U, so the level it is given here is zero, except in a
+closure of instances, where the level selects the recursor's instance and
+is the one the kernel infers for the field's type.  A field whose
 type mentions an earlier field checks because the recursor computes on
 the constructor, by its clause (`Recursor.lean`); `String`'s recursor
 stays a postulate, and so do such projections from a `String`. -/
@@ -352,7 +394,11 @@ def projectionAsRecursor (s : Scope) (S : Name) (i : Nat) (t : Expr) : PrintM Ex
   let .forallE _ fieldType _ _ := field | throw s!"the constructor {ctor} has too few fields"
   let motive := Expr.lam `self structType (fieldType.abstract #[.fvar self]) .default
   let minor := fieldsAsLambdas fields c.numFields i
-  let levels := if r.levelParams.length == us.length + 1 then Level.zero :: us else us
+  let large := r.levelParams.length == us.length + 1
+  let motiveLevel ← if large && (← read).specialized then
+      sortLevel (s.lctx.mkLocalDecl self `self structType) fieldType
+    else pure Level.zero
+  let levels := if large then motiveLevel :: us else us
   return mkAppN (.const r.name levels) (params ++ #[motive, minor, t])
 
 /-- The type of an application whose head is a constant or a bound
@@ -407,8 +453,8 @@ partial def printExpr (s : Scope) (e : Expr) : PrintM AgdaTerm := do
   | .bvar i => throw s!"a loose bound variable #{i}"
   | .fvar id => return .var (← s.nameOf id)
   | .mvar _ => throw "a metavariable, which never occurs in a compiled constant"
-  | .sort _ => return .sort
-  | .const n _ => return .const ((← read).naming.constant n)
+  | .sort l => return if (← read).prop && isZeroLevel l then .prop else .sort
+  | .const n us => return .const ((← read).naming.constant (← referenceName n us))
   | .lit (.natVal n) => return .nat n
   | .lit (.strVal v) => return .str v
   | .mdata _ b => printExpr s b
@@ -512,7 +558,8 @@ partial def printFieldProjection (s : Scope) (S : Name) (i : Nat) (t : Expr) : P
     throw s!"a projection from {describe structType}"
   modify fun c => { c with fieldProjections := c.fieldProjections + 1 }
   let binders ← argumentBinders s head params
-  let mut out := AgdaTerm.field ((← read).naming.constant S) (binderName x depth)
+  let record ← referenceName S head.constLevels!
+  let mut out := AgdaTerm.field ((← read).naming.constant record) (binderName x depth)
   for h : j in [:params.size] do
     let (v, dom) := binders[j]!
     out := .app out (if v == .instance then .instance else .implicit) (← printAgainst s params[j] dom false)

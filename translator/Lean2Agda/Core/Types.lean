@@ -36,13 +36,18 @@ def Kind.label : Kind → String
 dependencies.  Keeping `ConstantInfo` leaves expressions and structured
 names available to later translation passes.  An auxiliary declaration is
 one the sharing pass made from a subterm of another; its source module is
-its owner's. -/
+its owner's.  An instance (`Specialize.lean`) is a constant at one pattern
+of its split level parameters: its `name` is its key and its
+dependencies are keys, its `pattern` the letters of the key, and the
+names inside its `info` stay Lean's; the pattern of any other declaration
+is empty, and its name is the constant's. -/
 structure Declaration where
   name : Name
   info : ConstantInfo
   sourceModule : Option Name
   dependencies : Array Name
   auxiliary : Bool := false
+  pattern : String := ""
   deriving Inhabited
 
 def Declaration.kind (decl : Declaration) : Kind := Kind.ofConstantInfo decl.info

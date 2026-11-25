@@ -5,6 +5,7 @@ import TranslatorTests.Input.Arithmetic
 import TranslatorTests.Input.Consumer
 import TranslatorTests.Input.Inductives
 import TranslatorTests.Input.Kinds
+import TranslatorTests.Input.Levels
 import TranslatorTests.Input.Numerals
 import TranslatorTests.Input.Printing
 import TranslatorTests.Input.Quotients

@@ -1,0 +1,23 @@
+# File: translator/tests/expected/levels-init-core.txt
+# specialization, rule predecessor
+constants	2128
+with level parameters	1484
+level parameters	2525
+split parameters	1296
+constants with a split parameter	954
+instances	3540
+possible instances, split parameters	4118
+possible instances, all parameters	6736
+entries	1793
+possible instances, entries	5256
+# specialization, rule zeroness
+constants	2128
+with level parameters	1484
+level parameters	2525
+split parameters	1285
+constants with a split parameter	954
+instances	3516
+possible instances, split parameters	4086
+possible instances, all parameters	6736
+entries	1793
+possible instances, entries	5256

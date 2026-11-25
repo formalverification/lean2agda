@@ -57,9 +57,15 @@ write is refused before anything is written, since a check of `DIR`
 would read it as part of the tree; nothing in it is deleted. -/
 def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (closure : Closure)
     (listing : String) : IO Unit := do
-  let shared ← IO.ofExcept (shareClosure env args.share closure)
-  let maps ← IO.ofExcept <| moduleNameMaps args.root shared
-  let tree ← IO.ofExcept (scaffoldTree env args.root shared args.split args.arithmetic)
+  -- With `--specialize` the scaffold and the sidecars are those of the
+  -- closure of instances; the listing stays the closure's as loaded.
+  let (emitted, splits) ← if args.specialize then do
+      let (instances, splits, _) ← IO.ofExcept (specializeClosure env defaultSplitRule closure)
+      pure (instances, some splits)
+    else pure (closure, none)
+  let shared ← IO.ofExcept (shareClosure env args.share emitted)
+  let maps ← IO.ofExcept <| moduleNameMaps args.root shared args.specialize
+  let tree ← IO.ofExcept (scaffoldTree env args.root shared args.split args.arithmetic splits args.prop)
   let comment := scaffoldComment closure
   let everything := tree.everythingPath.foldl (· / ·) dir |>.addExtension "agda"
   let strays ← strayModules dir (tree.modules.map (·.filePath dir) |>.push everything)
@@ -71,7 +77,7 @@ def writeOutputs (env : Environment) (args : Args) (dir : System.FilePath) (clos
   for map in maps do
     writeMaking (map.sidecarPath dir) map.render
   for m in tree.modules do
-    writeMaking (m.filePath dir) (m.render comment)
+    writeMaking (m.filePath dir) (m.render comment tree.options)
   writeMaking everything (tree.renderEverything comment)
   IO.FS.writeFile (dir / tree.libraryFile) (tree.renderLibrary comment)
   IO.FS.writeFile (dir / "libraries") s!"{← IO.FS.realPath (dir / tree.libraryFile)}\n"
@@ -85,5 +91,11 @@ def run (args : Args) : IO Unit := do
   if let some dir := args.out then writeOutputs env args dir closure listing
   (← IO.getStdout).putStr listing
   if args.stats then (← IO.getStdout).putStr closure.stats.render
+  -- The specialization's counts under each rule, the emitted one first.
+  if args.stats && args.specialize then
+    let sites ← IO.ofExcept (closureSites env closure)
+    for rule in [defaultSplitRule, defaultSplitRule.other] do
+      let (_, _, stats) ← IO.ofExcept (specializationWith env rule closure sites)
+      (← IO.getStdout).putStr stats.render
 
 end Lean2Agda

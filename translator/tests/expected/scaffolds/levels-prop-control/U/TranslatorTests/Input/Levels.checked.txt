@@ -1,0 +1,29 @@
+checked 139 of 142 declarations, 7 of 7 data types and records
+unfolded 0 of 37 theorems, 0 in vain
+defined 8 of 8 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalSorts LevelFixtures:Box:mk:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Box:mk:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Even:brecOn:eq | Prop != Set
+refused value UnequalSorts LevelFixtures:Even:succ:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Even:succ:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Holder:mk:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Holder:mk:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Odd:brecOn:eq | Prop != Set
+refused value UnequalSorts LevelFixtures:Odd:succ:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Odd:succ:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Pick:left:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Pick:left:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Pick:right:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Pick:right:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Tagged:mk:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Tagged:mk:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:Tree:~usizeOf~u2~ueq | Prop != Set
+refused value UnequalSorts LevelFixtures:Tree:brecOn:eq | Prop != Set
+refused value UnequalSorts LevelFixtures:Tree:brecOn~u1:eq | Prop != Set
+refused value UnequalSorts LevelFixtures:Tree:node:inj | Prop != Set
+refused value UnequalSorts LevelFixtures:Tree:node:injEq | Prop != Set
+refused value UnequalSorts LevelFixtures:atProp | Prop != Set
+refused type UnequalSorts LevelFixtures:fromProofs | Prop != Set
+dropped LevelFixtures:fromProofs~umk
+refused value UnequalSorts LevelFixtures:toProof | Prop != Set
+refused type UnequalSorts LevelFixtures:unboxProof | Prop != Set

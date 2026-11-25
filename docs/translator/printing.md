@@ -209,6 +209,19 @@ and from 7 to 20, every new one `UnequalSorts Prop != Set`.  The cost of
 lacks; the encoding of `Prop` is [#27]'s question, and specializing
 constants by which universe parameters are zero is [#28]'s.
 
+That specialization exists since [#28], behind `--specialize`, off by
+default ([`levels.md`][levels]): each constant is emitted as its
+instances, one per pattern of its split level parameters at zero, and a
+reference `c.{us}` prints as the instance its levels select (`Eq#n`,
+`Eq#z`).  Sorts still print as `Set`, so a specialized scaffold checks as
+its constants did.  The printing of `Prop` is the second switch, `--prop`,
+a measurement: a sort whose level is zero prints as `Prop`, under
+`--prop --type-in-type --rewriting`.  Measured again on 2026-11-24, on the
+scaffolds as they are now: without the specialization `--prop` leaves 253
+of `nat-gcd-self`'s 329 declarations and 203 of `nat-gcd-succ`'s 261, with
+65 and 43 refusals `UnequalSorts`; with it every declaration of both
+checks, and `UnequalSorts` does not occur.
+
 ### Literals
 
 A natural number literal prints as a decimal, of any size; the scaffold
@@ -748,6 +761,7 @@ It assumes the following of its callers:
 [catalog-quot]: ../foundations/gap-catalog.md#quotients
 [naming]: naming.md
 [modules]: modules.md
+[levels]: levels.md
 [catalog-irrel]: ../foundations/gap-catalog.md#proof-irrelevance
 [inductives]: inductives.md
 [inductives-projections]: inductives.md#projections

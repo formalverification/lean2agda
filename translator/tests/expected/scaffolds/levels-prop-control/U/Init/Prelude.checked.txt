@@ -1,0 +1,11 @@
+checked 70 of 71 declarations, 14 of 14 data types and records
+unfolded 0 of 6 theorems, 0 in vain
+defined 12 of 14 recursors by pattern matching, 0 refused by the termination checker
+refused value SplitInProp Eq:rec | Cannot split on datatype in Prop unless target is in Prop
+refused value UnequalSorts Eq:subst | Prop != Set
+refused value UnequalSorts Eq:symm | Prop != Set
+refused value UnequalSorts Eq:trans | Prop != Set
+refused value SplitInProp HEq:rec | Cannot split on datatype in Prop unless target is in Prop
+refused value UnequalSorts eq~uof~uheq | Prop != Set
+refused value UnequalSorts congrArg | Prop != Set
+refused type UnequalSorts Quot:ind-β | Prop != Set

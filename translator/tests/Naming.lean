@@ -90,7 +90,7 @@ def checkMalformedReverseMaps : IO Unit := do
   let reverse ← IO.ofExcept <| ReverseMap.build #[`Nat, `Bool]
   let map : ModuleNames := { root := `U, source := `Init.Prelude, reverse }
   let text := map.render
-  for bad in ["", "{}\n", text.replace "\"version\":1" "\"version\":2",
+  for bad in ["", "{}\n", text.replace "\"version\":1" "\"version\":3",
     text.replace "\"records\":2" "\"records\":1",
     text.replace "\"agda\":\"Nat\"" "\"agda\":\"Wrong\"",
     text.replace "\"target\":[\"U\",\"Init\",\"Prelude\"]" "\"target\":[\"Elsewhere\"]",

@@ -207,7 +207,9 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
       `--type-in-type` alone and prints every sort as `Set`, `imax`
       included; on two corpus scaffolds, `--prop` with `Prop` for every
       sort at level zero more than doubled Agda's refusals
-      ([`printing.md`][printing]).
+      ([`printing.md`][printing]).  Since [#28] the specialization exists,
+      behind `--specialize`, and with it the same printing checks every
+      declaration of both scaffolds ([`levels.md`][levels]).
    +  K: no impredicativity; a constant translates only if its uses of
       impredicativity are inessential, that is, if its level constraints have a
       predicative solution.
@@ -219,6 +221,11 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    patterns); then compute predicative, universe-polymorphic level annotations
    by constraint solving in the style of Predicativize ([#29]); report the
    constants whose constraints have no solution as essentially impredicative.
+   The first step is built ([`levels.md`][levels]): a parameter is fixed
+   only where a sort, an `imax` or a use depends on it, which makes 79,997
+   instances of `Init`'s 65,994 constants at the pin against 137,010 with
+   every parameter fixed, and inside an instance every level is a maximum
+   of a constant and of parameters under successors.
    The corpus expects `order-hom-map-lfp` and `substructure-closure-le` to
    exercise this, each taking an infimum over all subsets or all substructures
    ([`../../corpus/README.md`][corpus-readme], Coverage).
@@ -628,11 +635,15 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    +  CU: as K; the cubical library writes `Type ℓ` and `ℓ-max`, `ℓ-suc` for
       the same levels.
 +  **Translation strategy**.  `Prop`-instantiation specialization first
-   ([#28]), which removes `imax`; then predicativization by level unification
-   ([#29]), expecting some constants to need constraints the solver cannot find
-   (Predicativize's Theorem 6.1) and some to be essentially impredicative.  The
-   corpus lists six entries under this feature, `list-reverse-reverse` among
-   them (one level parameter, no `imax`, no instantiation at `Prop`).
+   ([#28]), which removes `imax` (built: a parameter fixed as nonzero is
+   written `u + 1`, so that every sort of an instance is `Prop` or
+   `Sort (ℓ + 1)`, Agda's `Set ℓ`, and Lean's kernel accepts each instance
+   as an instantiation; [`levels.md`][levels]); then predicativization by
+   level unification ([#29]), expecting some constants to need constraints
+   the solver cannot find (Predicativize's Theorem 6.1) and some to be
+   essentially impredicative.  The corpus lists six entries under this
+   feature, `list-reverse-reverse` among them (one level parameter, no
+   `imax`, no instantiation at `Prop`).
 +  **Predecessors**.  lyphyser's level clauses and rocq-lean-import's `_instX`
    duplication with surrogate parameters for algebraic universes
    ([related-work], the two sections); Predicativize's elaboration algorithm,
@@ -1365,6 +1376,7 @@ Mathlib's large-eliminating propositions excepted.
     binder" and the sentence "Note that we don't have any congruence rules for
     let."
 [printing]: ../translator/printing.md
+[levels]: ../translator/levels.md
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
 [inductives]: ../translator/inductives.md
 [recursors]: ../translator/recursors.md

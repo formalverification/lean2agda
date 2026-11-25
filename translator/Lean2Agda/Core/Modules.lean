@@ -67,7 +67,7 @@ def AgdaModule.filePath (m : AgdaModule) (dir : System.FilePath) : System.FilePa
 it comes from, a count of the refused declarations when there are any,
 the header with the imports, opens and re-exports, then the items,
 separated by blank lines. -/
-def AgdaModule.render (m : AgdaModule) (comment : String) : String :=
+def AgdaModule.render (m : AgdaModule) (comment : String) (options : String := profileUOptions) : String :=
   let origin := match m.part with
     | some (k, n) => s!"-- Lean module {m.source}, part {k} of {n}\n"
     | none => if m.reexports.isEmpty then s!"-- Lean module {m.source}\n"
@@ -77,17 +77,20 @@ def AgdaModule.render (m : AgdaModule) (comment : String) : String :=
   let lines := m.imports.map (s!"import {dotted ·}") ++ m.opens.map (s!"open import {dotted ·}")
     ++ m.reexports.map (s!"open import {dotted ·} public")
   let header := lines.foldl (fun out l => out ++ l ++ "\n")
-    s!"{profileUOptions}\n-- {comment}\n{origin}{refused}module {m.name} where\n"
+    s!"{options}\n-- {comment}\n{origin}{refused}module {m.name} where\n"
   m.items.foldl (fun out item => out ++ "\n" ++ item.text) header
 
 /-- The scaffold of a closure as a tree: its root, its modules sorted by
-path, what printing counted, and the refused declarations in the
-closure's order, auxiliary definitions left out. -/
+path, what printing counted, the refused declarations in the closure's
+order, auxiliary definitions left out, the options every module states,
+and whether the closure is one of instances. -/
 structure ScaffoldTree where
   root : Root
   modules : Array AgdaModule
   counts : PrintCounts
   refused : Array Refusal := #[]
+  options : String := profileUOptions
+  specialized : Bool := false
   deriving Inhabited
 
 /-- Every item of the tree, module by module. -/
@@ -98,9 +101,11 @@ def ScaffoldTree.items (t : ScaffoldTree) : Array ScaffoldItem :=
 def ScaffoldTree.module? (t : ScaffoldTree) (source : ModuleName) : Option AgdaModule :=
   t.modules.find? fun m => m.source == source && m.part.isNone
 
-/-- One tab-separated line per refused declaration: kind, name, reason. -/
+/-- One tab-separated line per refused declaration: kind, name, reason;
+an instance by its constant's name and its pattern (`keyDisplay`). -/
 def ScaffoldTree.renderRefusals (t : ScaffoldTree) : String :=
-  t.refused.foldl (fun out r => out ++ s!"{r.kind.label}\t{r.name}\t{r.reason}\n") ""
+  let display : Name → String := if t.specialized then keyDisplay else fun n => toString n
+  t.refused.foldl (fun out r => out ++ s!"{r.kind.label}\t{display r.name}\t{r.reason display}\n") ""
 
 /-! ## The library files -/
 
@@ -126,7 +131,7 @@ def ScaffoldTree.everythingPath (t : ScaffoldTree) : List String :=
 that checks it all. -/
 def ScaffoldTree.renderEverything (t : ScaffoldTree) (comment : String) : String :=
   t.modules.foldl (fun out m => out ++ s!"import {m.name}\n")
-    s!"{profileUOptions}\n-- {comment}\n-- every module of the tree\nmodule {dotted t.everythingPath} where\n"
+    s!"{t.options}\n-- {comment}\n-- every module of the tree\nmodule {dotted t.everythingPath} where\n"
 
 /-! ## Splitting -/
 
@@ -212,11 +217,28 @@ operation table's rows use joins its home's module (`Helper.home`),
 where `orderItems` puts it before its first user there, and other
 modules name it by that module's path; the rewrite rules of `Nat.sub`
 come just before `Nat.sub`, which refers to them, when the closure holds
-what they mention (`Nat.pred` and `Eq`). -/
+what they mention (`Nat.pred` and `Eq`).
+
+A closure of instances (`Specialize.lean`) comes with its `splits`: every
+declaration is then declared under its key's identifier, each reference
+names the instance its levels select, an instance of `Quot.lift` or
+`Quot.ind` has the rule of its own levels, and the operation table's
+rules, which are equations between numbers, name the instance of `Eq` at
+`Nat`'s level.  `prop` prints a sort at level zero as `Prop` and states
+`--prop` in every module, for the measurement. -/
 def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
-    (split : Nat := defaultSplitThreshold) (arithmetic : Arithmetic := .agda) :
+    (split : Nat := defaultSplitThreshold) (arithmetic : Arithmetic := .agda)
+    (splits : Option Splits := none) (prop : Bool := false) :
     Except String ScaffoldTree := do
   let env ← addAuxiliaries env closure
+  let specialized := splits.isSome
+  let splits := splits.getD {}
+  let ident : Name → String := if specialized then instanceIdent else agdaIdent
+  -- What the operation table's text names: a Lean constant, or in a
+  -- closure of instances its instance at the level the table uses it at,
+  -- which is `Nat`'s for `Eq` and its constructor.
+  let tableName (n : Name) : Except String Name :=
+    splits.resolve n (if n == ``Eq || n == ``Eq.refl then [.succ .zero] else [])
   let decls := closure.declarations
   let byName : Std.HashMap Name Declaration := decls.foldl (fun m d => m.insert d.name d) {}
   let refused := refuseDeclarations decls
@@ -242,15 +264,18 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
   let mut uses : Array String := #[]
   if arithmetic == .agda then
     for decl in kept do
-      if let some entry ← tableEntry? decl.name decl.info.type then uses := uses ++ entry.uses
+      if let some entry ← tableEntry? decl.info.name decl.info.type then uses := uses ++ entry.uses
   let wanted := helperClosure uses
-  let withRule := uses.contains subBuiltin && subRules.all fun r => r.mentions.all fun n => kept.any (·.name == n)
+  let mut mentioned : Array Name := #[]
+  for r in subRules do
+    for n in r.mentions do mentioned := mentioned.push (← tableName n)
+  let withRule := uses.contains subBuiltin && mentioned.all fun n => kept.any (·.name == n)
   let mut home : Std.HashMap String ModuleName := {}
   for h in (if withRule then wanted ++ subRules else wanted) do
     let some m := owner[h.home]? | throw s!"the operation table's {h.name} needs {h.home} in the closure"
     home := home.insert h.name m
   let qualifiedOwner : Std.HashMap String ModuleName :=
-    owner.fold (fun acc n m => acc.insert (qualifiedName root m (agdaIdent n)) m) {}
+    owner.fold (fun acc n m => acc.insert (qualifiedName root m (ident n)) m) {}
   let qualifiedOwner := home.fold (fun acc h m => acc.insert (qualifiedName root m h) m) qualifiedOwner
   let refusedIn : Std.HashMap ModuleName Nat := refused.fold (fun acc n _ =>
     if byName[n]!.auxiliary then acc else
@@ -260,17 +285,18 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
   let mut modules := #[]
   let mut provided : Std.HashSet String := {}
   for m in order do
-    let p : Printer := { env, naming := Naming.qualified root fun n => (owner[n]?).filter (· != m) }
+    let p : Printer := { env, naming := Naming.qualified root (fun n => (owner[n]?).filter (· != m)) ident,
+                         resolve := splits.resolve, specialized, prop }
     let helperName (h : String) : String := match home[h]? with
       | some hm => if hm == m then h else qualifiedName root hm h
       | none => h
-    let q : TableNaming := ⟨p.naming.constant, helperName⟩
+    let q : TableNaming := ⟨fun n => p.naming.constant ((tableName n).toOption.getD n), helperName⟩
     let mut items := #[]
     for decl in groups[m]! do
       if let some (item, c) ← scaffoldItem p byName recursors decl arithmetic helperName then
         items := items.push item
         counts := counts.add c
-      if let some (name, type) := quotRule? decl.name then
+      if let some (name, type) := declarationRule? p splits decl then
         let (item, c) ← ruleItem p name type
         items := items.push item
         counts := counts.add c
@@ -278,7 +304,7 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
       -- rules come before it and every module or part that uses `Nat.sub`
       -- imports them: Agda applies a rewrite rule only where its module is
       -- imported.
-      if withRule && decl.name == ``Nat.sub then
+      if withRule && decl.info.name == ``Nat.sub then
         if let some last := items.back? then
           items := items.pop.push { last with references := last.references.push subPredSuccName }
         items := items ++ subRules.map (helperItem q)
@@ -295,7 +321,8 @@ def scaffoldTree (env : Environment) (root : Root) (closure : Closure)
           throw s!"{mod.name} refers to {r}, which no module declares"
   let sorted := modules.qsort (·.name < ·.name)
   let refusals := decls.filterMap fun d => if d.auxiliary then none else refused[d.name]?
-  let tree : ScaffoldTree := { root := root, modules := sorted, counts := counts, refused := refusals }
+  let tree : ScaffoldTree := { root := root, modules := sorted, counts := counts, refused := refusals, specialized,
+                               options := if prop then profileUPropOptions else profileUOptions }
   if sorted.any (·.path == tree.everythingPath) then
     throw s!"the closure has a module at {dotted tree.everythingPath}, the path of the module importing all"
   return tree

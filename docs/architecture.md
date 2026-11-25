@@ -82,7 +82,7 @@ flowchart TB
   load["Load: environment, closure, dependency order"]:::built
   atlas["Profile: the atlas, with each constant's axioms and tier;<br/>the failures Check finds return here, by category"]:::built
   norm["Normalize: Lean4Less inserts casts for proof irrelevance,<br/>K-like reduction and the computation rule of Quot.lift"]:::planned
-  univ["Elaborate universes: specialize by which levels are zero,<br/>then predicativize"]:::planned
+  univ["Elaborate universes: specialize by which levels are zero (built),<br/>then predicativize (planned)"]:::partial
   emit["Emit: names, printed terms and the scaffold (built);<br/>data and record, recursors, opaque theorems,<br/>parameters, one module per Lean module (planned)"]:::partial
   check["Check: Agda under the profile's flags<br/>(the scaffold checker and the driver for emitted modules built)"]:::partial
   lib["An Agda library in two layers, constructive and classical"]:::planned
@@ -96,7 +96,7 @@ flowchart TB
 | Load | the pinned `.olean` modules; a list of modules and of root declarations | an `Environment`; the closure of the roots in dependency order, each constant with its source module | built | [#15] |
 | Profile | the environment | one record per constant (axioms, tier, kind, module, `noncomputable`, `unsafe`, `partial`, `auto`) and the report | built, version 0 | [#11]; [#36] adds the fields the later stages fill |
 | Normalize | the environment of the modules to translate, through Lean4Less's `.olean` output or inside its process ([#26] chooses the bridge across the toolchain skew) | a Lean⁻ environment; the casts inserted per constant; the constants aborted | planned | [#26], [#30] |
-| Elaborate universes | the Lean⁻ environment | each constant specialized by which of its universe-level parameters are zero, with predicative level annotations; the essentially impredicative constants, reported | planned | [#28], [#29] |
+| Elaborate universes | the Lean⁻ environment | each constant specialized by which of its universe-level parameters are zero, with predicative level annotations; the essentially impredicative constants, reported | the specialization built behind `--specialize`, on the environment as loaded; the annotations planned | [#28], [#29] |
 | Emit | the closure, the profile and the layer | Agda modules | names, the printer, the sharing pass and the profile U scaffold built; the rest planned | [#16] to [#22], [#27], [#32], [#33], [#37], [#38] |
 | Check | the emitted modules and the profile's flags | Agda's verdict per module, with time and memory; the failures, fed back into the atlas by category | the scaffold checker, the corpus checker and the driver for emitted modules exist | [#22], [#23], [#43], [#45] |
 
@@ -165,9 +165,11 @@ unit eta are to stay off, since Agda's records have eta.
 
 ### Elaborate universes
 
-Planned by [#28] and [#29].  Two steps, in the order rocq-lean-import and
-lyphyser's tool both chose.  First, each constant is specialized by which of
-its universe-level parameters are zero, which decides which of its sorts are
+The first step is built ([#28]; [`translator/levels.md`][levels] gives its
+rules and its counts), and the second is planned ([#29]).  Two steps, in
+the order rocq-lean-import and lyphyser's tool both chose.  First, each
+constant is specialized by which of its universe-level parameters are
+zero, which decides which of its sorts are
 `Prop` (`Sort 0`): lyphyser's level clauses and rocq-lean-import's `_instX`
 duplicates, one per pattern of parameters instantiated at `Prop`, are the same
 idea; instances are generated lazily as uses demand them, and within an
@@ -397,6 +399,7 @@ Issues are cited by number; the documents are this repository's.
 [naming]: translator/naming.md
 [printing]: translator/printing.md
 [modules]: translator/modules.md
+[levels]: translator/levels.md
 [blowup]: reports/printing-blowup-2026-10-12.md
 [catalog]: foundations/gap-catalog.md
 [report]: foundations/gap-report-corpus.md

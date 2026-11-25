@@ -9,8 +9,8 @@ the companion note of ADR 0001; this map names the files and definitions
 that implement the stages built so far, and the rules each one implements
 stay in the notes beside it ([`loading.md`][loading],
 [`naming.md`][naming], [`printing.md`][printing],
-[`inductives.md`][inductives], [`recursors.md`][recursors] and
-[`modules.md`][modules]).
+[`inductives.md`][inductives], [`recursors.md`][recursors],
+[`modules.md`][modules] and [`levels.md`][levels]).
 
 The map is kept true by a test.  `scripts/python/standards_check.py`, run
 by `make test` (`tests/test_standards_check.py`), fails on any of the
@@ -57,6 +57,12 @@ definition the pass order names renames it here.
    scaffold leaves out, with its reason.  A **computation rule** is a postulated equation the
    scaffold makes a rewrite rule, so that Agda reduces `Quot.lift` and
    `Quot.ind` on `Quot.mk` as Lean's kernel does.
++  An **instance** is a constant with each of its split level parameters
+   fixed as zero or as nonzero, which `--specialize` emits in the
+   constant's place; a constant's **split** parameters are those a sort
+   or an `imax` of its depends on; the **closure of instances** holds
+   each instance under its **key**, the constant's name followed by a
+   component of pattern letters ([`levels.md`][levels]).
 +  A **sidecar** is the `.names.ndjson` file beside each module path,
    mapping every Agda identifier back to the Lean name it encodes.
 +  **Pure** means a function of its arguments: no effect monad, so no
@@ -78,6 +84,11 @@ operation table's item by `tableItem` for an accelerated operation's
 recursive core, and `helperItem` adds the table's helpers to their home
 modules and its rewrite rules before `Nat.sub`, which refers to them.  Without `--out`
 the run stops after the listing; with `--stats` it appends the counts.
+With `--specialize`, `specializeClosure` runs between `strayModules` and
+`shareClosure`, which then shares, names and prints the closure of
+instances, the printer asking `Splits.resolve` for the instance each
+reference selects; with `--stats` too, `specializationWith` appends the
+specialization's counts under each rule.
 The tree checker, `agda_check.py`, runs the scaffold checker's loop on
 each module in dependency order.
 
@@ -92,14 +103,21 @@ each module in dependency order.
 | `renderClosure` | `translator/Lean2Agda/Core/Render.lean` | the profile and the closure | the listing: standard output, and `closure.txt` with `--out` |
 | `writeOutputs` | `translator/Lean2Agda/Main.lean` | the environment, `Args`, the directory, the closure, the listing | the files of `--out` |
 | `strayModules` | `translator/Lean2Agda/Main.lean` | the directory and the paths the run writes | the `.agda` files there it does not write, which refuse the run |
-| `shareClosure` | `translator/Lean2Agda/Core/Share.lean` | the environment, the threshold (`--share`), the closure | the shared closure, by `shareDeclaration` on each safe declaration |
+| `specializeClosure` | `translator/Lean2Agda/Core/Specialize.lean` | the environment, the rule, the closure, under `--specialize` | the closure of instances, each declaration made by `instanceInfo`, with its `Splits` and counts |
+| `closureSites` | `translator/Lean2Agda/Core/Specialize.lean` | the environment and the closure | each constant's `LevelSites`, by `levelSites`, a projection's levels read by `projectionTypes` |
+| `splitAnalysis` | `translator/Lean2Agda/Core/Specialize.lean` | the rule, the closure, the sites | the `Splits`: each constant's split level parameters, the least masks closed under `wantedSplits` |
+| `instanceTable` | `translator/Lean2Agda/Core/Specialize.lean` | the `Splits`, the sites, the closure | the instances as `InstanceRecord`s, every pattern of each root and what `instanceUses` finds each one to use |
+| `normalLevelWith` | `translator/Lean2Agda/Core/Levels.lean` | a level and what its parameters stand for | its `NormalLevel`, or the parameters that leave an `imax` undecided |
+| `specializationWith` | `translator/Lean2Agda/Core/Specialize.lean` | the environment, a rule, the closure, the sites | the `Splits`, the instances and the `SpecializationStats`, without the instances' expressions; `SpecializationStats.render` appends them with `--stats` |
+| `shareClosure` | `translator/Lean2Agda/Core/Share.lean` | the environment, the threshold (`--share`), the closure, or the closure of instances | the shared closure, by `shareDeclaration` on each safe declaration |
 | `moduleNameMaps` | `translator/Lean2Agda/Core/ReverseMap.lean` | the root (`--root`) and the shared closure | one `ModuleNames` per source module; `ModuleNames.render` writes each sidecar |
-| `scaffoldTree` | `translator/Lean2Agda/Core/Modules.lean` | the environment, the root, the shared closure, the split threshold, the arithmetic (`--arithmetic`) | the `ScaffoldTree`: its `AgdaModule`s, its counts, its refusals |
+| `scaffoldTree` | `translator/Lean2Agda/Core/Modules.lean` | the environment, the root, the shared closure, the split threshold, the arithmetic (`--arithmetic`), the `Splits` of a closure of instances, `--prop` | the `ScaffoldTree`: its `AgdaModule`s, its counts, its refusals |
+| `Splits.resolve` | `translator/Lean2Agda/Core/Specialize.lean` | a reference's constant and level arguments, from the printer | the key of the instance the levels select, by `useLetters` |
 | `addAuxiliaries` | `translator/Lean2Agda/Core/Share.lean` | the environment and the shared closure | the environment with the auxiliary definitions added, checked by the kernel |
 | `refuseDeclarations` | `translator/Lean2Agda/Core/Scaffold.lean` | the closure's declarations | the refused ones, each with its `Refusal` |
 | `recursorBlocks` | `translator/Lean2Agda/Core/Scaffold.lean` | the kept declarations | the recursors of each block of inductive types, keyed by its first type, in `recursorRank`'s order |
 | `scaffoldItem` | `translator/Lean2Agda/Core/Scaffold.lean` | one kept declaration | its `ScaffoldItem`, by kind, through the printer's `Printer.type` and `Printer.clause` |
-| `ruleItem` | `translator/Lean2Agda/Core/Scaffold.lean` | a quotient primitive's computation rule, from `quotRule?` | its `ScaffoldItem`: the rule's postulate and its `REWRITE` pragma |
+| `ruleItem` | `translator/Lean2Agda/Core/Scaffold.lean` | a quotient primitive's computation rule, from `declarationRule?`: `quotRule?`'s, or that of one instance at its levels | its `ScaffoldItem`: the rule's postulate and its `REWRITE` pragma |
 | `tableEntry?` | `translator/Lean2Agda/Core/Arithmetic.lean` | a definition's name and type | its `TableEntry`, or none, or an error when its type no longer has the row's arity |
 | `tableItem` | `translator/Lean2Agda/Core/Scaffold.lean` | a definition and its `TableEntry` | its `ScaffoldItem`: Lean's signature, printed, and the row's clauses |
 | `helperClosure` | `translator/Lean2Agda/Core/Arithmetic.lean` | the helpers the emitted rows use | those helpers and the ones they use, as `Helper`s |
@@ -134,20 +152,26 @@ structures are, and each Python one is a frozen dataclass.
 | Type | File | Made by | Read by |
 | --- | --- | --- | --- |
 | `Args` | `translator/Lean2Agda/Core/CommandLine.lean` | `parseArgs` | `main`, `run`, `writeOutputs` |
+| `NormalLevel` | `translator/Lean2Agda/Core/Levels.lean` | `normalLevelWith` | the split analysis, `useLetters`, `instanceInfo`, the printer's `isZeroLevel` |
+| `SplitRule` | `translator/Lean2Agda/Core/Specialize.lean` | `defaultSplitRule`, and its `other` for the counts | `splitAnalysis`, `SpecializationStats.render` |
+| `LevelSites` | `translator/Lean2Agda/Core/Specialize.lean` | `levelSites` | `splitAnalysis`, `instanceUses` |
+| `Splits` | `translator/Lean2Agda/Core/Specialize.lean` | `splitAnalysis` | `instanceTable`, `specializeClosure`, `scaffoldTree`, the printer through `Splits.resolve` |
+| `InstanceRecord` | `translator/Lean2Agda/Core/Specialize.lean` | `instanceTable` | `specializeClosure`, the counts |
+| `SpecializationStats` | `translator/Lean2Agda/Core/Specialize.lean` | `specializationStats` | `run`, through `SpecializationStats.render` |
 | `Arithmetic` | `translator/Lean2Agda/Core/Arithmetic.lean` | `parseArgs`, from `--arithmetic` | `scaffoldTree`, `scaffoldItem`, `inductiveItem` |
 | `TableEntry` | `translator/Lean2Agda/Core/Arithmetic.lean` | `table`, through `tableEntry?` | `tableItem`, `scaffoldTree` |
 | `Helper` | `translator/Lean2Agda/Core/Arithmetic.lean` | `helpers` and `subRules` | `helperClosure`, `helperItem`, `scaffoldTree` |
 | `TableNaming` | `translator/Lean2Agda/Core/Arithmetic.lean` | `scaffoldTree`, per module, from its `Naming` and the helpers' homes | `tableItem`, `helperItem`, the table's clauses |
 | `Kind` | `translator/Lean2Agda/Core/Types.lean` | `Kind.ofConstantInfo` | `renderClosure`, `Stats.add`, the refusals |
-| `Declaration` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `shareDeclaration` for an auxiliary | every pass after loading |
-| `Closure` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `shareClosure` for the shared closure | `renderClosure`, `Closure.stats`, `moduleNameMaps`, `scaffold` |
+| `Declaration` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `specializeClosure` for an instance; `shareDeclaration` for an auxiliary | every pass after loading |
+| `Closure` | `translator/Lean2Agda/Core/Types.lean` | `dependencyClosure`; `specializeClosure` for the closure of instances; `shareClosure` for the shared closure | `renderClosure`, `Closure.stats`, `moduleNameMaps`, `scaffold` |
 | `Stats` | `translator/Lean2Agda/Core/Stats.lean` | `Closure.stats` | `run`, through `Stats.render` |
 | `Root` | `translator/Lean2Agda/Core/Naming.lean` | `parseArgs`, from `--root` | `agdaModule`, `moduleNameMaps`, `scaffold` |
 | `ModuleNames` | `translator/Lean2Agda/Core/ReverseMap.lean` | `moduleNameMaps`; `ModuleNames.parse` from a sidecar | `writeOutputs`, the naming tests |
 | `ReverseMap` | `translator/Lean2Agda/Core/ReverseMap.lean` | `ReverseMap.build`, which refuses a collision | `ModuleNames.render`, `ReverseMap.lookup` |
 | `AgdaTerm` | `translator/Lean2Agda/Core/Print.lean` | `printExpr` and the rest of the printer | `AgdaTerm.render`, `AgdaTerm.constants`, the emitters |
 | `PrintCounts` | `translator/Lean2Agda/Core/Print.lean` | the printer, in `PrintM`'s state | `ScaffoldTree`'s counts, the printing tests and `PrintingBlowup.lean` |
-| `Printer` | `translator/Lean2Agda/Core/Print.lean` | `scaffoldTree`, per module, with the environment and that module's `Naming.qualified` | `Printer.type`, `Printer.clause`, `Printer.telescope`, `Printer.term` |
+| `Printer` | `translator/Lean2Agda/Core/Print.lean` | `scaffoldTree`, per module, with the environment, that module's `Naming.qualified`, and for a closure of instances `Splits.resolve` | `Printer.type`, `Printer.clause`, `Printer.telescope`, `Printer.term` |
 | `Scope` | `translator/Lean2Agda/Core/Print.lean` | `Scope.enter` and `enterTelescope` | the printer and `Inductive.lean`'s `dataLines` and `recordLines` |
 | `Clause` | `translator/Lean2Agda/Core/Print.lean` | `Printer.clause` | `valueItem` in `Scaffold.lean` |
 | `Pattern` | `translator/Lean2Agda/Core/Print.lean` | `recursorClause`, `absurdClause` and `variablePatterns` in `Recursor.lean` | `PatternClause.render` |
@@ -203,7 +227,9 @@ and `translator/Lean2Agda/Main.lean`.
 | `translator/Lean2Agda/Core/Closure.lean` | load | the environment, the roots | the closure in dependency order | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Render.lean` | load | the closure | the listing | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Stats.lean` | load | the closure | the counts by kind | pure | [`loading.md`][loading] |
-| `translator/Lean2Agda/Core/Naming.lean` | emit: names | a Lean name, a root and a module | its Agda identifier and module path | pure | [`naming.md`][naming] |
+| `translator/Lean2Agda/Core/Naming.lean` | emit: names | a Lean name, a root and a module; an instance's key | its Agda identifier and module path | pure | [`naming.md`][naming] |
+| `translator/Lean2Agda/Core/Levels.lean` | emit: levels | a level, and what its parameters stand for | its normal form without `imax`: whether it is zero, never zero, and what is one below it | pure | [`levels.md`][levels] |
+| `translator/Lean2Agda/Core/Specialize.lean` | emit: levels | the environment and the closure | each constant's split level parameters; the closure of instances, made from the roots' patterns and the uses; the counts | pure | [`levels.md`][levels] |
 | `translator/Lean2Agda/Core/ReverseMap.lean` | emit: names | the shared closure; a sidecar's text | the sidecars, rendered and parsed | pure | [`naming.md`][naming] |
 | `translator/Lean2Agda/Core/Share.lean` | emit: sharing | the environment and the closure | the shared closure; the environment with its auxiliaries | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/InductiveShape.lean` | emit: inductives | an inductive type | record or data, the parameters kept, a field's binder | pure | [`inductives.md`][inductives] |
@@ -252,6 +278,7 @@ named checks only.
 | `translator/tests/Check.lean` | `lake test` (`check`) | the parser, root selection, dependencies, cycles, order, statistics, and the closure's axioms against `tests/atlas-gcd-self.json` and `Atlas.Graph` |
 | `translator/tests/Modules.lean` | `lake test` (`modules`) | owners, qualified references, imports, auxiliaries, the library files, and the split rule, on `Base` and `Consumer` |
 | `translator/tests/Inductives.lean` | `lake test` (`inductives`) | record or data, parameters kept, the declarations of core types and the fixtures, projections, sharing in constructor types |
+| `translator/tests/Levels.lean` | `lake test` (`levels`) | the level normal form; the split parameters of core constants and the fixtures under both rules; the instance a use selects, and that instances come from uses; instances' types; identifiers, injective over `Init`, and the sidecars of version 2; a specialized tree's declarations, rules and `--prop` printing; a projection through its recursor's instance; over `Init.Core`'s closure, no `imax`, normal forms, predecessors, and the kernel's acceptance of every instance |
 | `translator/tests/Naming.lean` | `lake test` (`naming`) | identifiers, reverse maps, injectivity over samples and `Init`, module paths; writes `NamingLexical.agda` and `NamingImport.agda` to `NAMING_AGDA_TEST_DIR` |
 | `translator/tests/Printing.lean` | `lake test` (`printing`) | the layout, binder names, constructors, telescopes, repairs, sharing; writes `PrintingLexical.agda` to `PRINTING_AGDA_TEST_DIR` |
 | `translator/tests/Recursors.lean` | `lake test` (`recursors`) | the recursors' clauses, a parameter Agda keeps as an index, the absurd clause, `String`'s recursor postulated, nested and mutual blocks in `recursorRank`'s order, the patterns' layout, `breakCycles` leaving a recursor's recursion alone |
@@ -267,11 +294,12 @@ named checks only.
 | `translator/tests/TranslatorTests/Input/Consumer.lean` | fixture | a private, an opaque and a matching definition, a projection, an `initialize`, importing `Base` |
 | `translator/tests/TranslatorTests/Input/Inductives.lean` | fixture | one inductive type per rule of [`inductives.md`][inductives] |
 | `translator/tests/TranslatorTests/Input/Kinds.lean` | fixture | every kind the scaffold emits or refuses |
+| `translator/tests/TranslatorTests/Input/Levels.lean` | fixture | one constant per rule of the specialization: a split parameter, none, one passed on, the predecessor rule, an `imax`, a record, a recursor at two motives, a promoted parameter, quotients at two instances |
 | `translator/tests/TranslatorTests/Input/Numerals.lean` | fixture | the accelerated operations on numerals past 2^64, by `rfl` and `decide` |
 | `translator/tests/TranslatorTests/Input/Printing.lean` | fixture | every expression constructor and binder visibility, the repairs, a sharing blowup |
 | `translator/tests/TranslatorTests/Input/Quotients.lean` | fixture | theorems that hold by `rfl` only through a quotient's computation rule |
 | `translator/tests/TranslatorTests/Input/Recursors.lean` | fixture | values that compute through recursors: structural recursion, an indexed family, nested and mutual types, a `K`-like family, a type without constructors |
-| `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden trees and their listings through `agda_check.py --refusals`; a kept tree checked as it is; split trees against uncut ones; the `quotients` tree with its rewrite rules removed; the `arithmetic` trees under both settings of `--arithmetic`; `Init.Core`'s inductive types; the golden listings and sidecars; `--version`; the command line's failures, a stale `--out` among them |
+| `translator/tests/run.sh` | `make test-translator` | `lake test`; Agda on the lexical files; the golden trees and their listings through `agda_check.py --refusals`; a kept tree checked as it is; split trees against uncut ones; the `quotients` tree with its rewrite rules removed; the `levels` tree of instances under `--specialize`, and its listings under `--prop` with and without the specialization; the `arithmetic` trees under both settings of `--arithmetic`; `Init.Core`'s inductive types; the golden listings and sidecars; the specialization's counts for `Init.Core`; `--version`; the command line's failures, a stale `--out` among them |
 
 The fixture `Consumer.lean` declares an `initialize`, so it mentions `IO`;
 the fixtures and tests carry no Effects cell, since every test does IO.
@@ -284,6 +312,7 @@ library.
 | File | Run as | Purpose |
 | --- | --- | --- |
 | `translator/scripts/InductiveTypes.lean` | `lake env lean`; `run.sh` with `INDUCTIVE_CLOSURE=Init.Core` | the inductive types of a closure or of modules, one per line, as roots |
+| `translator/scripts/ModuleList.lean` | `lake env lean` | the modules an import brings in, one per line, to name every module of `Init` as the roots' modules |
 | `translator/scripts/PrintingBlowup.lean` | `lake env lean` | the printer's output size with and without sharing, for the dated report under `docs/reports/` |
 | `translator/scripts/FlattenBenchmark.lean` | compiled by hand ([`../lean-findings.md`][findings]) | the cost of `Closure.declarations` against an explicit loop |
 | `translator/scripts/NamingAtlasProbe.lean` | `lake exe naming-atlas-probe` | the atlas's name decoder against Mathlib's structured names; needs Mathlib's cache |
@@ -340,6 +369,7 @@ version and the profile, in the library's `NOTICE` and README
 [printing]: printing.md
 [inductives]: inductives.md
 [modules]: modules.md
+[levels]: levels.md
 [nat-operations]: ../foundations/nat-operations.md
 [recursors]: recursors.md
 [translator-readme]: ../../translator/README.md

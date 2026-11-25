@@ -104,17 +104,23 @@ abbrev Printed := Array String × Array AgdaTerm
 def binderTerms (binders : Array (Visibility × String × AgdaTerm)) : Array AgdaTerm :=
   binders.map (·.2.2)
 
+/-- The identifier a block's declaration gives one of its types or
+constructors: that of its key in the block's pattern, which is the
+constant's own outside a closure of instances. -/
+def declaredIdent (pattern : String) (n : Name) : PrintM String :=
+  return (← read).naming.ident (instanceKey n pattern)
+
 /-- `data T params : indices → Set where`, then each constructor with its
 type after the parameters, in the scope of the type's parameters. -/
-def dataLines (m : InductiveMember) (indent : String) : PrintM Printed := do
+def dataLines (m : InductiveMember) (indent pattern : String) : PrintM Printed := do
   let k := agdaParamCount (← read).env m.type
   let (binders, inner, rest) ← enterTelescope {} m.type.type k
   let target ← printExpr inner rest
-  let mut lines := #[s!"{indent}data {agdaIdent m.type.name}{telescopeText binders} : {target.render} where"]
+  let mut lines := #[s!"{indent}data {← declaredIdent pattern m.type.name}{telescopeText binders} : {target.render} where"]
   let mut terms := binderTerms binders |>.push target
   for c in m.ctors do
     let t ← printExpr inner (← instantiateParams inner c.type (parameterVariables k))
-    lines := lines.push s!"{indent}  {agdaIdent c.name} : {t.render}"
+    lines := lines.push s!"{indent}  {← declaredIdent pattern c.name} : {t.render}"
     terms := terms.push t
   return (lines, terms)
 
@@ -123,17 +129,17 @@ field's type printed in the scope of the parameters and the fields before
 it, under the name the printer gives a projection of it.  A recursive
 record is `inductive`, without eta, as in Lean, and open to pattern
 matching on its constructor, as a data type is. -/
-def recordLines (m : InductiveMember) (indent : String) : PrintM Printed := do
+def recordLines (m : InductiveMember) (indent pattern : String) : PrintM Printed := do
   let k := m.type.numParams
   let (binders, inner, rest) ← enterTelescope {} m.type.type k
   let target ← printExpr inner rest
   let #[c] := m.ctors | throw s!"the record {m.type.name} has other than one constructor"
-  let mut lines := #[s!"{indent}record {agdaIdent m.type.name}{telescopeText binders} : {target.render} where"]
+  let mut lines := #[s!"{indent}record {← declaredIdent pattern m.type.name}{telescopeText binders} : {target.render} where"]
   -- A recursive record needs `inductive`; Lean gives it no eta, and
   -- without eta Agda matches on its constructor only after `pattern`.
   if m.type.isRec then
     lines := lines ++ #[s!"{indent}  inductive", s!"{indent}  no-eta-equality", s!"{indent}  pattern"]
-  lines := lines.push s!"{indent}  constructor {agdaIdent c.name}"
+  lines := lines.push s!"{indent}  constructor {← declaredIdent pattern c.name}"
   let mut terms := binderTerms binders |>.push target
   if c.numFields > 0 then lines := lines.push s!"{indent}  field"
   let mut scope := inner
@@ -149,28 +155,33 @@ def recordLines (m : InductiveMember) (indent : String) : PrintM Printed := do
     rest := b.instantiate1 fv
   return (lines, terms)
 
-def memberLines (m : InductiveMember) (indent : String) : PrintM Printed := do
-  if isAgdaRecord (← read).env m.type then recordLines m indent else dataLines m indent
+def memberLines (m : InductiveMember) (indent pattern : String) : PrintM Printed := do
+  if isAgdaRecord (← read).env m.type then recordLines m indent pattern else dataLines m indent pattern
 
 /-- A block as one declaration: a lone type as itself, several in a
 `mutual` block; `Nat` with `BUILTIN NATURAL`, so that literals print as
 decimals; `Eq` with `BUILTIN REWRITE`, the relation of the quotient's
 computation rules (`Scaffold.lean`); and an unsafe block after
 `NO_POSITIVITY_CHECK`, since Lean's kernel checks no unsafe type for
-positivity. -/
-def inductiveDecl (p : Printer) (members : Array InductiveMember) : Except String InductiveDecl := do
+positivity.  In a closure of instances the block is one instance's, of
+the given pattern: its types and constructors are declared under their
+keys' identifiers, and each instance of `Eq` is a rewrite relation of its
+own (probe `L02RewriteRelations`). -/
+def inductiveDecl (p : Printer) (members : Array InductiveMember) (pattern : String := "") :
+    Except String InductiveDecl := do
+  let ident (n : Name) : String := p.naming.ident (instanceKey n pattern)
   let ((lines, terms), counts) ← runPrint p do
-    if members.size == 1 then memberLines members[0]! ""
+    if members.size == 1 then memberLines members[0]! "" pattern
     else members.foldlM (init := (#["mutual"], #[])) fun (lines, terms) m => do
-      let (more, moreTerms) ← memberLines m "  "
+      let (more, moreTerms) ← memberLines m "  " pattern
       return (lines ++ more, terms ++ moreTerms)
   let lines := if members.any (·.type.isUnsafe) then #["{-# NO_POSITIVITY_CHECK #-}"] ++ lines else lines
-  let lines := if members.map (·.type.name) == #[``Nat] then lines.push s!"\{-# BUILTIN NATURAL {agdaIdent ``Nat} #-}"
+  let lines := if members.map (·.type.name) == #[``Nat] then lines.push s!"\{-# BUILTIN NATURAL {ident ``Nat} #-}"
     else lines
-  let lines := if members.map (·.type.name) == #[``Eq] then lines.push s!"\{-# BUILTIN REWRITE {agdaIdent ``Eq} #-}"
+  let lines := if members.map (·.type.name) == #[``Eq] then lines.push s!"\{-# BUILTIN REWRITE {ident ``Eq} #-}"
     else lines
   let provides := members.foldl (fun acc m =>
-    (acc.push (agdaIdent m.type.name)) ++ m.ctors.map (agdaIdent ·.name)) #[]
+    (acc.push (ident m.type.name)) ++ m.ctors.map (ident ·.name)) #[]
   let references := terms.foldl (fun acc t => (t.references p.naming).foldl (fun acc n =>
     if acc.contains n || provides.contains n then acc else acc.push n) acc) #[]
   return { lines, provides, references, counts }

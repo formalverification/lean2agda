@@ -1,0 +1,5 @@
+checked 81 of 81 declarations, 19 of 19 data types and records
+unfolded 0 of 7 theorems, 0 in vain
+defined 10 of 10 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms eq~uof~uheq#n | Eq:rec#nn x₆ x₉ != x₆ of type x₄
+refused value UnequalTerms eq~uof~uheq#z | Eq:rec#zn x₆ x₉ != x₆ of type x₄

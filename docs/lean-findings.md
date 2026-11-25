@@ -48,6 +48,7 @@ entry adds its row here too.
 | LF-13 | S2 | Lake does not track a file that `include_str` reads |
 | LF-14 | S2 | `testDriver` cannot name an executable whose name has a hyphen |
 | LF-15 | Checked | the kernel's counters bound the uses of an accelerated operation's definition, and match Agda's refusals for `Nat.sub` |
+| LF-18 | Checked | the kernel accepts every instance of `Init`'s constants at zero and successor levels, with levels rewritten to a normal form |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -680,6 +681,43 @@ entry adds its row here too.
    candidates").
 +  **Upstream**.  Nothing to report.
 
+## LF-18: the kernel accepts every instance of a constant at zero and successor levels
+
++  **Severity**.  Checked.
++  **Found**.  2026-11-24, by the Prop-instantiation specialization
+   ([#28]), at Lean v4.33.1.
++  **The question**.  The translator emits a universe-polymorphic constant
+   as instances: the constant's type, value and recursor rules with `0`
+   or `u + 1` substituted for each level parameter that matters, and
+   every level rewritten to the translator's own normal form, a maximum
+   of a constant and of parameters under successors
+   ([`translator/levels.md`][levels]).  Lean's kernel checked the constant
+   once, with its parameters free, and it decides the equality of two
+   levels by a normal form that is not complete: `Level.normalize` leaves
+   `imax u v` as it is.  So it is a question whether the kernel accepts
+   each instance when it is checked again as a declaration of its own,
+   which the sharing pass and the printer rely on when they hand instance
+   terms to `Lean.Kernel.check` and `Lean.Kernel.whnf`.
++  **The answer**.  It does, for `Init`.  Every one of the 79,997
+   instances of `Init`'s 65,994 constants (631 modules, every pattern of
+   every constant) was checked: each axiom, safe definition, theorem and
+   opaque constant added to the environment under a fresh name by
+   `addDeclCore`, and the type and the recursor rules of each inductive
+   type, constructor, recursor and quotient primitive typed by
+   `Lean.Kernel.check`.  None was rejected, in 137 s.  The same run found
+   no `imax` in any instance, every level in normal form, and every
+   reference selecting an instance that was made.  The control is the
+   other way of writing a nonzero parameter, as `u` under an assumption
+   the kernel does not have: `f.{u} : Sort u → Sort (max 1 u)` for a
+   function whose type is `Sort (imax 1 u)` is rejected, as it should be,
+   since the two differ at `u = 0`.
++  **To rerun**.  From `translator/`:
+   `LEVELS_MODULES="$(lake env lean scripts/ModuleList.lean | tr '\n' ' ')" lake test -- levels`,
+   and without the variable for the closure of `Init.Core` alone (3,540
+   instances, 3 s), which `make test` runs.  The control is
+   `docs/translator/probes/L04NonzeroParameter.lean`.
++  **Upstream**.  Nothing to report.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -719,3 +757,5 @@ entry adds its row here too.
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [kernel-reduce-nat]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/type_checker.cpp#L702-L733
 [nat-operations]: foundations/nat-operations.md
+[#28]: https://github.com/formalverification/lean2agda/issues/28
+[levels]: translator/levels.md
