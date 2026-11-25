@@ -270,6 +270,29 @@ trees to the goldens once they pass:
 The heap and time bounds stayed as they are: a run that needs more is the
 finding, and raising either to make a run pass would hide it.
 
+## On the GitHub runner
+
+The `goldens` workflow's first run, on [#96] at `52265ee` (run
+`45520228058`, 2026-11-25), reproduced every golden and every count of
+this document.  What it measured is as follows:
+
++  **The runner**: 4 processors, 15,983 MiB of memory and 3 GiB of swap,
+   Ubuntu 26.04.1.
++  **The disk**: 88 GB free at the start, 113 GB once the job deletes the
+   runner image's largest preinstalled toolchains, 96 GB with the dev
+   shell and Mathlib's cache in, and 95 GB at the end.
++  **The time**: `make goldens` at `-j 2` took 2,874 s (47 min 54 s),
+   against the laptop's 1,936 s at `-j 4`; the whole job took 51 min of
+   its 300 min bound, 2 min of it for the shell and Mathlib's cache.  The
+   slowest trees were `substructure-closure-le` (loop 891 s, final check
+   53 s), `init-core` (602 s, 33 s), `init-data-nat-gcd` (444 s, 30 s)
+   and `init-prelude` (421 s, 39 s).
++  **The memory**: the largest process is again `substructure-closure-le`'s
+   loop run on `Init.Prelude`, 8,493 MiB, the cross-module unfolding
+   below.  `Init.Prelude` is every tree's root and so always runs alone;
+   no other process of the thirteen trees passes 2,271 MiB, so two at
+   once stay within the runner's memory.
+
 ## What moves the numbers
 
 +  **The loop's passes**.  The driver checks a tree again, from a fresh
@@ -329,6 +352,7 @@ dated report [`goldens-2026-11-22`][dated].
 [#88]: https://github.com/formalverification/lean2agda/issues/88
 [#89]: https://github.com/formalverification/lean2agda/issues/89
 [#94]: https://github.com/formalverification/lean2agda/issues/94
+[#96]: https://github.com/formalverification/lean2agda/pull/96
 [manifest]: ../corpus/manifest.json
 [modules]: translator/modules.md
 [printing-checks]: translator/printing.md#what-agda-checks-and-the-fallback

@@ -343,7 +343,7 @@ make atlas             # the atlas and its report, about three minutes and 7.5 G
 make corpus-check      # Agda on every corpus entry
 make goldens           # the corpus and Init golden trees, checked and tabulated (docs/performance.md)
 make goldens GOLDENS=init-core RESULTS=out   # one of them, keeping its trees and tables in out/
-make scaffold-corpus   # the twelve corpus entries alone
+make scaffold-corpus   # the corpus lines of goldens.txt alone
 make test              # the Python suite and the translator's semantic and golden tests
 make test-unit         # the translator's Lean unit checks alone: lake test in translator/
 ```

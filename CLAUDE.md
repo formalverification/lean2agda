@@ -50,14 +50,15 @@ section before changing anything structural.
    report (`atlas/README.md`); it needs Mathlib's cache and about
    7.5 GiB of memory, and no CI job runs it.
 +  `make goldens` translates every tree of `translator/tests/goldens.txt`
-   (the twelve corpus entries and the four `Init` fragments), runs the
-   refusal loop over it, checks its final state fresh, compares it with
+   (nine of the twelve corpus entries and the four `Init` fragments;
+   the three largest Mathlib closures wait on M2-15), runs the refusal
+   loop over it, checks its final state fresh, compares it with
    its golden under `translator/tests/expected/scaffolds/`, and prints
    the tables of `docs/performance.md`, failing unless every refusal is
    classified to an issue by `translator/tests/refusal-classes.txt`;
    `make goldens-update` rewrites the goldens, and `GOLDENS=NAME...`
-   picks some.  It needs Mathlib's cache and takes hours, so the
-   `goldens` workflow runs it nightly and on demand, not the
+   picks some.  It needs Mathlib's cache and takes about 50 minutes on
+   a 4-processor runner at `-j 2`, so the `goldens` workflow runs it nightly and on demand, not the
    pull-request job.  A new refusal in a golden needs its line in the
    classes file, naming the issue whose work removes it.
 +  `docs/translator/architecture.md` is the translator's module map: a
@@ -195,4 +196,6 @@ before any pull request.  The committed skills `project-setup` and
    112 GB after, 101 GB once the shell is in), so the binding limit is
    now the job's time, not its disk.  Keep Mathlib's cache and other
    large downloads out of the `nix` job; the `goldens` workflow fetches
-   the cache and prints the runner's disk and memory first.
+   the cache and prints the runner's disk and memory first (run
+   `45520228058`: 4 processors, 16 GB of memory, 88 GB free, 113 GB
+   after the deletions, 96 GB with the shell and the cache).

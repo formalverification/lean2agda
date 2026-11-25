@@ -680,9 +680,10 @@ broke each rule in turn and showed which checks fail:
    closure's heap refusals in `Init.Prelude` make the loop take more
    than 50 minutes).
 
-`make scaffold-corpus` is the check over all twelve corpus entries, the
-corpus lines of `make goldens`, which also checks the four `Init`
-fragments ([`../performance.md`][performance]); both need Mathlib's cache,
+`make scaffold-corpus` is the check over the corpus entries of `make
+goldens` (nine of the twelve; the three largest Mathlib closures wait on
+M2-15), which also checks the four `Init` fragments
+([`../performance.md`][performance]); both need Mathlib's cache,
 and the `goldens` workflow, not the pull-request job, runs them.
 
 ## Hand-off to the emitters
