@@ -7,9 +7,10 @@ import TranslatorTests
 /-!
 The scaffold's rules, on the fixture `TranslatorTests.Input.Kinds`: how
 each kind of declaration is emitted, what is refused and why, that the
-sharing pass leaves `unsafe` declarations alone, that cyclic definitions
-are postulated, and that a `String` root keeps its builtin; and on the
-fixture `TranslatorTests.Input.Quotients`, the quotient's computation
+sharing pass leaves `unsafe` declarations alone, and that cyclic
+definitions are postulated; on the fixture `TranslatorTests.Input.Strings`,
+the table of string literals, with `String` a record; and on the fixture
+`TranslatorTests.Input.Quotients`, the quotient's computation
 rules: Lean's own statements, printed with the visibilities of
 `Quot.lift` and `Quot.mk`, after what they mention, and only in a
 closure that holds `Quot`.  `tests/run.sh` checks the same fixtures'
@@ -107,15 +108,49 @@ def checkKinds (env : Environment) : IO Unit := do
     "an unsafe declaration was shared"
   let _ ← IO.ofExcept (scaffoldTree env `U shared)
 
-def checkCyclesAndBuiltins (env : Environment) : IO Unit := do
-  -- Mutually recursive partial companions fall back to postulates, and a
-  -- String root keeps its builtin.
-  let s ← scaffoldOf env #[``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec, ``String]
+def checkCycles (env : Environment) : IO Unit := do
+  -- Mutually recursive partial companions fall back to postulates.
+  let s ← scaffoldOf env #[``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec]
   for n in [``PrintFixtures.evenP._unsafe_rec, ``PrintFixtures.oddP._unsafe_rec] do
     require ((← itemOf s n).text.startsWith "-- cyclic definition, postulated\npostulate ")
       s!"cyclic {n} was not postulated"
-  let string ← itemOf s ``String
-  require ((string.text.splitOn "BUILTIN STRING").length == 2) "a String root lost its builtin"
+
+/-- The table of string literals: one definition per distinct literal,
+its kernel expansion, in `String.ofList`'s module, `Init.Prelude`, which
+a module holding a literal names by its path; `String` a record with no
+builtin; and the constants the expansions unfold to transparent, since
+their closure holds no literal, so that the table closes no cycle. -/
+def checkLiterals (env : Environment) : IO Unit := do
+  let roots ← IO.ofExcept <| selectRoots env #[`TranslatorTests.Input.Strings] #[]
+  let s ← scaffoldOf env roots
+  let literals := ["", "a", "a\"b\\c\n", "ab", "aλ✝𝔸", "b", "c", "d", "e", "f", "shared"]
+  let table := s.items.filter fun i => i.provides.any (·.startsWith "String:~ulit:")
+  require (table.size == literals.length) s!"{table.size} literal definitions"
+  let prelude := s.modules.filter (·.source == `Init.Prelude) |>.foldl (· ++ ·.items) #[]
+  for lit in literals do
+    require (prelude.any (·.provides.contains (agdaIdent (literalName lit))))
+      s!"no definition of {repr lit} in Init.Prelude"
+  let ab ← itemOf s (literalName "ab")
+  require (ab.text == "String:~ulit:ab : String\nString:~ulit:ab = String:ofList " ++
+      "(List:cons {Char} (Char:ofNat 97) (List:cons {Char} (Char:ofNat 98) (List:nil {Char})))\n")
+    s!"the definition of \"ab\": {ab.text}"
+  require ((← itemOf s (literalName "")).text.endsWith " = String:ofList (List:nil {Char})\n")
+    "the definition of the empty string"
+  -- One literal in two declarations: one definition, which both name.
+  let shared := "U.Init.Prelude." ++ agdaIdent (literalName "shared")
+  for n in [``StringFixtures.first, ``StringFixtures.second] do
+    require ((← itemOf s n).references.contains shared) s!"{n} does not refer to {shared}"
+  -- A shared subterm may name literals' definitions, which the kernel
+  -- must hold before the sharing pass infers the subterm's type.
+  let aux ← itemOf s (auxiliaryName ``StringFixtures.repeated 1)
+  require (["a", "b", "c", "d", "e", "f"].all fun l => aux.references.contains ("U.Init.Prelude." ++ agdaIdent (literalName l)))
+    s!"the shared subterm of repeated refers to {aux.references}"
+  -- What the expansions unfold to is transparent, not a cycle's postulate.
+  for n in [``String.ofList, ``Char.ofNat, ``List.utf8Encode, ``String.utf8EncodeChar, ``String.mk] do
+    let item ← itemOf s n
+    require (item.text.startsWith (agdaIdent n ++ " : ")) s!"{n} is not a transparent definition: {item.text}"
+  require ((← itemOf s ``String).text.startsWith "record String : Set where") "String is not a record"
+  require (s.items.all fun i => (i.text.splitOn "BUILTIN STRING").length == 1) "a BUILTIN STRING pragma"
 
 /-- A closed type with its level parameters set to `1`, so that the
 kernel can check it outside a declaration. -/
@@ -160,10 +195,11 @@ def checkQuotientRules (env : Environment) : IO Unit := do
 
 def run : IO Unit := do
   let env ← importEnvironment #[`Init, `TranslatorTests.Input.Kinds, `TranslatorTests.Input.Printing,
-    `TranslatorTests.Input.Quotients]
+    `TranslatorTests.Input.Quotients, `TranslatorTests.Input.Strings]
   checkKinds env
-  checkCyclesAndBuiltins env
+  checkCycles env
+  checkLiterals env
   checkQuotientRules env
-  IO.println "scaffold checks: kinds, refusals, unsafe sharing, cycles, builtins, and quotient rules passed"
+  IO.println "scaffold checks: kinds, refusals, unsafe sharing, cycles, literals, and quotient rules passed"
 
 end ScaffoldTests

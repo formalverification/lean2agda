@@ -1,6 +1,6 @@
-checked 321 of 321 declarations, 40 of 40 data types and records
-unfolded 3 of 49 theorems, 3 in vain
-defined 40 of 40 recursors by pattern matching, 0 refused by the termination checker
+checked 359 of 359 declarations, 41 of 41 data types and records
+unfolded 3 of 62 theorems, 3 in vain
+defined 41 of 41 recursors by pattern matching, 0 refused by the termination checker
 refused value UnequalTerms eq~uof~uheq | Eq:rec x₆ x₉ != x₆ of type x₄
 unfolded UnequalTerms Nat:div~urec~ufuel~ulemma for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
 unfolded UnequalTerms Nat:not~ule~uof~unot~uble~ueq~utrue for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)

@@ -15,10 +15,12 @@ This note maps each accelerated operation to an Agda definition, states
 which of Lean's definitional equations each one keeps, gives its cost on
 large numerals and what the safe profiles need of it, and records the
 measurements of issue [#31] that chose the table, together with the
-design for `String` and `Char` and the cost of proofs by `decide`.
+cost of proofs by `decide` and the representation of `String` and `Char`
+that issue [#88] adopted.
 
 Everything here was measured at the project's pins ([`../pinning.md`][pinning]):
-Lean v4.33.1 and Agda 2.8.0, on 2026-11-09 and 2026-11-10.  The probes
+Lean v4.33.1 and Agda 2.8.0, on 2026-11-09 and 2026-11-10, and the
+section on `String` on 2026-11-24.  The probes
 named below are under [`probes/`][probes]; each Agda probe records its
 outcome on its first line, and the Lean probe `NatOps.lean` records its
 output at its end.  The translator emits the table under profile U by
@@ -346,11 +348,13 @@ refuses `Nat.gcd` at the pin needs a run of Lean4Less, which is issue
    The nine declarations more are the table's six builtin helpers and
    `Nat.sub`'s three rules.
    The 70 values behind `ByteArray.IsValidUTF8` check, but five that the
-   control never reached are refused: `String.decEq`, its
-   `_proof_2` and `String.ofByteArray.injEq`, which compare two proofs of
-   one proposition ([#27]'s), and `String.noConfusion` and
-   `String.ofByteArray.noConfusion`, which need `String.rec` to compute
-   while `String` is a postulate (the section on `String`, below).  With
+   control never reached are refused: `String.decEq` and
+   `String.ofByteArray.injEq`, which compare two proofs of one
+   proposition ([#27]'s), and `String.decEq._proof_2`,
+   `String.noConfusion` and `String.ofByteArray.noConfusion`, which need
+   `String.rec` or a projection from a `String` to compute while `String`
+   was a postulate (the section on `String`, below, where [#88] checks all
+   three; this note first charged `_proof_2` to [#27]).  With
    `Nat.modCoreGo_lt` refused and `Nat.modCore_lt` checked, that makes the
    21; the 4 behind a refused type are `apply_eqRec` and the three behind
    it, as before.  The single-module scaffold of the code before issue
@@ -437,21 +441,21 @@ numeral of 10^9 or more fails, by the time bound or the heap bound.
 
 ## `String` and `Char`
 
-(See also [#17] and [#27].)
+(See also [#17], [#27], [#44] and [#88].)
 
-Under profile U today `String` is a postulate bound to `BUILTIN STRING`,
-so that Lean's string literals print as Agda's, and its constructor
-`String.ofByteArray` and recursor `String.rec` are postulates too.
-Lean's kernel expands a literal on demand to `String.ofList [c₁, …,
-cₙ]`, and `String.ofList` is `String.ofByteArray (List.utf8Encode l) _`,
-so the round trip `"ab" = String.ofList ['a', 'b']`, which Lean accepts by
-`rfl`, is refused by Agda (`UnequalTerms "ab" != String:ofList …`), as is
-`"a" = String.mk ['a']`; a character literal is `Char.ofNat 97`, an
-application, and `'a'.toNat = 97` checks (a scratch probe of three
-theorems, 379 constants, 2026-11-10).  `String.noConfusion` and
-`String.ofByteArray.noConfusion`, newly reached in `Init.Core`'s closure,
-are refused for the same reason.  There are two representations, as
-follows.
+Until [#88] `String` was a postulate under profile U, bound to `BUILTIN
+STRING` so that Lean's string literals printed as Agda's, and its
+constructor `String.ofByteArray` and recursor `String.rec` were
+postulates too.  Lean's kernel expands a literal on demand to
+`String.ofList [c₁, …, cₙ]`, and `String.ofList` is `String.ofByteArray
+(List.utf8Encode l) _`, so the round trip `"ab" = String.ofList ['a',
+'b']`, which Lean accepts by `rfl`, was refused by Agda (`UnequalTerms
+"ab" != String:ofList …`), as was `"a" = String.mk ['a']`; a character
+literal is `Char.ofNat 97`, an application, and `'a'.toNat = 97` checked
+(a scratch probe of three theorems, 379 constants, 2026-11-10).
+`String.noConfusion` and `String.ofByteArray.noConfusion`, newly reached
+in `Init.Core`'s closure, were refused for the same reason.  There were
+two representations, as follows.
 
 +  **Agda's primitive strings**.  Keep `BUILTIN STRING` and make Lean's
    operations Agda's primitives: `String.ofList` as `primStringFromList`,
@@ -468,25 +472,144 @@ follows.
 +  **Lean's structures**.  Emit `String` and `Char` as the records Lean
    declares and print a literal as the kernel expands it, `String.ofList`
    applied to a list of `Char.ofNat` applications, with no `BUILTIN
-   STRING`.  The round trip then holds by `refl` (both sides are one
-   term), `String.rec` and `String.noConfusion` compute, nothing is
-   postulated, and the representation serves every profile.  Its costs
-   are text and evaluation: `Init.Core`'s closure has 742 string literals
-   (85 distinct, 4,150 characters in all) and `Init.Data.String.Basic`'s
-   758 (53 distinct), which the sharing pass would print once each; and a
+   STRING`.  Nothing is postulated, `String.rec` and `String.noConfusion`
+   compute, and the representation serves every profile.  Its costs are
+   text and evaluation: `Init.Core`'s closure holds 742 string literals
+   in its printed trees, 85 distinct, and `Init.Data.String.Basic`'s 764,
+   53 distinct (counting types, values and recursors' rules); and a
    decision on strings evaluates `List.utf8Encode` in Agda, through the
-   table's builtins.  It needs the closure to count `String.ofList`,
-   `Char.ofNat`, `List.cons` and `List.nil` as dependencies of every
-   constant with a string literal, the printer to expand literals, and
-   `Scaffold.lean` to stop treating `String` apart; the comparisons of
-   `String`'s validity proofs (`String.decEq`) stay [#27]'s.
+   table's builtins.
 
-The second representation is the recommendation, for every profile: it
-is the kernel's own semantics, and profiles K and CC have no other.  It
-does not fit this pull request (it changes the closure, the printer, the
-scaffold and every golden that holds a literal), so issue [#31] proposes
-it as a follow-up; the primitive representation could return later as a
-profile U option for speed.
+Issue [#31] recommended the second, for every profile: it is the
+kernel's own semantics, and profiles K and CC have no other.  Issue [#88]
+adopted it, as follows; the primitive representation could return as a
+profile U option for speed, which would be an issue of its own.
+
++  **The closure**.  A string literal's dependencies are the constants of
+   its expansion, `String.ofList`, `List.cons`, `List.nil`, `Char`,
+   `Char.ofNat` and `Nat`, and `String`, its type (`Closure.lean`).  The
+   closure of the four constants the issue names has 373 constants (375
+   with `String.mk`) and holds no string literal, so a literal's
+   expansion never refers back to itself, and `breakCycles` postulates
+   none of what it unfolds to (LF-16 of [`lean-findings.md`][lean-findings]).
++  **The expansion**.  `Literals.lean` builds the kernel's term exactly
+   (`string_lit_to_constructor`, [`inductive.cpp`, lines 1368 to
+   1380][kernel-string-lit]): code points, not bytes, so that `𝔸`, four
+   bytes, is one `Char.ofNat 120120`; `List.cons` and `List.nil` at
+   universe level zero over `Char`; and `""` as `String.ofList` of
+   `List.nil`.  The unit check compares it with Lean's own `toExpr` of the
+   code points and has the kernel equate it with the literal.
++  **One definition per distinct literal**.  The sharing pass, before it
+   shares any subterm, gives each distinct literal of the closure one
+   definition, its expansion, named `String._lit` followed by the
+   literal's text (`String:~ulit:ab` in Agda), owned by `String.ofList`'s
+   module, `Init.Prelude`, which every module holding a literal imports,
+   and checked by the kernel; every occurrence becomes a reference to it
+   ([`printing.md`][printing-sharing], The sharing pass).  A literal the
+   printer meets directly, in a recursor's rule or a constructor's type
+   read from the environment, prints as its expansion in place.
++  **The scaffold**.  `String` and `Char` are records like any other,
+   `String.rec` is defined by its clause, a projection from a `String`
+   is a field projection, and `BUILTIN STRING` is gone.
+
+### The round trips
+
+The fixture `TranslatorTests.Input.Strings` holds [#88]'s acceptance
+criterion, with an escape, the empty string, a character of each UTF-8
+length, a literal in two declarations and a repeated subterm holding
+literals (the golden tree `strings`).  Under the table its 376
+declarations and 39 data types and records all check, in 29 Agda runs
+over three passes and 106 s at `-j 4`, at a load average near 15
+(2026-11-24), as follows:
+
++  `"ab" = String.ofList ['a', 'b']` checks by `refl`: its sides print as
+   one term once the literal's definition unfolds.
++  `"a" = String.mk ['a']` checks, but not because the two functions have
+   one body as kernel terms.  The elaborator abstracts each one's proof of
+   validity into a theorem of its own, `String.ofList._proof_1` and
+   `String.mk._proof_1`, with one statement and one proof, which Lean's
+   kernel identifies by proof irrelevance; Agda identifies them once the
+   checker's fallback unfolds both, and the listing records the two
+   unfoldings (LF-17 of [`lean-findings.md`][lean-findings]).  That is
+   [#27]'s class of refusal, which the fallback settles here.
++  `"ab".toByteArray = List.utf8Encode ['a', 'b']`, a projection that
+   Lean's kernel computes by expanding the literal, checks by `refl`.
++  `repeated`, a list of six literals written twice, becomes one sharing
+   auxiliary naming six literal definitions, which the sharing pass can
+   type only because the literals' definitions reach the kernel's
+   environment first (a mutation that skips that step fails the unit
+   check).
+
+Under `--arithmetic lean` none of it can check: `String`'s field names
+`ByteArray.IsValidUTF8`, whose type exhausts Agda's heap under Lean's
+definitions (The measurements, above), so that `String` and everything
+that mentions it are dropped behind it.  Checked once, on the fixture
+before `repeated` joined it and under a heap bound of 4G, the loop took
+14 Agda runs and 3,979 s, each round meeting the bound; `Init.Prelude`
+refused eight declarations for the heap, the type of
+`ByteArray.IsValidUTF8`, and `Char.ofNatAux`, `Char.ofNat._proof_1`
+and five sharing auxiliaries of `Char.ofNat`'s two proofs, whose
+`decide` on numerals near 2^32 runs in unary; none of the fixture's own
+eight declarations checked.  So the harness checks the fixture under the
+table only.
+
+### `Init.Core`'s closure, before and after
+
+The closure as the tree of modules, every value printed, `-j 8`, on one
+base (53fea3b), at load averages of 3.5 to 5 from other work
+(2026-11-24); the time is the sum over Agda runs, with the wall time in
+parentheses:
+
+| `Init.Core`'s closure | Declarations | Values | Checked | Refused | Behind a refused type | Types refused | Unfolded | Agda runs | Time | Largest peak | Bytes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `String` a postulate (before) | 1,972 | 1,660 | 1,635 | 21 | 4 | 1 | 8, three in vain | 37 | 432.3 s (415 s) | 2,281 MiB | 1,529,322 |
+| `String` a record, the table | 2,079 | 1,768 | 1,746 | 18 | 4 | 1 | 8, three in vain | 34 | 455.0 s (436 s) | 2,324 MiB | 1,594,503 |
+| `String` a record, literals in place | 2,214 | 1,903 | 1,881 | 18 | 4 | 1 | 8, three in vain | 34 | 535.8 s (528 s) | 2,252 MiB | 1,768,487 |
+
+The before row repeats [#31]'s figures (The measurements, above), at
+the higher load.  What moved, and why, is as follows:
+
++  **The three refusals gone** are `String.noConfusion` and
+   `String.ofByteArray.noConfusion`, which compute through `String.rec`,
+   and `String.decEq._proof_2`, whose `congrArg (fun s =>
+   s.toByteArray.data.toList)` needs a projection from
+   `String.ofByteArray …` to reduce.  `String.decEq` and
+   `String.ofByteArray.injEq` stay refused, each comparing two proofs of
+   one `ByteArray.IsValidUTF8` ([#27]'s), with the 16 other refusals, the
+   type of `apply_eqRec` and the three behind it, as before.
++  **The 107 declarations more** are the 85 literal definitions; the
+   twelve constants a literal now reaches, `String.ofList`, `Char.ofNat`,
+   `Char.ofNatAux` and its private part, `BitVec.ofNatLT`, `UInt32.size`
+   and a matcher (seven definitions), and `String.ofList._proof_1`,
+   `Char.ofNat._proof_1` and `_proof_2`, `Nat.lt_trans` and
+   `isValidChar_UInt32` (five theorems); the sharing pass's eleven
+   auxiliaries of `Char.ofNat`'s two proofs; and `String` as a record
+   and its recursor where there were three postulates (`String`,
+   `String.ofByteArray`, `String.rec`), one fewer.  The values are those
+   less the record, the recursor and the postulates, 108 more; the data
+   types and records and the recursors, 145 and 147, are one more each.
++  **The three Agda runs fewer** are the three refusals gone, each of
+   which cost the loop a run; the unfoldings are the same eight.
++  **The time and the peak** are within the load's noise: 5% more wall
+   time and 43 MiB more, both in `Init.Core`'s first part, where the
+   expansions' references now point.
+
+### The table, or literals in place
+
+[#88] asked for one definition per distinct literal, and the table
+was measured against the alternative, each literal replaced by its
+expansion before the sharing pass, so that a literal repeated within one
+declaration is still shared but every declaration prints its own (a
+scratch build; the variant's diff is three lines of `Share.lean`).  The
+table is smaller: `Init.Core`'s tree is 1,594,503 bytes with it and
+1,768,487 in place, 11% more, and `Init.Data.String.Basic`'s 993,756,880
+and 993,922,880 (the control's 993,700,602; ten modules of single proofs
+over 10 MB each make that tree's size, [#44]'s).  It is faster too: in
+place, Agda takes 535.8 s over the same 34 runs (528 s wall), against
+the table's 455.0 s (436 s), 18% more, with the same events declaration
+for declaration, since the sharing pass then makes 250 auxiliaries of
+the expansions a declaration repeats, where the table needs 30 and its
+85 definitions.  The table stays.
 
 ## Profiles K and CC
 
@@ -530,15 +653,19 @@ builtins through `Agda.Builtin.Nat` (`P28CubicalLiterals`).
    intended rejection.
 +  The fixtures `TranslatorTests.Input.Arithmetic` and `Numerals`, and the
    unit check `tests/Arithmetic.lean`, in the translator's harness.
++  The fixture `TranslatorTests.Input.Strings`, the unit checks of
+   `tests/Check.lean` (`checkLiterals`) and `tests/Scaffold.lean`
+   (`checkLiterals`), and the golden tree `strings`, for issue [#88].
 
 ## References
 
 +  Issues and pull requests: [#17], [#19], [#21], [#22], [#26], [#27],
-   [#30], [#31], [#33], [#44], [#84].
+   [#30], [#31], [#33], [#44], [#84], [#88].
 +  Lean's kernel: [kernel-type-checker], lines 36, 571, 702 to 733, 765
    and 1093 to 1099.
 +  Agda's builtins: [agda-builtins], "Natural numbers", "Booleans",
    "Characters", "Strings", "Lists".
++  Lean's kernel on string literals: [kernel-string-lit].
 +  Code: [`Arithmetic.lean`][arithmetic-lean] (the table),
    [`Scaffold.lean`][scaffold-lean] (`tableItem`, `helperItem`),
    [`Modules.lean`][modules-lean] (the helpers' homes),
@@ -555,6 +682,7 @@ builtins through `Agda.Builtin.Nat` (`P28CubicalLiterals`).
 [#33]: https://github.com/formalverification/lean2agda/issues/33
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [#84]: https://github.com/formalverification/lean2agda/pull/84
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 
 [catalog-literals]: gap-catalog.md#literals
 [recursors-positivity]: ../translator/recursors.md#agdas-positivity-check-and-leans-arithmetic
@@ -567,4 +695,6 @@ builtins through `Agda.Builtin.Nat` (`P28CubicalLiterals`).
 [modules-lean]: ../../translator/Lean2Agda/Core/Modules.lean
 [scaffold-check]: ../../scripts/python/scaffold_check.py
 [kernel-type-checker]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/type_checker.cpp
+[kernel-string-lit]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/inductive.cpp#L1368-L1380
+[printing-sharing]: ../translator/printing.md#the-sharing-pass
 [agda-builtins]: https://agda.readthedocs.io/en/v2.8.0/language/built-ins.html

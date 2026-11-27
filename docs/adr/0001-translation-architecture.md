@@ -818,8 +818,10 @@ correct ([#5], closed).
 types, values, constructors, recursors and their rules, ordered by strongly
 connected components; the *scaffold* is the Agda module the printer writes for
 a closure under profile U, every constant with its printed type as a postulate
-except `Nat` and `String`, bound to their builtins, the type abbreviations, the
-roots' values and the auxiliaries the sharing pass makes.
+except `Nat`, bound to its builtin, the type abbreviations, the roots' values
+and the auxiliaries the sharing pass makes; since [#88] `String` is the record
+Lean declares, and a string literal its kernel expansion, through one
+definition per distinct literal.
 
 **Decision**.  The emitter's shape is as follows; the first three items are
 built, the rest are the roadmap's plan.
@@ -1165,6 +1167,7 @@ closures hold ([`foundations/gap-report-corpus.md`], Corrections).
 [#76]: https://github.com/formalverification/lean2agda/pull/76
 [#77]: https://github.com/formalverification/lean2agda/pull/77
 [#78]: https://github.com/formalverification/lean2agda/pull/78
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 
 [`architecture.md`]: ../architecture.md
 [`related-work.md`]: ../related-work.md

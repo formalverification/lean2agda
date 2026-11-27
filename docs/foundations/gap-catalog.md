@@ -681,8 +681,9 @@ the `_unsafe_rec` companion, since a `partial def` becomes an `opaque` that
    that forces it for unguarded recursive records is forbidden under `--safe`
    ([agda-safe]).  By profile, as follows.
    +  U: as K, since [#18]: every structure-like type of `Init.Core`'s
-      closure but `String` is a record, `String` a postulate for
-      `BUILTIN STRING`; a recursive type with one constructor is a record
+      closure is a record, `String` and `Char` among them since [#88]
+      (until then `String` was a postulate for `BUILTIN STRING`); a
+      recursive type with one constructor is a record
       declared `no-eta-equality`, without the eta Lean also withholds
       (27 in `import Lean`, none in `Init`); and a structure-like type
       whose constructor binds a parameter explicitly is a data type with
@@ -797,8 +798,8 @@ literals**.
       under it).
    +  CU: the same builtins through `Agda.Builtin.Nat` and
       `Agda.Builtin.String` (probe `P28CubicalLiterals`).
-+  **Translation strategy**.  Literals through `BUILTIN NATURAL` and the
-   builtin string type in the printer ([#17]); the operation table ([#31],
++  **Translation strategy**.  `Nat` literals through `BUILTIN NATURAL`
+   in the printer ([#17]); the operation table ([#31],
    [`nat-operations.md`][nat-operations]): the recursive core of each
    accelerated operation is an Agda builtin with its arguments swapped or
    shifted (`Nat.add`, `Nat.mul`, `Nat.ble`, `Nat.beq`, `Nat.sub`, the
@@ -810,10 +811,18 @@ literals**.
    successor of the fuel, and `Nat.bitwise`'s at zero for an unknown `f`.
    `Nat.gcd` needs nothing of its own: Lean's definition computes once
    `Nat.modCore.go` is the builtin.  Under profile U the translator emits
-   the table by default (`--arithmetic agda`).  Literals of `String` should
-   be emitted as the kernel expands them, over Lean's structures, which
-   serves every profile; that is a follow-up of [#31].  The corpus expects
-   `nat-gcd-self` and `nat-gcd-succ` to exercise this entry.
+   the table by default (`--arithmetic agda`).  `String` literals are
+   emitted as the kernel expands them, `String.ofList` over `Char.ofNat`
+   applications, over `String` and `Char` as the records Lean declares,
+   with no `BUILTIN STRING`: one definition per distinct literal of the
+   closure, which serves every profile and postulates nothing ([#88],
+   [`nat-operations.md`][nat-operations], "`String` and `Char`").
+   `"ab" = String.ofList ['a', 'b']` then holds by `refl`, and
+   `"a" = String.mk ['a']` once the two functions' abstracted validity
+   proofs unfold, which Lean's kernel identifies by proof irrelevance
+   instead.  Until [#88] the printer bound `String` to Agda's builtin
+   string type and both were refused.  The corpus expects `nat-gcd-self`
+   and `nat-gcd-succ` to exercise this entry.
 +  **Predecessors**.  lean2dk value-stubs three classes of constants whose cost
    "is inherent to the encoding rather than the kernel", bignum `Nat`
    primitives on a unary encoding, the `omega` machinery's normal forms and
@@ -1078,11 +1087,12 @@ literals**.
    `refl` (probe `P15ProjLet`).  By profile, as follows.
    +  U: as K: since [#18], a projection from a record prints as its
       field projection and Lean's projection functions unfold to it, so
-      that a dependent field checks; from `String`, a postulate, and from
-      a type whose constructor binds a parameter explicitly, it still
-      prints through the recursor, which computes since [#19], so that a
-      dependent field checks there too (`String`'s recursor stays a
-      postulate).  `let` prints as Agda's `let`
+      that a dependent field checks, `String`'s among them since [#88]
+      (until then `String` was a postulate, and a projection from it
+      printed through its recursor, a postulate too); from a type whose
+      constructor binds a parameter explicitly, it still prints through
+      the recursor, which computes since [#19], so that a dependent field
+      checks there too.  `let` prints as Agda's `let`
       ([`printing.md`][printing], [`inductives.md`][inductives]).
    +  K: projections become applications of the record's projection functions;
       `let` becomes Agda's `let` or, where sharing matters for checking time,
@@ -1244,6 +1254,7 @@ Mathlib's large-eliminating propositions excepted.
 [#55]: https://github.com/formalverification/lean2agda/issues/55
 [#57]: https://github.com/formalverification/lean2agda/issues/57
 [#58]: https://github.com/formalverification/lean2agda/issues/58
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 
 [carneiro-thesis]: https://github.com/digama0/lean-type-theory/releases/tag/v1.0
 [abel-coquand]: https://arxiv.org/abs/1911.08174

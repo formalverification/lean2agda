@@ -84,6 +84,7 @@ def checkFixtures : IO Unit := do
     "projection structure omitted"
   require ((expressionDependencies (.lit (.natVal 3))).contains ``Nat) "literal Nat omitted"
   require ((expressionDependencies (.lit (.strVal "x"))).contains ``String) "literal String omitted"
+  require ((expressionDependencies (.lit (.strVal ""))).contains ``String.ofList) "the empty literal's expansion omitted"
   let info : ConstantInfo := .recInfo {
     name := `syntheticRec, levelParams := [], type := .sort .zero, all := [],
     numParams := 0, numIndices := 0, numMotives := 0, numMinors := 0,
@@ -116,10 +117,37 @@ def checkAtlas : IO Unit := do
   let duplicate ← closureFor env #[``Nat.gcd_self, ``Nat.gcd_self]
   require (renderClosure "U" duplicate == renderClosure "U" closure) "duplicate roots change output"
 
+/-- A string literal is its kernel expansion: the term Lean's own
+`toExpr` builds for `Meta.toCtorIfLit` before it reduces, which the kernel
+accepts as equal to the literal, over code points rather than bytes; and
+the closure counts every constant the expansion names, so that the
+closure of a constant holding a literal holds `String.ofList` and
+`Char.ofNat`.  The cases are an escape, the empty string, and a character
+of each UTF-8 length, one byte to four. -/
+def checkLiterals : IO Unit := do
+  let env ← importEnvironment #[`TranslatorTests.Input.Strings]
+  for s in ["a\"b\\c\n", "", "a", "λ", "✝", "𝔸", "aλ✝𝔸"] do
+    let e := stringLiteralExpansion s
+    require (e == mkApp (mkConst ``String.ofList) (toExpr s.toList)) s!"the expansion of {repr s} is not Lean's"
+    require (Kernel.isDefEq env {} (.lit (.strVal s)) e matches .ok true)
+      s!"the kernel does not equate {repr s} with its expansion"
+    let deps := expressionDependencies (.lit (.strVal s))
+    for n in expressionDependencies e do
+      require (deps.contains n) s!"the dependencies of {repr s} omit {n}"
+  -- Spelled out: `𝔸` is one code point, of four bytes.
+  let char := mkConst ``Char
+  require (stringLiteralExpansion "𝔸" == mkApp (mkConst ``String.ofList)
+      (mkApp3 (.const ``List.cons [.zero]) char (mkApp (mkConst ``Char.ofNat) (mkRawNatLit 120120))
+        (mkApp (.const ``List.nil [.zero]) char))) "𝔸 is not one code point"
+  let closure ← closureFor env #[``StringFixtures.widths]
+  for n in [``String.ofList, ``Char.ofNat, ``List.cons, ``List.nil, ``List.utf8Encode] do
+    require ((namesOf closure).contains n) s!"a literal's closure misses {n}"
+
 def runChecks : IO Unit := do
   checkArgs
   checkFixtures
   checkAtlas
-  IO.println "translator checks: parser, selection, dependencies, cycles, order, statistics, and atlas passed"
+  checkLiterals
+  IO.println "translator checks: parser, selection, dependencies, cycles, order, statistics, atlas, and literals passed"
 
 end CheckTests

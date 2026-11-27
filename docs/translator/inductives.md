@@ -17,14 +17,13 @@ each file's first line records its outcome.
 ## Records and data types
 
 A type with one constructor and no indices is one that Lean's kernel
-projects from (`Expr.proj`), and it becomes an Agda `record` unless one of
-the following holds:
-
-+  its constructor binds a parameter explicitly (the next section), since
-   a record has no indices;
-+  it is `String`, which stays a postulate because `BUILTIN STRING` binds
-   Agda's string literals to a postulated type, so that its constructor
-   `String.ofByteArray` and its recursor stay postulates too.
+projects from (`Expr.proj`), and it becomes an Agda `record` unless its
+constructor binds a parameter explicitly (the next section), since a
+record has no indices.  `String` and `Char` are records too, as Lean
+declares them: until [#88] `String` was a postulate bound to `BUILTIN
+STRING`, with its constructor `String.ofByteArray` and its recursor, so
+that Lean's string literals printed as Agda's; a literal now prints as
+Lean's kernel expands it ([`printing.md`][printing-literals]).
 
 Every other type becomes a `data` type, `Nat` among them, followed by
 `{-# BUILTIN NATURAL Nat #-}` so that literals print as decimals; an empty
@@ -147,13 +146,15 @@ where Agda's projection appears: the printing fixture's dependent
 projection `PrintFixtures.Dependent.value`, which the scaffold of [#17]
 refused, checks.
 
-From a type with one constructor that is not a record (`String`, or a type
-whose constructor binds a parameter explicitly), a projection still prints
+From a type with one constructor that is not a record (a type whose
+constructor binds a parameter explicitly), a projection still prints
 through the type's recursor, as [#17] printed every projection.  Since
 [#19] that computes, the recursor reducing on the constructor, so a field
 whose type mentions an earlier field checks too: the recursor fixture's
-`RecursorFixtures.Tagged.value`, refused before, is the test.  `String`'s
-recursor stays a postulate.  The printer refuses a projection from
+`RecursorFixtures.Tagged.value`, refused before, is the test.  A
+projection from a `String` printed that way until [#88], through a
+recursor that was a postulate, and is a field projection now.  The
+printer refuses a projection from
 a recursive such type, whose recursor's minor premise would need the
 induction hypotheses too; `import Lean` has none.
 
@@ -236,11 +237,14 @@ under `tests/expected/scaffolds/init-core-inductives/`:
 | Lean's nested or mutual types, `--types-only` | 72 | 618 of 685 | 411 of 478 | 8 types, and 59 that use them |
 | the fixture `TranslatorTests.Input.Inductives` | 17 | 79 of 79 | 25 of 25 | none |
 
-The 145th inductive type of `Init.Core`'s closure is `String`, a
-postulate.  The scaffold prints in 1.9 s, holds 127,134 bytes,
-scope-checks in 0.9 s, and type-checks in 5 Agda runs, 3.9 s in all and
-1.1 s for the last (medians of three runs on 2026-10-13, at load averages
-of 8.9 before and 8.3 after).  The four matchers it refuses are
+The 145th inductive type of `Init.Core`'s closure is `String`, which
+was a postulate when these figures were measured; since [#88] it is a
+record, and the golden listing checks 545 of 545 declarations, 145 of
+145 data types and records and 147 of 147 recursors.  The scaffold
+prints in 1.9 s, holds 127,134 bytes, scope-checks in 0.9 s, and
+type-checks in 5 Agda runs, 3.9 s in all and 1.1 s for the last
+(medians of three runs on 2026-10-13, at load averages of 8.9 before and
+8.3 after).  The four matchers it refuses are
 those of [`printing.md`][printing-checks], whose `n ≤ m` now unfolds to
 `LE.le₁ instLENat n m` and needs [#20]'s transparent `instLENat`, with
 which, in a copy of the `nat-gcd-self` scaffold, all four check.
@@ -282,7 +286,8 @@ modules and 937 MB, every proof of the closure included, and its
 
 ## Recursors
 
-Since [#19] every recursor but `String`'s is defined by pattern matching,
+Since [#19] every recursor is defined by pattern matching (`String`'s
+since [#88]),
 one clause per kernel rule, and the recursors of a mutual or nested block
 are one `mutual` definition; [`recursors.md`][recursors] gives the
 rules, the probes, the termination counts and what Agda checks with them.
@@ -337,7 +342,9 @@ one data type.
 [#19]: https://github.com/formalverification/lean2agda/issues/19
 [#20]: https://github.com/formalverification/lean2agda/issues/20
 [#22]: https://github.com/formalverification/lean2agda/issues/22
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 [printing]: printing.md
+[printing-literals]: printing.md#literals
 [modules]: modules.md
 [recursors]: recursors.md
 [printing-checks]: printing.md#what-agda-checks-and-the-fallback

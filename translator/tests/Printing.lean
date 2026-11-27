@@ -40,7 +40,6 @@ def precedenceCases : List (AgdaTerm × String) :=
    (.app f .explicit letE, "f (let y₀ : A; y₀ = a₀ in y₀)"),
    (.app f .explicit .sort, "f Set"),
    (.app f .explicit (.nat 42), "f 42"),
-   (.app f .explicit (.str "s"), "f \"s\""),
    (.pi .explicit none arrow B, "(A → B) → B"),
    (.pi .explicit none A arrow, "A → A → B"),
    (.pi .explicit none (.app f .explicit a) B, "f a₀ → B"),
@@ -59,8 +58,6 @@ def precedenceCases : List (AgdaTerm × String) :=
 
 def checkLayout : IO Unit := do
   for (t, expected) in precedenceCases do expectText t.render expected "layout"
-  expectText (agdaStringLiteral "a\"b\\c\nd") "\"a\\\"b\\\\c\\10\\&d\"" "string escapes"
-  expectText (agdaStringLiteral "λ9✝") "\"\\955\\&9\\10013\\&\"" "non-ASCII escapes"
   expectText ((Clause.ofTerm (.lam .implicit "α₀" .sort (.lam .instance "i₁" .sort
     (.lam .explicit "a₂" .sort (.var "a₂"))))).render "c") "c {α₀} ⦃ i₁ ⦄ a₂ = a₂" "clause patterns"
 
@@ -107,7 +104,12 @@ def checkConstructors (env : Environment) : IO Unit := do
   ok (mkConst ``Nat) "Nat" "constant"
   ok (mkConst ``Nat.gcd_self) "Nat:gcd~uself" "escaped constant"
   ok (.lit (.natVal 18446744073709551616)) "18446744073709551616" "natural literal"
-  ok (.lit (.strVal "x\"")) "\"x\\\"\"" "string literal"
+  -- A string literal prints as the kernel expands it, over code points.
+  ok (.lit (.strVal "x\"")) ("String:ofList (List:cons {Char} (Char:ofNat 120) " ++
+    "(List:cons {Char} (Char:ofNat 34) (List:nil {Char})))") "string literal"
+  ok (.lit (.strVal "")) "String:ofList (List:nil {Char})" "empty string literal"
+  ok (.lit (.strVal "λ𝔸")) ("String:ofList (List:cons {Char} (Char:ofNat 955) " ++
+    "(List:cons {Char} (Char:ofNat 120120) (List:nil {Char})))") "string literal past ASCII"
   ok (.mdata {} (mkConst ``Nat)) "Nat" "mdata dropped"
   ok (mkApp2 (.const ``id [.succ .zero]) (mkConst ``Nat) (.lit (.natVal 3))) "id {Nat} 3"
     "implicit argument"

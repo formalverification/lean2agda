@@ -2,6 +2,7 @@
 File: translator/Lean2Agda/Core/Closure.lean
 -/
 import Lean2Agda.Core.Types
+import Lean2Agda.Core.Literals
 import Lean.Util.ForEachExpr
 import Lean.Util.SCC
 
@@ -21,14 +22,17 @@ def moduleOf (env : Environment) (name : Name) : Option Name := do
   env.header.moduleNames[idx.toNat]?
 
 /-- Visit shared subexpressions once.  Projections carry a structure
-name outside `.const`; literals carry an implicit primitive type. -/
+name outside `.const`; literals carry an implicit primitive type, and a
+string literal stands for its kernel expansion, which names
+`String.ofList`, `List.cons`, `List.nil`, `Char`, `Char.ofNat` and `Nat`
+(`Literals.lean`). -/
 def expressionDependencies (expr : Expr) : Array Name := runST fun s => do
   let names : ST.Ref s (Std.HashSet Name) ← ST.mkRef {}
   expr.forEach (ω := s) (m := ST s) fun e => do
     match e with
     | .const n _ | .proj n _ _ => names.modify (·.insert n)
     | .lit (.natVal _) => names.modify (·.insert ``Nat)
-    | .lit (.strVal _) => names.modify (·.insert ``String)
+    | .lit (.strVal _) => names.modify fun ns => stringLiteralConstants.foldl (·.insert ·) ns
     | _ => pure ()
   return sortNames (← names.get).toArray
 

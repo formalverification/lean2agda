@@ -48,6 +48,8 @@ entry adds its row here too.
 | LF-13 | S2 | Lake does not track a file that `include_str` reads |
 | LF-14 | S2 | `testDriver` cannot name an executable whose name has a hyphen |
 | LF-15 | Checked | the kernel's counters bound the uses of an accelerated operation's definition, and match Agda's refusals for `Nat.sub` |
+| LF-16 | Checked | the kernel expands a string literal to Lean's own `toExpr` of its code points, and what that names holds no literal |
+| LF-17 | S2 | `"a" = String.mk ['a']` by `rfl` rests, unseen, on proof irrelevance between two abstracted proofs |
 
 ## LF-1: `#print axioms` omits axioms behind an inductive type, `sorryAx` included
 
@@ -680,6 +682,63 @@ entry adds its row here too.
    candidates").
 +  **Upstream**.  Nothing to report.
 
+## LF-16: the kernel expands a string literal to Lean's own `toExpr` of its code points
+
++  **Severity**.  Checked.
++  **Found**.  2026-11-24, by issue [#88]'s session, at Lean v4.33.1.
++  **What was asked**.  Issue [#88] emits each string literal as the term
+   Lean's kernel expands it to, so that Agda compares what the kernel
+   compares.  Asked: what that term is at the pin, exactly, and whether
+   expanding it can close a cycle, a literal inside the closure of the
+   constants it names.
++  **The answer**.  `string_lit_to_constructor`
+   ([`inductive.cpp`, lines 1368 to 1380][kernel-string-lit]) decodes the
+   literal's UTF-8 into code points and builds `String.ofList` over
+   `List.cons.{0} Char (Char.ofNat k)` for each code point `k`, a natural
+   number literal, ending in `List.nil.{0} Char`; the kernel calls it
+   where a recursor meets a literal (`inductive.h`, line 97), where a
+   projection does (`type_checker.cpp`, line 422), and where a comparison
+   meets one against an application of `String.ofList`, the constant of
+   line 1342 (lines 1145 to 1156).  That is the term
+   `mkApp (mkConst ``String.ofList) (toExpr s.toList)`, which
+   `Lean.Meta.toCtorIfLit` builds before it reduces, for an escape, the
+   empty string and a character of each UTF-8 length, one byte to four,
+   and the kernel's `isDefEq` equates each with its literal
+   (`translator/tests/Check.lean`, `checkLiterals`).  The closure of
+   `String.ofList`, `Char.ofNat`, `List.cons` and `List.nil` has 373
+   constants, 375 with `String.mk`, and none holds a string literal, so
+   no expansion refers back to itself.
++  **To rerun**.  `lake test -- check` from `translator/`, which fails if
+   either side moves with the pin; the cycle's count by the closure of
+   those four constants.
++  **Upstream**.  Nothing to report.
+
+## LF-17: `"a" = String.mk ['a']` by `rfl` rests, unseen, on proof irrelevance
+
++  **Severity**.  S2.
++  **Found**.  2026-11-24, by issue [#88]'s session, at Lean v4.33.1 and
+   Agda 2.8.0.
++  **What happened**.  `String.ofList` and the deprecated `String.mk` have
+   one body in the source, `⟨List.utf8Encode data, .intro data rfl⟩`
+   (`Init/Prelude.lean`, line 3557; `Init/Data/String/Bootstrap.lean`,
+   line 150), and `"a" = String.mk ['a']` holds by `rfl`.  As kernel
+   terms the bodies differ: the elaborator abstracts each one's proof of
+   validity into a theorem of its own, `String.ofList._proof_1` and
+   `String.mk._proof_1`, with one statement and one proof, and the kernel
+   identifies the two by definitional proof irrelevance.  A translator
+   that keeps theorems opaque sees two different constants; the profile U
+   scaffold checks the equation only after the checker's fallback unfolds
+   both theorems (the golden tree `strings`).
++  **Meaning**.  A proof by `rfl` between two definitions written alike
+   can rest on proof irrelevance without saying so, through the proofs
+   the elaborator abstracts; the encoding of `Prop` ([#27]) decides what
+   such a proof becomes in profiles K and CC.
++  **To rerun**.  `#print String.mk` and `#print String.ofList` with
+   `set_option pp.proofs true`; the listing
+   `tests/expected/scaffolds/strings/U/TranslatorTests/Input/Strings.checked.txt`.
++  **Upstream**.  Nothing to report: it is the elaborator's documented
+   treatment of proofs inside definitions.
+
 [#7]: https://github.com/formalverification/lean2agda/issues/7
 [#8]: https://github.com/formalverification/lean2agda/issues/8
 [#69]: https://github.com/formalverification/lean2agda/pull/69
@@ -719,3 +778,6 @@ entry adds its row here too.
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [kernel-reduce-nat]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/type_checker.cpp#L702-L733
 [nat-operations]: foundations/nat-operations.md
+[#88]: https://github.com/formalverification/lean2agda/issues/88
+[kernel-string-lit]: https://github.com/leanprover/lean4/blob/v4.33.1/src/kernel/inductive.cpp#L1368-L1380
+[#27]: https://github.com/formalverification/lean2agda/issues/27

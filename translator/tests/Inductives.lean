@@ -39,7 +39,7 @@ def declarationText (env : Environment) (n : Name) : IO String := do
 def checkShapes (env : Environment) : IO Unit := do
   let cases : List (Name × Nat × Nat × Bool) := [
     (``Eq, 1, 2, false), (``HEq, 1, 2, false), (``Nat.le, 1, 1, false), (``Acc, 2, 2, false),
-    (``List, 1, 1, false), (``Nat, 0, 0, false), (``String, 0, 0, false), (``Prod, 2, 2, true),
+    (``List, 1, 1, false), (``Nat, 0, 0, false), (``String, 0, 0, true), (``Char, 0, 0, true), (``Prod, 2, 2, true),
     (``PUnit, 0, 0, true), (``True, 0, 0, true), (``And, 2, 2, true), (``LawfulBEq, 2, 2, true),
     (``Relation.TransGen, 3, 3, false), (``Lean.Syntax, 0, 0, false),
     (``Lean.Meta.CheckTactic.CheckGoalType, 1, 2, false),
@@ -55,7 +55,7 @@ def checkShapes (env : Environment) : IO Unit := do
     require (isAgdaRecord env v == record) s!"{n} is a record: {isAgdaRecord env v}"
   for (n, expected) in [(``Prod.fst, true), (``Subtype.property, true), (``LE.le, true),
       (``InductiveFixtures.Packed.fits, true), (``InductiveFixtures.Rose.children, true),
-      (``String.toByteArray, false), (``String.isValidUTF8, false), (``Nat.add, false)] do
+      (``String.toByteArray, true), (``String.isValidUTF8, true), (``Nat.add, false)] do
     require (isRecordProjection env n == expected) s!"{n} is a record projection"
 
 /-- The declarations, each as `run.sh` has Agda check it. -/
@@ -74,6 +74,10 @@ def checkDeclarations (env : Environment) : IO Unit := do
     (``Prod, "record Prod (α₀ : Set) (β₁ : Set) : Set where\n  constructor Prod:mk\n  field\n" ++
       "    fst₂ : α₀\n    snd₃ : β₁"),
     (``PUnit, "record PUnit : Set where\n  constructor PUnit:unit"),
+    (``String, "record String : Set where\n  constructor String:ofByteArray\n  field\n" ++
+      "    toByteArray₀ : ByteArray\n    isValidUTF8₁ : ByteArray:IsValidUTF8 toByteArray₀"),
+    (``Char, "record Char : Set where\n  constructor Char:mk\n  field\n" ++
+      "    val₀ : UInt32\n    valid₁ : UInt32:isValidChar val₀"),
     (``LawfulBEq, "record LawfulBEq (α₀ : Set) ⦃ inst₁ : BEq α₀ ⦄ : Set where\n" ++
       "  constructor LawfulBEq:mk\n  field\n    ⦃ toReflBEq₂ ⦄ : ReflBEq α₀ ⦃ inst₁ ⦄\n" ++
       "    eqofbeq₃ : {a₃ : α₀} → {b₄ : α₀} → Eq {Bool} (BEq:beq {α₀} ⦃ inst₁ ⦄ a₃ b₄) Bool:true → Eq {α₀} a₃ b₄"),
@@ -143,9 +147,7 @@ def checkProjections (env : Environment) : IO Unit := do
       (.proj ``InductiveFixtures.Rose 1 (.bvar 0)) .default))
     "λ (t₀ : InductiveFixtures:Rose) → InductiveFixtures:Rose.children₁ t₀" "a recursive record's projection"
   expectText (← printType env (.lam `s (mkConst ``String) (.proj ``String 0 (.bvar 0)) .default))
-    ("λ (s₀ : String) → String:rec {λ (self₁ : String) → ByteArray} " ++
-     "(λ (toByteArray₁ : ByteArray) → λ (isValidUTF8₂ : ByteArray:IsValidUTF8 toByteArray₁) → toByteArray₁) s₀")
-    "a projection from String, a postulate"
+    "λ (s₀ : String) → String.toByteArray₀ s₀" "a projection from String, a record"
   let sized := mkApp (mkConst ``InductiveFixtures.Sized) (.lit (.natVal 3))
   expectText (← printType env (.lam `x sized (.proj ``InductiveFixtures.Sized 0 (.bvar 0)) .default))
     ("λ (x₀ : InductiveFixtures:Sized 3) → InductiveFixtures:Sized:rec {3} " ++

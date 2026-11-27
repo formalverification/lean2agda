@@ -96,6 +96,14 @@ check_tree quotients TranslatorTests.Input.Quotients
 check_tree arithmetic TranslatorTests.Input.Arithmetic TranslatorTests.Input.Numerals
 check_tree arithmetic-lean --arithmetic lean TranslatorTests.Input.Arithmetic
 
+# String and Char as Lean's structures (issue M3-11): issue M3-11's
+# round trips, "ab" = String.ofList ['a', 'b'] and "a" = String.mk ['a']
+# by rfl, and the table of literals.  Under the table only: under Lean's
+# definitions ByteArray.IsValidUTF8, which String's field names, exhausts
+# Agda's heap in every round of the loop, so that nothing of String
+# checks (docs/foundations/nat-operations.md, "String and Char").
+check_tree strings TranslatorTests.Input.Strings
+
 # Where the quotient's computation rules fire (issue M2-7): the same
 # tree with its REWRITE pragmas removed, so that the rules never fire,
 # refuses every root, each of which holds in Lean only because the

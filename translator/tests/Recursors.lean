@@ -9,8 +9,9 @@ The recursors' clauses (issue M2-5): the kernel's rules as clauses, with
 the visibilities of each recursor's Lean type; `_` for indices and for a
 parameter Agda keeps as an index; a recursive field's call; the absurd
 clause of an empty type; a nested type's recursors and a mutual pair's
-as one `mutual` block, in `recursorRank`'s order; `String`'s recursor
-left a postulate; and `breakCycles` leaving a recursor's recursion alone.
+as one `mutual` block, in `recursorRank`'s order; `String`'s recursor by
+its clause, as any record's; and `breakCycles` leaving a recursor's
+recursion alone.
 `tests/run.sh` checks the fixture `TranslatorTests.Input.Recursors`'s
 scaffold against its golden file and listing, where every recursor's
 values compute.
@@ -68,8 +69,10 @@ def checkCoreRecursors (env : Environment) : IO Unit := do
   expectText ((clauseLines (← itemOf s ``False.rec)).getD 1 "") "False:rec motive₀ ()" "False.rec"
   expectText ((clauseLines (← itemOf s ``Prod.rec)).getD 1 "")
     "Prod:rec {α₀} {β₁} {motive₂} mk₃ (Prod:mk fst₄ snd₅) = mk₃ fst₄ snd₅" "Prod.rec"
-  -- `String` is a postulate, and its recursor stays one.
-  require ((← itemOf s ``String.rec).text.startsWith "postulate String:rec : ") "String.rec"
+  -- `String` is a record, and its recursor has a clause, as Prod's has.
+  expectText ((clauseLines (← itemOf s ``String.rec)).getD 1 "")
+    "String:rec {motive₀} ofByteArray₁ (String:ofByteArray toByteArray₂ isValidUTF8₃) = ofByteArray₁ toByteArray₂ isValidUTF8₃"
+    "String.rec"
   -- Every recursor item is structural, so `breakCycles` left it alone.
   for n in [``Nat.rec, ``Acc.rec] do
     let item ← itemOf s n

@@ -53,9 +53,14 @@ The entries are as follows:
    `Nat.sub`'s equation at a successor as a rewrite rule, with two that
    make the rules confluent; the checker and the tree driver undo an
    unfolding made in vain ([#31]).
++  `String` and `Char` as the records Lean declares, with no `BUILTIN
+   STRING`: a string literal printed as Lean's kernel expands it,
+   `String.ofList` over `Char.ofNat` applications, through one definition
+   per distinct literal of the closure, the table of literals ([#88]).
 
 [#25]: https://github.com/formalverification/lean2agda/issues/25
 [#31]: https://github.com/formalverification/lean2agda/issues/31
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 [#64]: https://github.com/formalverification/lean2agda/pull/64
 [#71]: https://github.com/formalverification/lean2agda/pull/71
 [#73]: https://github.com/formalverification/lean2agda/pull/73

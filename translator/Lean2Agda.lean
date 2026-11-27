@@ -2,6 +2,7 @@
 File: translator/Lean2Agda.lean
 -/
 import Lean2Agda.Core.Types
+import Lean2Agda.Core.Literals
 import Lean2Agda.Core.Closure
 import Lean2Agda.Core.CommandLine
 import Lean2Agda.Core.Render

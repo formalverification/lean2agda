@@ -1,3 +1,3 @@
-checked 342 of 342 declarations, 41 of 41 data types and records
-unfolded 4 of 51 theorems, 3 in vain
-defined 41 of 41 recursors by pattern matching, 0 refused by the termination checker
+checked 380 of 380 declarations, 42 of 42 data types and records
+unfolded 4 of 64 theorems, 3 in vain
+defined 42 of 42 recursors by pattern matching, 0 refused by the termination checker

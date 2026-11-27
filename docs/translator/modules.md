@@ -57,9 +57,11 @@ The rules behind that shape are as follows:
 +  **Exactly the modules named**: the import set of a module is computed
    from its items' printed references, and a reference that names
    neither an item of the module nor an item of another module stops the
-   translator with an error.  A literal counts as a reference to `Nat` or
-   `String` (`AgdaTerm.references`), whose builtin binding a module sees
-   only through an import of the type's module, direct or not.
+   translator with an error.  A natural number literal counts as a
+   reference to `Nat` (`AgdaTerm.references`), whose builtin binding a
+   module sees only through an import of `Nat`'s module, direct or not;
+   a string literal is a reference to its definition, which
+   `Init.Prelude` owns ([`printing.md`][printing-literals]).
 +  **Acyclic**: a Lean declaration refers only to its own module and to
    modules that module imports, and Lean's import graph is acyclic, so
    the emitted graph is too.  It is often a chain: in
@@ -342,5 +344,6 @@ python3 ../scripts/python/agda_check.py --fresh -j 8 kept
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [naming]: naming.md
 [printing]: printing.md
+[printing-literals]: printing.md#literals
 [related]: ../related-work.md
 [report]: ../reports/printing-blowup-2026-10-12.md

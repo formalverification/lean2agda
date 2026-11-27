@@ -206,11 +206,14 @@ made faithful in Milestones 3 and 4, as follows.
    differs from the type they are checked against, printing a definition's
    leading lambdas as left-hand-side patterns, naming binders by a readable
    base and their depth, and rendering by a precedence table.  Under profile U
-   every sort prints as `Set`; literals go through `BUILTIN NATURAL` and
-   `BUILTIN STRING`; `Expr.proj` prints through the structure's recursor until
-   records exist.  lyphyser's deduplication and lambda binder fixing are the
-   ideas, re-derived.  Details: [`translator/printing.md`][printing], with the
-   measurements in [`reports/printing-blowup-2026-10-12.md`][blowup].
+   every sort prints as `Set`; `Nat` literals go through `BUILTIN NATURAL`,
+   and a string literal prints as the kernel expands it, through one
+   definition per distinct literal ([#88]); `Expr.proj` prints as the record's
+   field projection since [#18], and through the structure's recursor for a
+   type whose constructor binds a parameter explicitly.  lyphyser's
+   deduplication and lambda binder fixing are the ideas, re-derived.  Details:
+   [`translator/printing.md`][printing], with the measurements in
+   [`reports/printing-blowup-2026-10-12.md`][blowup].
 +  **The scaffold** (built by [#17]).  `--out DIR` writes one Agda module for
    the whole closure under `{-# OPTIONS --type-in-type --rewriting #-}`: each
    declaration emitted by its kind ([#18], [#20]; recursors are still
@@ -390,6 +393,7 @@ Issues are cited by number; the documents are this repository's.
 [#73]: https://github.com/formalverification/lean2agda/pull/73
 [#74]: https://github.com/formalverification/lean2agda/pull/74
 [#77]: https://github.com/formalverification/lean2agda/pull/77
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 
 [adr]: adr/0001-translation-architecture.md
 [map]: translator/architecture.md

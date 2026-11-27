@@ -45,9 +45,11 @@ lean` emits Lean's compiled definitions of them as any other, the control
 of the table's measurements ([`nat-operations.md`][nat-operations]).
 
 `--share N` sets the sharing threshold, 32 by default; `--share 0` turns
-the pass off.  The listing, `closure.txt` and standard output are as
-before.  The sidecars are those of the shared closure, so that they map the
-auxiliary definitions' identifiers back to their structured names too.
+off the sharing of subterms, and leaves the table of string literals
+(The sharing pass, below).  The listing, `closure.txt` and standard
+output are as before.  The sidecars are those of the shared closure, so
+that they map the auxiliary definitions' identifiers back to their
+structured names too.
 `agda_check.py --refusals --without-rewrite` checks the tree with its
 `REWRITE` pragmas removed (Quotients, below), as `scaffold_check.py
 --without-rewrite` does for one module.
@@ -212,13 +214,26 @@ constants by which universe parameters are zero is [#28]'s.
 ### Literals
 
 A natural number literal prints as a decimal, of any size; the scaffold
-binds Lean's `Nat` to `BUILTIN NATURAL`.  A string literal prints as an
-Agda string, with `"` and `\` escaped and every character outside
-printable ASCII written as a decimal escape closed by `\&` (`λ` becomes
-`\955\&`), so that the output does not depend on how a reader decodes
-Unicode; the scaffold binds Lean's `String` to `BUILTIN STRING`.  None of
-the three corpus entries has a string literal; the printing fixture's
-`greeting` does.
+binds Lean's `Nat` to `BUILTIN NATURAL`.  A string literal is a kernel
+term of its own, which Lean's kernel expands on demand to
+`String.ofList` over `List.cons.{0} Char (Char.ofNat k)` for each code
+point `k`, ending in `List.nil.{0} Char` (`string_lit_to_constructor`,
+[`nat-operations.md`][nat-operations-strings]).  Since [#88] the
+scaffold has no string literal of its own: `String` and `Char` are the
+records Lean declares, and a literal prints as that expansion,
+
+    String:ofList (List:cons {Char} (Char:ofNat 97) (List:cons {Char} (Char:ofNat 98) (List:nil {Char})))
+
+for `"ab"`, with one `Char.ofNat` per code point whatever its UTF-8
+length (`λ` is `Char:ofNat 955`, `𝔸` is `Char:ofNat 120120`) and
+`String:ofList (List:nil {Char})` for `""`.  The scaffold prints the
+expansion once per distinct literal, in the literal's definition, and a
+reference to that definition wherever the literal occurs (the table of
+literals, under The sharing pass, below); the printer prints a literal
+it meets directly, in a recursor's rule or a constructor's type read
+from the environment, as the expansion in place.  None of the three
+corpus entries has a string literal; the printing fixture's `greeting`
+and the fixture `TranslatorTests.Input.Strings` do.
 
 ### Projections
 
@@ -226,21 +241,19 @@ the three corpus entries has a string literal; the printing fixture's
 prints as Agda's projection of the field, `S.fᵢ {params} t`, its
 parameters passed implicitly, or as instance arguments for those `S`
 declares as instances, as Agda's projections take them
-([`inductives.md`][inductives-projections]).  From a type with one
-constructor that is not a record (`String`, a postulate for
-`BUILTIN STRING`, or a type whose constructor binds a parameter
-explicitly) it prints through the type's recursor, as every projection
-did before [#18]: `S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`,
-where `Tᵢ` is the field's type with each earlier field replaced by its
-projection from `self`, as the kernel types a projection.  For a field
+([`inductives.md`][inductives-projections]); `String` is such a record
+since [#88].  From a type with one constructor that is not a record (a
+type whose constructor binds a parameter explicitly) it prints through
+the type's recursor, as every projection did before [#18]:
+`S.rec {params} {λ self → Tᵢ} (λ f₀ … fₙ₋₁ → fᵢ) t`, where `Tᵢ` is the
+field's type with each earlier field replaced by its projection from
+`self`, as the kernel types a projection.  For a field
 whose type mentions an earlier field, that checks because the recursor
 computes on the constructor ([#19]); the recursor fixture's
 `RecursorFixtures.Tagged.value`, a dependent field of a type whose
-constructor binds its parameter, is the test.  `String`'s recursor stays a
-postulate, so such a projection from a `String` does not compute.
-The printing fixture's dependent field `PrintFixtures.Dependent.value`,
-which Agda refused printed through the recursor, checks as a field
-projection.
+constructor binds its parameter, is the test.  The printing fixture's
+dependent field `PrintFixtures.Dependent.value`, which Agda refused
+printed through the recursor, checks as a field projection.
 
 ### Other constructors
 
@@ -296,7 +309,42 @@ pass is what keeps the text linear: the fixture `PrintFixtures.doubling`,
 1,288 with it, and the doubling of 2^20 leaves in `tests/Printing.lean`
 prints 2^22 − 3 nodes without it and 100 with it.  The pass shares closed
 subterms only, within one declaration; open repetition and sharing across
-declarations are [#44]'s.
+declarations are [#44]'s, but for string literals, below.
+
+**The table of literals** ([#88]).  Before it shares any subterm, the
+pass gives each distinct string literal of the closure one auxiliary
+definition, its kernel expansion of type `String` (`tabulateLiterals`),
+and replaces every occurrence of the literal in a declaration's type or
+value by a reference to it, in every declaration of the closure, so
+that a literal prints once however many declarations hold it:
+`Init.Core`'s closure holds 742 literals, 85 distinct, in 62
+declarations, its macro and unexpander rules' syntax kinds above all.
+The definitions are as follows:
+
++  named `String._lit` followed by the literal's text as one more name
+   component, `String:~ulit:ab` in Agda for `"ab"`, `String:~ulit:~e`
+   for `""` and `String:~ulit:a~x22~b~x5c~c~xa~` for `"a\"b\\c\n"`,
+   since Agda's identifier escapes a component injectively
+   ([`naming.md`][naming]): the name is the literal's alone, never the
+   closure's, and no two literals share one;
++  owned by `String.ofList`'s module, `Init.Prelude`, which every module
+   holding a literal imports, since it declares `String`; every other
+   module names a definition by that module's path, and the sidecar of
+   `Init.Prelude` maps each back to its Lean name;
++  added to the environment through the kernel, which checks each, before
+   any subterm is shared, so that a shared subterm may mention one;
++  free of cycles: their values name `String.ofList`, `List.cons`,
+   `List.nil`, `Char` and `Char.ofNat`, whose closure of 373 constants
+   holds no literal, so that no definition refers back to itself and
+   `breakCycles` postulates none of what they unfold to.
+
+A recursor's computation rules are left as they are, as the sharing pass
+leaves them, and the printer expands a literal there in place.  On
+`Init.Core`'s closure the table costs 85 definitions of 31,908 bytes, and
+printing each literal in place instead, the expansion before the sharing
+pass so that a literal repeated within one declaration is shared, makes
+the tree 11% larger and Agda 18% slower
+([`nat-operations.md`][nat-operations-strings] has the numbers).
 
 ## The scaffold
 
@@ -311,9 +359,6 @@ emitted, as follows:
    each type with one constructor and no indices, a data type for each
    other, `Nat` among them, bound to `BUILTIN NATURAL`
    ([`inductives.md`][inductives]);
-+  `String`, a postulate bound to `BUILTIN STRING`, with its constructor
-   and recursor ([`nat-operations.md`][nat-operations] gives the design
-   that would emit Lean's structure instead);
 +  the recursive cores of the operations Lean's kernel accelerates on
    `Nat` (`Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.pow`, `Nat.beq`,
    `Nat.ble`, `Nat.div.go`, `Nat.modCore.go`, `Nat.bitwise`,
@@ -331,7 +376,8 @@ emitted, as follows:
    and its printed clause, since Lean's terms rely on unfolding it; the
    projection functions of records, whose values print as the records'
    field projections, `partial` definitions' `_unsafe_rec` companions and
-   the sharing pass's auxiliary definitions are definitions too;
+   the sharing pass's auxiliary definitions are definitions too, the
+   table's definitions of the closure's string literals among them;
 +  a theorem (`thmInfo`) is a definition inside an `opaque` block of its
    own, under the comment `-- theorem`, so that Agda's conversion checking
    never unfolds a proof: Lean's kernel compares proofs by proof
@@ -344,8 +390,8 @@ emitted, as follows:
    value Lean's kernel never unfolds, kept but never unfolded;
 +  the recursors of each block of inductive types are one definition by
    pattern matching, under the comment `-- recursor`, whose clauses are
-   the kernel's computation rules ([`inductives.md`][inductives-recursors]);
-   `String`'s recursor is a postulate, as `String` is;
+   the kernel's computation rules ([`inductives.md`][inductives-recursors]),
+   `String`'s among them since [#88];
 +  an axiom is a postulate, and so are the quotient primitives,
    `Quot.lift` and `Quot.ind` each followed by its computation rule as a
    rewrite rule (Quotients, below).
@@ -622,8 +668,9 @@ and all seven check, with the recursors defined or not.
 `make test-translator` runs the following; the probes in the pull request
 broke each rule in turn and showed which checks fail:
 
-+  `tests/Printing.lean`: the precedence table, string escapes, clause
-   patterns, binder names, each `Expr` constructor, the lambda repairs and
++  `tests/Printing.lean`: the precedence table, string literals printed
+   as the kernel expands them (an escape, `""`, code points past ASCII),
+   clause patterns, binder names, each `Expr` constructor, the lambda repairs and
    the three eta repairs, a telescope, qualified names, and the sharing pass's
    counting on the doubling of 2^20 leaves and its auxiliaries
    (kernel-checked, owned, printed in linear size);
@@ -641,7 +688,12 @@ broke each rule in turn and showed which checks fail:
    the six refusals with their reasons and their absence from the module,
    the header's count, a closure with nothing to refuse, and the sharing
    pass leaving an `unsafe` declaration alone; also the mutual `partial`
-   companions of the printing fixture, and a `String` root's builtin;
+   companions of the printing fixture, and on the fixture
+   `tests/TranslatorTests/Input/Strings.lean` the table of literals (one
+   definition per distinct literal, in `Init.Prelude`, its exact text,
+   one definition for a literal two declarations hold), `String` a record
+   with no `BUILTIN STRING`, and `String.ofList`, `Char.ofNat`,
+   `List.utf8Encode`, `String.utf8EncodeChar` and `String.mk` transparent;
 +  `PrintingLexical.agda`, which `tests/Printing.lean` writes: a binder
    built from every Agda keyword and sort name, which Agda checks;
 +  nine scaffolds against golden trees in `tests/expected/scaffolds/`
@@ -656,8 +708,10 @@ broke each rule in turn and showed which checks fail:
    names the six refused declarations and whose listings show the
    fallback, and `quotients`, whose four roots check, with a second set of
    listings of the same tree checked with `--without-rewrite`, which
-   refuses all four; the scaffold of `Init.Core`'s inductive types,
-   against its listings alone; and the declarations each scaffold's
+   refuses all four; since [#88] also `strings`, whose round trips
+   through `String.ofList` and `String.mk` check under the operation
+   table; the scaffold of `Init.Core`'s inductive types, against its
+   listings alone; and the declarations each scaffold's
    translator refuses, against a golden `refusals.txt` where one exists
    and required to be none otherwise;
 +  `scripts/python/tests/test_scaffold_check.py`: the checker's parsing
@@ -690,9 +744,9 @@ The printer exposes the following, all pure:
    the binders out.  `printExpr`, `printAgainst` and `Scope.enter` work at
    the level below, for printing a constructor's type in the scope of its
    type's parameters.
-+  `shareClosure env threshold closure` shares a closure, and
-   `addAuxiliaries env closure` returns the environment the printer needs
-   for it.
++  `shareClosure env threshold closure` tabulates a closure's string
+   literals and shares its subterms, and `addAuxiliaries env closure`
+   returns the environment the printer needs for it.
 +  Each call returns `PrintCounts`: repairs at the top and below,
    projections printed through a recursor, and projections printed as a
    record's field projection.
@@ -742,6 +796,7 @@ It assumes the following of its callers:
 [#31]: https://github.com/formalverification/lean2agda/issues/31
 [#44]: https://github.com/formalverification/lean2agda/issues/44
 [#86]: https://github.com/formalverification/lean2agda/pull/86
+[#88]: https://github.com/formalverification/lean2agda/issues/88
 [report]: ../reports/printing-blowup-2026-10-12.md
 [report-opaque]: ../reports/opaque-theorems-2026-10-13.md
 [report-quot]: ../reports/quotient-rules-2026-11-08.md
@@ -756,3 +811,4 @@ It assumes the following of its callers:
 [related]: ../related-work.md
 [catalog-let]: ../foundations/gap-catalog.md#projections-and-let
 [nat-operations]: ../foundations/nat-operations.md
+[nat-operations-strings]: ../foundations/nat-operations.md#string-and-char

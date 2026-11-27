@@ -1,0 +1,5 @@
+checked 10 of 10 declarations, 0 of 0 data types and records
+unfolded 2 of 3 theorems, 0 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms String:ofList:~uproof~u1 for StringFixtures:mk~ua | U.Init.Prelude.String:ofList:~uproof~u1
+unfolded UnequalTerms String:mk:~uproof~u1 for StringFixtures:mk~ua | U.Init.Prelude.List:cons (U.Init.Prelude.Char:ofNat 97)
