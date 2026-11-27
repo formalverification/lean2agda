@@ -56,9 +56,10 @@ section before changing anything structural.
    its golden under `translator/tests/expected/scaffolds/`, and prints
    the tables of `docs/performance.md`, failing unless every refusal is
    classified to an issue by `translator/tests/refusal-classes.txt`;
-   `make goldens-update` rewrites the goldens, and `GOLDENS=NAME...`
-   picks some.  It needs Mathlib's cache and takes about 50 minutes on
-   a 4-processor runner at `-j 2`, so the `goldens` workflow runs it nightly and on demand, not the
+   `make goldens-update` rewrites the goldens of the trees whose checks
+   succeed, and `GOLDENS=NAME...` picks some.  It needs Mathlib's cache
+   and takes about 50 minutes on a 4-processor runner at `-j 2`, so the
+   `goldens` workflow runs it nightly and on demand, not the
    pull-request job.  A new refusal in a golden needs its line in the
    classes file, naming the issue whose work removes it.
 +  `docs/translator/architecture.md` is the translator's module map: a

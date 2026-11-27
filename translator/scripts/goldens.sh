@@ -18,7 +18,9 @@
 # most closures import Mathlib; `make goldens` runs it.  Options, as
 # follows:
 #
-#   --update        write each golden directory instead of comparing
+#   --update        write each golden directory instead of comparing,
+#                   for a tree whose loop and final check both succeeded;
+#                   a tree whose check failed keeps its golden as it was
 #   --results DIR   keep each tree's work under DIR/NAME (the emitted
 #                   tree, the listings, loop.txt, final.json,
 #                   translate-seconds), and the tables in DIR/report.md
@@ -83,15 +85,16 @@ while read -r name form args <&3; do
   rm -rf "$out"
   mkdir -p "$out"
   read -r -a lean_args <<< "$args"
+  ran=1
   start=$(date +%s%N)
   "$lake_cmd" env "$scratch/lean2agda" --out "$out/tree" "${lean_args[@]}" > /dev/null
   seconds "$start" "$(date +%s%N)" > "$out/translate-seconds"
   start=$(date +%s%N)
   python3 ../scripts/python/agda_check.py --refusals --messages --agda "$agda_cmd" -j "$jobs" \
-    --listings "$out/listings" --keep "$out/kept" "$out/tree" > "$out/loop.txt" || status=1
+    --listings "$out/listings" --keep "$out/kept" "$out/tree" > "$out/loop.txt" || { status=1; ran=; }
   looped=$(date +%s%N)
   python3 ../scripts/python/agda_check.py --fresh --json --agda "$agda_cmd" -j "$jobs" \
-    "$out/kept" > "$out/final.json" || status=1
+    "$out/kept" > "$out/final.json" || { status=1; ran=; }
   checked=$(date +%s%N)
   golden="$out/golden"
   mkdir -p "$golden"
@@ -104,9 +107,14 @@ while read -r name form args <&3; do
     *) echo "goldens.sh: $name: unknown form $form" >&2; exit 2 ;;
   esac
   expected="tests/expected/scaffolds/$name"
-  if [[ -n "$update" ]]; then
+  if [[ -n "$update" && -z "$ran" ]]; then
+    verdict="not written, since a check failed"
+  elif [[ -n "$update" ]]; then
+    # Copied beside the golden first, so that a failed copy leaves it whole.
+    rm -rf "$expected.new"
+    cp -r "$golden" "$expected.new"
     rm -rf "$expected"
-    cp -r "$golden" "$expected"
+    mv "$expected.new" "$expected"
     verdict=written
   elif diff -r "$expected" "$golden" > "$out/golden.diff"; then
     verdict=same
