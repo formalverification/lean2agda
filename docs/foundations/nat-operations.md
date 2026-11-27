@@ -353,7 +353,7 @@ refuses `Nat.gcd` at the pin needs a run of Lean4Less, which is issue
    proposition ([#27]'s), and `String.decEq._proof_2`,
    `String.noConfusion` and `String.ofByteArray.noConfusion`, which need
    `String.rec` or a projection from a `String` to compute while `String`
-   is a postulate (the section on `String`, below, where [#88] checks all
+   was a postulate (the section on `String`, below, where [#88] checks all
    three; this note first charged `_proof_2` to [#27]).  With
    `Nat.modCoreGo_lt` refused and `Nat.modCore_lt` checked, that makes the
    21; the 4 behind a refused type are `apply_eqRec` and the three behind

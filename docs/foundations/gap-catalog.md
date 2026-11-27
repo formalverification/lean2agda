@@ -1087,11 +1087,12 @@ literals**.
    `refl` (probe `P15ProjLet`).  By profile, as follows.
    +  U: as K: since [#18], a projection from a record prints as its
       field projection and Lean's projection functions unfold to it, so
-      that a dependent field checks; from `String`, a postulate, and from
-      a type whose constructor binds a parameter explicitly, it still
-      prints through the recursor, which computes since [#19], so that a
-      dependent field checks there too (`String`'s recursor stays a
-      postulate).  `let` prints as Agda's `let`
+      that a dependent field checks, `String`'s among them since [#88]
+      (until then `String` was a postulate, and a projection from it
+      printed through its recursor, a postulate too); from a type whose
+      constructor binds a parameter explicitly, it still prints through
+      the recursor, which computes since [#19], so that a dependent field
+      checks there too.  `let` prints as Agda's `let`
       ([`printing.md`][printing], [`inductives.md`][inductives]).
    +  K: projections become applications of the record's projection functions;
       `let` becomes Agda's `let` or, where sharing matters for checking time,

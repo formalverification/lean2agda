@@ -203,7 +203,7 @@ and `translator/Lean2Agda/Main.lean`.
 | `translator/Lean2Agda.lean` | library root | | the core, imported whole | pure | |
 | `translator/Lean2Agda/Core/CommandLine.lean` | command line | the arguments | `Args`, the usage text | pure | [`README.md`][translator-readme] |
 | `translator/Lean2Agda/Core/Types.lean` | load | `ConstantInfo` | `Kind`, `Declaration`, `Closure` | pure | [`loading.md`][loading] |
-| `translator/Lean2Agda/Core/Literals.lean` | load and emit: literals | a string literal | its kernel expansion, and the constants that names | pure | [`printing.md`][printing] |
+| `translator/Lean2Agda/Core/Literals.lean` | load and emit: literals | a string literal | its kernel expansion, and the constants it names | pure | [`printing.md`][printing] |
 | `translator/Lean2Agda/Core/Closure.lean` | load | the environment, the roots | the closure in dependency order | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Render.lean` | load | the closure | the listing | pure | [`loading.md`][loading] |
 | `translator/Lean2Agda/Core/Stats.lean` | load | the closure | the counts by kind | pure | [`loading.md`][loading] |

@@ -4,19 +4,23 @@ File: translator/tests/TranslatorTests/Input/Strings.lean
 
 /-!
 String literals as Lean's kernel expands them (issue M3-11), for the
-golden trees `strings` and `strings-lean` of `tests/run.sh`, which check
-this module under both settings of `--arithmetic`.  A literal is a
-kernel term of its own, which the kernel expands to `String.ofList` over
-`Char.ofNat` applications where a comparison or a projection needs it;
-the translator gives each distinct literal one definition, that
+golden tree `strings` of `tests/run.sh`, which checks this module under
+the default `--arithmetic agda` only: under `--arithmetic lean`,
+`ByteArray.IsValidUTF8` and `Char.ofNat`'s proofs exhaust Agda's heap
+(`docs/foundations/nat-operations.md`, "`String` and `Char`").  A literal
+is a kernel term of its own, which the kernel expands to `String.ofList`
+over `Char.ofNat` applications where a comparison or a projection needs
+it; the translator gives each distinct literal one definition, that
 expansion.  The two round trips are issue M3-11's acceptance criterion:
-the first holds because both sides print as one term, the second
-because `String.mk`, deprecated, has `String.ofList`'s body.  The
-definitions cover an escape, the empty string, a character of each
-UTF-8 length (`a`, `λ`, `✝` and `𝔸`, one to four bytes), one literal
-in two declarations, which the scaffold defines once, and a repeated
-closed subterm holding literals, which the sharing pass shares after the
-literals' definitions are in the kernel's environment.
+the first holds because both sides print as one term, the second because
+`String.mk`, deprecated, has `String.ofList`'s body, once the checker
+unfolds the two proofs of validity the elaborator abstracts from them
+(LF-17 in `docs/lean-findings.md`).  The definitions cover an escape, the
+empty string, a character of each UTF-8 length (`a`, `λ`, `✝` and `𝔸`,
+one to four bytes), one literal in two declarations, which the scaffold
+defines once, and a repeated closed subterm holding literals, which the
+sharing pass shares after the literals' definitions are in the kernel's
+environment.
 -/
 
 namespace StringFixtures

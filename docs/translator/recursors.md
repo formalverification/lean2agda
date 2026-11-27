@@ -218,12 +218,13 @@ both:
 | after [#88], `String` a record | 2,079 | 1,768 | 1,746 | 18 | 4 | 1 | 8, three in vain | 147 of 147 |
 
 The 147 recursors are 145 inductive types' and `Lean.Syntax`'s two
-`rec_N`; `String.rec` stays a postulate, and `ByteArray.IsValidUTF8.rec`
-is dropped with its type, so 145 of the 146 the listing counts (all but
-`String.rec`) are defined, all of them accepted by the termination
-checker.  The 16 refused values, with the refused type of `apply_eqRec`,
-fall into the classes of the goldens: 15 comparisons of two proofs of one
-proposition (`Subtype.eq`, `Subtype.ext`, `Subtype.eta`,
+`rec_N`.  In the run after [#19], `String.rec` was still a postulate and
+`ByteArray.IsValidUTF8.rec` was dropped with its type, so 145 of the 146
+the listing counted (all but `String.rec`) were defined, all of them
+accepted by the termination checker.  That run's 16 refused values, with
+the refused type of `apply_eqRec`, fall into the classes of the goldens: 15
+comparisons of two proofs of one proposition (`Subtype.eq`,
+`Subtype.ext`, `Subtype.eta`,
 `Subtype.mk.injEq`, `Subtype.instDecidableEq`'s proof, `Char.ext`,
 `Char.mk.injEq`, `Fin.eq_of_val_eq`, `Fin.mk.injEq`, `proof_irrel`,
 `instSubsingletonDecidable`, `Nat.modCore_lt`, `dif_pos`, `dif_neg`, and
@@ -233,7 +234,7 @@ rules (this branch before it merged) the run refused seven values more,
 the quotient's (`funext`, `Quot.liftBeta`, `Quot.indBeta`,
 `Quot.liftIndepPr1`, `Quotient.exact`, `Quotient.lift₂`'s proof,
 `Quotient.rel.refl`), and the two listings differ in nothing else but the
-two rules and the fallback's unfoldings at those seven.  The 74 values
+two rules and the fallback's unfoldings at those seven.  Its 74 values
 behind a refused type are `apply_eqRec` with the 3 behind it
 (`Quot.pliftOn` and its kin, as before) and 70 behind
 `ByteArray.IsValidUTF8` (`String`'s equality and its instances,
@@ -249,7 +250,8 @@ the table gives up, and checks `Nat.modCore_lt`, whose comparison of two
 proofs it removes ([`nat-operations.md`][nat-operations], The
 measurements); the nine declarations more are the table's six builtin
 helpers and `Nat.sub`'s three rewrite rules.  With `String` a record
-([#88]) `String.rec` is defined too, and those three values check; the
+([#88]) `String.rec` is defined too, so all 147 are, and those three
+values check; the
 107 declarations more are the 85 definitions of the closure's distinct
 string literals, the twelve constants a literal now reaches
 (`String.ofList`, `Char.ofNat` and what they use), the sharing pass's
