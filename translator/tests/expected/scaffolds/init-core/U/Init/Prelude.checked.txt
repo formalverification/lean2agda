@@ -1,0 +1,16 @@
+checked 864 of 864 declarations, 90 of 90 data types and records
+unfolded 5 of 87 theorems, 3 in vain
+defined 92 of 92 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms eq~uof~uheq | Eq:rec x₆ x₉ != x₆ of type x₄
+refused value UnequalTerms Fin:eq~uof~uval~ueq | isLt₅ != isLt₆ of type Nat:le (Nat:succ val₄) n₀
+unfolded UnequalTerms Nat:div~urec~ufuel~ulemma for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
+unfolded UnequalTerms Nat:not~ule~uof~unot~uble~ueq~utrue for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
+unfolded UnequalTerms Nat:le~uof~uble~ueq~utrue for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
+refused value UnequalTerms Nat:modCoreGo~ult | Decidable:rec (λ x₇ → x₅)
+refused value UnequalTerms Char:ext | valid₄ != valid₅ of type
+refused value UnequalTerms String:decEq:~uproof~u2 | Array.toList₁
+refused value UnequalTerms String:decEq | isValidUTF8₈ != isValidUTF8₉ of type
+unfolded UnequalTerms Eq:symm for Lean:Name:noConfusion | (k₄ : P₀) → P₀ !=<
+unfolded UnequalTerms Nat:eq~uof~ubeq~ueq~utrue for Lean:Name:noConfusion | (k₄ : P₀) → P₀ !=<
+refused value UnequalTerms String:noConfusion | (k₆ : Eq toByteArray₄ toByteArray₄ → P₀) → P₀ !=<
+refused value CannotApply String:ofByteArray:noConfusion | Expression used as function but does not have function type:

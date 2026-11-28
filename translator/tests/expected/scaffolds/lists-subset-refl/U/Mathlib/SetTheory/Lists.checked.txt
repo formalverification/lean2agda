@@ -1,0 +1,13 @@
+checked 36 of 36 declarations, 3 of 3 data types and records
+unfolded 7 of 9 theorems, 3 in vain
+defined 3 of 3 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms Eq:symm for Lists~x27~:toList:eq~u2, in vain | U.Init.Prelude.Eq:rec
+unfolded UnequalTerms Eq:symm for Lists~x27~:to~uofList, in vain | U.Init.Prelude.List:cons head₂
+unfolded UnequalTerms Eq:symm for Lists~x27~:noConfusion | (k₁₅ : U.Init.Prelude.HEq a₁₄ a₁₄ → P₀) → P₀ !=<
+unfolded CannotApply heq~uof~ueq for Lists~x27~:cons~x27~:noConfusion | Expression used as function but does not have function type:
+unfolded UnequalTerms Eq:symm for Lists~x27~:of~utoList, in vain | Lists~x27~:nil !=
+unfolded UnequalTerms Nat:eq~uof~ubeq~ueq~utrue for Lists~x27~:noConfusion | (k₁₅ : U.Init.Prelude.HEq a₁₄ a₁₄ → P₀) → P₀ !=<
+unfolded CannotApply Nat:eq~uof~ubeq~ueq~utrue for Lists~x27~:cons~x27~:noConfusion | Expression used as function but does not have function type:
+refused value UnequalTerms Lists~x27~:toList:eq~u2 | U.Init.Prelude.Eq:rec (λ x₅ → U.Init.Prelude.List:nil)
+refused value UnequalTerms Lists~x27~:to~uofList | U.Init.Prelude.List:cons head₂
+refused value UnequalTerms Lists~x27~:of~utoList | Lists~x27~:nil !=

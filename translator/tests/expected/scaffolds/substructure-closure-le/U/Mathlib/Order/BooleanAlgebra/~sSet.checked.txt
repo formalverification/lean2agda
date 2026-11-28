@@ -1,0 +1,9 @@
+checked 8 of 8 declarations, 0 of 0 data types and records
+unfolded 0 of 6 theorems, 0 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u1 | (x₄ : α₀) →
+refused value UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u2 | (x₄ : α₀) →
+refused value UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u3 | (i₅ : α₀) →
+refused value UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u4 | (i₅ : α₀) →
+refused value UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u5 | U.Init.Prelude.And (x₃ x₅)
+refused value UnequalTerms ~sSet:instBooleanAlgebra:~uproof~u6 | U.Init.Prelude.Or (x₄ x₅)

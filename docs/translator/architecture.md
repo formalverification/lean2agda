@@ -216,6 +216,7 @@ and `translator/Lean2Agda/Main.lean`.
 | `scripts/python/scaffold_check.py` | check | a scaffold | its listing of refusals and unfoldings | IO in `check_module` and `main`; the rest pure | [`printing.md`][printing] |
 | `scripts/python/agda_run.py` | check | a file and a directory | Agda's verdict, classified | IO in `run_agda`, `check_file` and `real_clock`; the rest pure | [`printing.md`][printing] |
 | `scripts/python/agda_check.py` | check | an emitted tree | each module's time and peak, or with `--refusals` each module's listing | IO in `measured_run`, `execute`, the tree's reads and writes, and `main`; the rest pure | [`modules.md`][modules] |
+| `scripts/python/refusal_report.py` | check | the trees `goldens.sh` checked, with their listings and reports; `tests/refusal-classes.txt` | per module and per tree: values, checked, refused by class, behind a refused type, Agda time and peak; the verdict | IO in `read_result` and `main`; the rest pure | [`../performance.md`][performance] |
 
 `Printer.telescope`, `Printer.term` and `Naming.qualified` are called by
 the tests and the measurement scripts only, today; they are the printer's
@@ -288,7 +289,7 @@ library.
 | `translator/scripts/FlattenBenchmark.lean` | compiled by hand ([`../lean-findings.md`][findings]) | the cost of `Closure.declarations` against an explicit loop |
 | `translator/scripts/NamingAtlasProbe.lean` | `lake exe naming-atlas-probe` | the atlas's name decoder against Mathlib's structured names; needs Mathlib's cache |
 | `translator/scripts/Smoke.lean` | `make lean-smoke` | Mathlib's `.olean` files load |
-| `translator/scripts/scaffold-corpus.sh` | `make scaffold-corpus` | every corpus entry's tree printed and run through the refusal loop |
+| `translator/scripts/goldens.sh` | `make goldens`, `make goldens-update`, `make scaffold-corpus`; the `goldens` workflow | each tree `tests/goldens.txt` names, the corpus entries and the `Init` fragments, translated, run through the refusal loop, checked fresh in its final state and compared with its golden; then `refusal_report.py`'s tables ([`../performance.md`][performance]) |
 
 ## The package
 
@@ -341,6 +342,7 @@ version and the profile, in the library's `NOTICE` and README
 [inductives]: inductives.md
 [modules]: modules.md
 [nat-operations]: ../foundations/nat-operations.md
+[performance]: ../performance.md
 [recursors]: recursors.md
 [translator-readme]: ../../translator/README.md
 [atlas]: ../../atlas/README.md

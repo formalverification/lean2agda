@@ -1,0 +1,5 @@
+checked 19 of 19 declarations, 0 of 0 data types and records
+unfolded 0 of 19 theorems, 0 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalHiding mem~uupperBounds | {a₄ : α₀} →
+refused value UnequalHiding lowerBounds~uempty | (x₃ : α₀) →

@@ -1,0 +1,6 @@
+checked 34 of 34 declarations, 0 of 0 data types and records
+unfolded 2 of 27 theorems, 2 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms Iff:mpr for exists~uprop~ucongr, in vain | w₇ != (U.Init.Core.Iff:mpr hp₅ (U.Init.Core.Iff:mp hp₅ w₇)) of type
+unfolded UnequalTerms Iff:mp for exists~uprop~ucongr, in vain | w₇ != (U.Init.Core.Iff.mpr₃ hp₅ (U.Init.Core.Iff:mp hp₅ w₇)) of
+refused value UnequalTerms exists~uprop~ucongr | w₇ != (U.Init.Core.Iff:mpr hp₅ (U.Init.Core.Iff:mp hp₅ w₇)) of type

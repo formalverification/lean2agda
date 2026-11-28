@@ -1,0 +1,23 @@
+checked 1079 of 1083 declarations, 52 of 52 data types and records
+unfolded 3 of 423 theorems, 0 in vain
+defined 52 of 52 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms Char:mk:injEq | valid₁ != valid₅ of type
+refused value UnequalTerms Fin:mk:injEq | isLt₂ != isLt₆ of type
+refused type UnequalTerms apply~ueqRec | h₁₀ != U.Init.Prelude.Eq:refl b₄ of type U.Init.Prelude.Eq b₄ b₄
+dropped Quot:pliftOn:~uproof~u1
+dropped Quot:pliftOn
+dropped Quotient:pliftOn
+refused value UnequalTerms instSubsingletonDecidable | t₂ != h₄ of type p₀
+unfolded UnequalTerms Setoid:refl for Quotient:lift~x2082~:~uproof~u2 | c₆ a₈ a₄ a₈ b₅ (Setoid:refl a₈) x !=
+unfolded UnequalTerms Quotient:lift~x2082~:~uproof~u1 for Quotient:lift~x2082~:~uproof~u2 | c₆ a₈ a₄ a₈ b₅ (Setoid:refl a₈) x !=
+refused value UnequalTerms proof~uirrel | h₁ != h₂ of type a₀
+unfolded UnequalTerms Quotient:sound for Quotient:rec | (Quotient:sound p₆) != (Quot:sound p₆) of type
+refused value UnequalTerms String:ofByteArray:injEq | isValidUTF8₁ != isValidUTF8₅ of type
+refused value UnequalTerms Subtype:eq | property₆ != property₇ of type p₁ val₅
+refused value UnequalTerms Subtype:eta | h₇ != property₅ of type
+refused value UnequalTerms Subtype:ext | property₆ != property₇ of type p₁ val₅
+refused value UnequalTerms Subtype:instDecidableEq:~uproof~u3 | h₃ != h₇ of type p₁ a₂
+refused value UnequalTerms Subtype:mk:injEq | property₃ != property₇ of type p₁ val₂
+refused value UnequalTerms cast~ueq | U.Init.Prelude.Eq:rec a₂ h₁ != a₂ of type α₀
+refused value UnequalTerms dif~uneg | h₆ x != hnc₂ x of type U.Init.Prelude.False
+refused value UnequalTerms dif~upos | h₆ != hc₂ of type c₀

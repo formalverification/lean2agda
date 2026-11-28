@@ -1,0 +1,7 @@
+checked 22 of 22 declarations, 1 of 1 data types and records
+unfolded 0 of 18 theorems, 0 in vain
+defined 1 of 1 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms IsCompl:dual | U.Mathlib.Data.FunLike.Basic.DFunLike.coe₃
+refused value UnequalHiding codisjoint~ucomm | (a₄ : α₀) →
+refused value UnequalHiding disjoint~ucomm | (a₄ : α₀) →
+refused value UnequalTerms IsCompl:le~usup~uright~uiff~uinf~uleft~ule | x₃ !=

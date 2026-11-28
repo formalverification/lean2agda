@@ -23,7 +23,11 @@
 #   CORPUS_TIMEOUT seconds corpus-check allows each Agda file (default: 300)
 #   OUT            a tree `lake exe lean2agda --out` wrote, for check-output
 #   JOBS           Agda processes check-output runs at once (default: half
-#                  the processors)
+#                  the processors); goldens' and scaffold-corpus' (default: 4)
+#   GOLDENS        names of translator/tests/goldens.txt for goldens
+#                  (default: all)
+#   RESULTS        directory where goldens keeps each tree's work and the
+#                  tables (default: a scratch directory, removed)
 #   GHPROJECT_DIR  engine checkout path (checkout channel only)
 #   NO_ENV_PREFIX  set (to anything) wherever gh authenticates *through*
 #                  GH_TOKEN/GITHUB_TOKEN; GitHub Actions included.
@@ -39,6 +43,8 @@ CORPUS_TIMEOUT ?= 300
 OUT ?=
 JOBS ?=
 ATLAS ?=
+GOLDENS ?=
+RESULTS ?=
 
 FLAGS := $(if $(REPO),--repo $(REPO)) $(if $(NO_ENV_PREFIX),--no-env-prefix)
 
@@ -63,7 +69,7 @@ endif
 
 .PHONY: help populate-dry populate update update-check lint \
         doctor check check-output test test-python test-translator test-unit corpus-check corpus-tables atlas \
-	scaffold-corpus \
+	scaffold-corpus goldens goldens-update \
 	test-naming-atlas \
         lean-cache lean-build lean-smoke \
         guard-gh guard-engine engine-mode
@@ -192,16 +198,35 @@ atlas: ## Write the axiom atlas of the pinned Mathlib (atlas/) and its report (d
 	cd translator && $(LAKE) exe atlas
 	$(PYTHON) scripts/python/atlas_report.py
 
-# Issue M2-3's acceptance over the whole corpus (docs/translator/printing.md):
-# print every entry's profile U scaffold as a tree of modules and run the
-# refusal loop over it (agda_check.py --refusals), since Agda scope-checks
-# a module of a tree only once its imports type-check.  Most entries
+# The golden trees of issue M2-9 (docs/performance.md): every line of
+# translator/tests/goldens.txt, the twelve corpus entries and the four
+# Init fragments, or those GOLDENS names, translated, run through the
+# refusal loop (agda_check.py --refusals), checked fresh in their final
+# state, and compared with tests/expected/scaffolds/NAME/; then
+# refusal_report.py prints the tables and fails unless every refusal is
+# classified by translator/tests/refusal-classes.txt.  Most closures
 # import Mathlib, so it needs Mathlib's cache in translator/.lake (make
-# lean-cache); the single-module scope check it replaces took about half
-# an hour.  No CI job runs it: the cache is several gigabytes.  The three
-# core-Lean entries run in make test-translator.
-scaffold-corpus: ## Print every corpus entry's scaffold and check it module by module (needs make lean-cache)
-	LAKE="$(LAKE)" AGDA="$(AGDA)" JOBS="$(JOBS)" bash translator/scripts/scaffold-corpus.sh
+# lean-cache).  The pull-request job does not run it; the workflow
+# .github/workflows/goldens.yml does, nightly and on demand.  The three
+# core-Lean entries also run in make test-translator.
+GOLDENS_RUN = LAKE="$(LAKE)" AGDA="$(AGDA)" JOBS="$(JOBS)" bash translator/scripts/goldens.sh \
+	$(if $(RESULTS),--results "$(abspath $(RESULTS))")
+
+goldens: ## Check the corpus and Init golden trees and print their tables (needs make lean-cache)
+	$(GOLDENS_RUN) $(GOLDENS)
+
+goldens-update: ## Rewrite the golden trees goldens compares with (GOLDENS=names, default all)
+	$(GOLDENS_RUN) --update $(GOLDENS)
+
+# Issue M2-3's acceptance over the corpus (docs/translator/printing.md),
+# now the corpus lines of goldens: each entry's tree printed, checked
+# module by module and compared with its golden; the corpus ids that
+# translator/tests/goldens.txt holds, all but the three largest closures
+# until issue M2-15 adds them.
+CORPUS_IDS = $(shell $(PYTHON) -c 'import json; g = {l.split()[0] for l in open("translator/tests/goldens.txt") if l.strip() and not l.startswith("#")}; print(" ".join(e["id"] for e in json.load(open("corpus/manifest.json")) if e["id"] in g))')
+
+scaffold-corpus: ## Check the corpus entries' trees against their goldens (needs make lean-cache)
+	$(GOLDENS_RUN) $(CORPUS_IDS)
 
 # ---- lean ----------------------------------------------------------------
 

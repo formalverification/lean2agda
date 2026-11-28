@@ -1,0 +1,5 @@
+checked 97 of 97 declarations, 5 of 5 data types and records
+unfolded 1 of 28 theorems, 1 in vain
+defined 5 of 5 recursors by pattern matching, 0 refused by the termination checker
+unfolded UnequalTerms Nat:ne~uof~ubeq~ueq~ufalse for Lean:Data:AC:evalList:~usparseCasesOn~u1:else~ueq, in vain | U.Init.Prelude.Nat:ne~uof~ubeq~ueq~ufalse
+refused value UnequalTerms Lean:Data:AC:evalList:~usparseCasesOn~u1:else~ueq | U.Init.Prelude.Nat:ne~uof~ubeq~ueq~ufalse

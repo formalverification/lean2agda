@@ -1,0 +1,106 @@
+name: goldens
+
+# The golden trees of issue M2-9 (docs/performance.md): every line of
+# translator/tests/goldens.txt, the corpus entries and the four Init
+# fragments, each translated, run through the refusal loop, checked
+# fresh in its final state and compared with its golden under
+# translator/tests/expected/scaffolds/, then tabulated, with every
+# refusal classified (`make goldens`).  Six of the corpus entries import
+# Mathlib, so the job fetches Mathlib's cache (`make lean-cache`), which
+# the pull-request job of ci.yml must not, and the whole run takes
+# longer than that job's 30 minutes.  So it runs nightly and on demand,
+# and on a pull request only when the pull request changes this file,
+# so that a change to it is proven before it reaches main: a schedule
+# runs only on the default branch, and workflow_dispatch needs the file
+# there.  The three core-Lean entries also run on every pull request, in
+# ci.yml's `make test`.
+#
+# The runner's processors, memory and disk are printed first, since the
+# parallelism is chosen against them.  Each Agda process may grow to the
+# checker's 8G heap bound, and one loop run on Init.Prelude reached
+# 8,490 MiB locally (docs/performance.md, "What moves the numbers"); a
+# standard runner has 16 GB, so two Agda processes run at once, and
+# Init.Prelude, every tree's root, always runs alone.  The tables go to
+# the run's summary, and each tree's tables, listings and loop report
+# are kept as an artifact.  Cachix and the disk step are ci.yml's; see
+# its comments there.
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/goldens.yml
+
+permissions:
+  contents: read
+
+jobs:
+  goldens:
+    name: Corpus goldens and Init fragments
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      JOBS: "2"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: The runner
+        run: |
+          nproc
+          free -m
+          df -h / /mnt || true
+          grep -E '^(NAME|VERSION)=' /etc/os-release
+
+      - name: Free disk space for the Nix store
+        run: |
+          set -euxo pipefail
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet \
+            /usr/local/.ghcup /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift
+          df -h / /mnt || true
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: formalverification
+          authToken: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN || '' }}
+          skipPush: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Mathlib's cache
+        run: |
+          set -euxo pipefail
+          nix develop --ignore-environment --keep HOME --command make lean-cache
+          df -h / || true
+
+      - name: make goldens
+        run: |
+          set -euxo pipefail
+          nix develop --ignore-environment --keep HOME --command \
+            make goldens RESULTS=goldens-results JOBS="$JOBS"
+
+      - name: Tables in the run's summary
+        if: always()
+        run: |
+          if [ -f goldens-results/report.md ]; then
+            cat goldens-results/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          free -m
+          df -h / || true
+
+      - name: Keep the tables and listings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldens-results
+          path: |
+            goldens-results/report.md
+            goldens-results/*/listings
+            goldens-results/*/loop.txt
+            goldens-results/*/final.json
+            goldens-results/*/golden.diff
+          if-no-files-found: ignore

@@ -1,0 +1,5 @@
+checked 76 of 76 declarations, 12 of 12 data types and records
+unfolded 0 of 28 theorems, 0 in vain
+defined 12 of 12 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms dif~uneg | h₆ x != hnc₂ x of type U.Init.Prelude.False
+refused value UnequalTerms dif~upos | h₆ != hc₂ of type c₀

@@ -1,0 +1,6 @@
+checked 530 of 530 declarations, 12 of 12 data types and records
+unfolded 0 of 52 theorems, 0 in vain
+defined 12 of 12 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms String:isValidUTF8 | toByteArray₁ !=
+refused value UnequalTerms String:noConfusion | (k₆ : Eq toByteArray₄ toByteArray₄ → P₀) → P₀ !=<
+refused value CannotApply String:ofByteArray:noConfusion | Expression used as function but does not have function type:

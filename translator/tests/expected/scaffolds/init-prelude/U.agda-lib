@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of Add Add:add Add:casesOn Add:ctorIdx Add:mk and 2309 more
+name: U
+include: .

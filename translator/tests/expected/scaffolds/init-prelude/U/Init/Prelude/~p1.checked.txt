@@ -1,0 +1,14 @@
+checked 1650 of 1650 declarations, 114 of 114 data types and records
+unfolded 5 of 101 theorems, 3 in vain
+defined 116 of 116 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalTerms eq~uof~uheq | Eq:rec x₆ x₉ != x₆ of type x₄
+refused value UnequalTerms Fin:eq~uof~uval~ueq | isLt₅ != isLt₆ of type Nat:le (Nat:succ val₄) n₀
+unfolded UnequalTerms Nat:div~urec~ufuel~ulemma for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
+unfolded UnequalTerms Nat:not~ule~uof~unot~uble~ueq~utrue for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
+unfolded UnequalTerms Nat:le~uof~uble~ueq~utrue for Nat:modCoreGo~ult, in vain | Decidable:rec (λ x₇ → x₅)
+refused value UnequalTerms Nat:modCoreGo~ult | Decidable:rec (λ x₇ → x₅)
+refused value UnequalTerms Char:ext | valid₄ != valid₅ of type
+refused value UnequalTerms String:decEq:~uproof~u2 | Array.toList₁
+refused value UnequalTerms String:decEq | isValidUTF8₈ != isValidUTF8₉ of type
+unfolded UnequalTerms Eq:symm for Lean:Name:noConfusion | (k₄ : P₀) → P₀ !=<
+unfolded UnequalTerms Nat:eq~uof~ubeq~ueq~utrue for Lean:Name:noConfusion | (k₄ : P₀) → P₀ !=<

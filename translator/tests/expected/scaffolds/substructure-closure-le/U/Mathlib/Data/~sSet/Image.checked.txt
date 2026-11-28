@@ -1,0 +1,5 @@
+checked 13 of 13 declarations, 0 of 0 data types and records
+unfolded 0 of 9 theorems, 0 in vain
+defined 0 of 0 recursors by pattern matching, 0 refused by the termination checker
+refused value UnequalHiding ~sSet:forall~umem~uimage | (a₅ : α₀) → U.Init.Prelude.Membership:mem s₃ a₅ → p₄ (f₂ a₅) !=
+refused value UnequalHiding ~uprivate:Mathlib:Data:~sSet:Image:~n0:~sSet:image~uuniv:~uproof~u1~u1 | ((a₄ : β₁) →

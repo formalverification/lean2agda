@@ -1,0 +1,3 @@
+-- lean2agda, profile U: the scaffold of the closure of Multiset:map~umap
+name: U
+include: .

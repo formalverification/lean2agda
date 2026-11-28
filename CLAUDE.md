@@ -49,6 +49,19 @@ section before changing anything structural.
    `make atlas` writes the axiom atlas of the pinned Mathlib and its
    report (`atlas/README.md`); it needs Mathlib's cache and about
    7.5 GiB of memory, and no CI job runs it.
++  `make goldens` translates every tree of `translator/tests/goldens.txt`
+   (nine of the twelve corpus entries and the four `Init` fragments;
+   the three largest Mathlib closures wait on M2-15), runs the refusal
+   loop over it, checks its final state fresh, compares it with
+   its golden under `translator/tests/expected/scaffolds/`, and prints
+   the tables of `docs/performance.md`, failing unless every refusal is
+   classified to an issue by `translator/tests/refusal-classes.txt`;
+   `make goldens-update` rewrites the goldens of the trees whose checks
+   succeed, and `GOLDENS=NAME...` picks some.  It needs Mathlib's cache
+   and takes about 50 minutes on a 4-processor runner at `-j 2`, so the
+   `goldens` workflow runs it nightly and on demand, not the
+   pull-request job.  A new refusal in a golden needs its line in the
+   classes file, naming the issue whose work removes it.
 +  `docs/translator/architecture.md` is the translator's module map: a
    row for every tracked `.lean` and `.sh` file under `translator/` and
    for the Python the harness runs, with its stage and effects, the pass
@@ -176,9 +189,14 @@ before any pull request.  The committed skills `project-setup` and
 +  In GitHub Actions, set `NO_ENV_PREFIX=1` on engine invocations: the
    engine strips `GH_TOKEN` by default, which is how Actions
    authenticates.
-+  The GitHub runner starts with about 14 GB of free disk, and the
-   default shell needs about 11 GB in the store plus, on a cold run, a
-   second copy of the unpacked Lean release while lean4-nix builds it.
-   The `nix` job therefore deletes the runner image's largest
-   preinstalled toolchains first, which leaves about 39 GB; keep
-   Mathlib's cache and other large downloads out of that job.
++  The default shell needs about 11 GB in the store plus, on a cold
+   run, a second copy of the unpacked Lean release while lean4-nix
+   builds it.  The GitHub runner had about 14 GB of free disk in October
+   2026 and 86 GB from November (run `42550014869`: 86 GB before the
+   `nix` job deletes the runner image's largest preinstalled toolchains,
+   112 GB after, 101 GB once the shell is in), so the binding limit is
+   now the job's time, not its disk.  Keep Mathlib's cache and other
+   large downloads out of the `nix` job; the `goldens` workflow fetches
+   the cache and prints the runner's disk and memory first (run
+   `45520228058`: 4 processors, 16 GB of memory, 88 GB free, 113 GB
+   after the deletions, 96 GB with the shell and the cache).
